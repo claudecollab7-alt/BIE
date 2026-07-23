@@ -1,0 +1,214 @@
+ALTER TABLE `tbl_item_stock` ADD 
+`rjpm_stock` DECIMAL(10,3) NOT NULL AFTER `kl_item_max_qty`, ADD 
+`rjpm_loc_row` INT(11) NOT NULL AFTER 
+`rjpm_stock`, ADD 
+`rjpm_loc_rack` INT(11) NOT NULL AFTER 
+`rjpm_loc_row`, ADD 
+`rjpm_item_price` DECIMAL(12,2) NOT NULL AFTER 
+`rjpm_loc_rack`, ADD 
+`rjpm_item_discount` DECIMAL(12,2) NOT NULL AFTER 
+`rjpm_item_price`, ADD 
+`rjpm_item_cost_price` DECIMAL(12,2) NOT NULL AFTER 
+`rjpm_item_discount`, ADD 
+`rjpm_item_selling_price` DECIMAL(12,2) NOT NULL AFTER 
+`rjpm_item_cost_price`, ADD 
+`rjpm_item_margin` DECIMAL(10,2) NOT NULL AFTER 
+`rjpm_item_selling_price`, ADD 
+`rjpm_item_min_qty` TINYINT(4) NOT NULL AFTER 
+`rjpm_item_margin`, ADD 
+`rjpm_item_order_min_qty` TINYINT(4) NOT NULL AFTER 
+`rjpm_item_min_qty`, ADD 
+`rjpm_item_max_qty` TINYINT(4) NOT NULL AFTER 
+`rjpm_item_order_min_qty`; 
+
+ALTER TABLE tbl_itemprice_history 
+ADD COLUMN rjpm_new_price DECIMAL(12,2) NOT NULL,
+ADD COLUMN rjpm_new_discount DECIMAL(6,2) NOT NULL,
+ADD COLUMN rjpm_new_cost_price DECIMAL(12,2) NOT NULL,
+ADD COLUMN rjpm_new_selling_price DECIMAL(12,2) NOT NULL,
+ADD COLUMN rjpm_new_item_margin DECIMAL(10,2) NOT NULL,
+ADD COLUMN rjpm_new_msq TINYINT(4) NOT NULL,
+ADD COLUMN rjpm_new_maq TINYINT(4) NOT NULL,
+ADD COLUMN rjpm_new_moq INT(11) NOT NULL,
+ADD COLUMN rjpm_new_item_curr_stock DECIMAL(10,2) NOT NULL,
+ADD COLUMN rjpm_new_item_uom INT(11) NOT NULL,
+ADD COLUMN rjpm_new_item_hsn INT(11) NOT NULL,
+ADD COLUMN rjpm_old_price DECIMAL(12,2) NOT NULL,
+ADD COLUMN rjpm_old_discount DECIMAL(6,2) NOT NULL,
+ADD COLUMN rjpm_old_cost_price DECIMAL(12,2) NOT NULL,
+ADD COLUMN rjpm_old_selling_price DECIMAL(12,2) NOT NULL,
+ADD COLUMN rjpm_old_item_margin DECIMAL(10,2) NOT NULL,
+ADD COLUMN rjpm_old_msq TINYINT(4) NOT NULL,
+ADD COLUMN rjpm_old_maq TINYINT(4) NOT NULL,
+ADD COLUMN rjpm_old_moq INT(11) NOT NULL,
+ADD COLUMN rjpm_old_item_curr_stock DECIMAL(10,2) NOT NULL,
+ADD COLUMN rjpm_old_item_uom INT(11) NOT NULL,
+ADD COLUMN rjpm_old_item_hsn INT(11) NOT NULL;
+
+ALTER TABLE `mst_branch` CHANGE `branch_stock_location_rack_field` `branch_stock_location_rack_field` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL; 
+
+INSERT INTO `mst_branch` (`branch_id`, `branch_name`, `branch_code`, `branch_state_code`, `branch_stock_field`, `company_address`, `company_ph_no1`, `company_ph_no2`, `company_toll_free`, `company_mail`, `company_web`, `company_state_code`, `company_gst`, `company_pan`, `branch_stock_location_rack_field`, `branch_stock_location_row_field`, `created_by`, `created_dtm`, `modify_by`, `modify_dtm`, `branch_status`, `branch_new_price`, `branch_new_discount`, `branch_new_cost_price`, `branch_new_selling_price`, `branch_new_margin`, `branch_new_msq`, `branch_new_maq`, `branch_new_moq`, `branch_new_item_hsn`, `branch_new_item_uom`, `branch_new_item_curr_stock`, `branch_old_price`, `branch_old_discount`, `branch_old_cost_price`, `branch_old_selling_price`, `branch_old_margin`, `branch_old_msq`, `branch_old_maq`, `branch_old_moq`, `branch_old_item_curr_stock`, `branch_old_item_hsn`, `branch_old_item_uom`, `branch_item_price`, `branch_item_discount`, `branch_item_cost_price`, `branch_item_selling_price`, `branch_item_margin`, `branch_item_msq`, `branch_item_maq`, `branch_item_moq`) VALUES
+(3, 'Rajapalayam', 'RJPM', '33', 'rjpm_stock', '<b><b>BENZEAR INDUSTRIAL ENTERPRISES</b></b> <br> 517/E and 517/F, Chandrashekarapuram,<br>Siva Temple Road, Muppathadam P O,<br>Aluva, Ernakulam, Kerala, 683101', '95009 60202', '95009 68923', '1800 599 2323', 'rjpm@benzear-bie.com', 'www.benzear-bie.com', 32, '32AANFB3578M1Z1', 'AANFB3578M', 'rjpm_loc_rack', 'rjpm_loc_row', 1, '2023-05-26 16:43:42', 1, '2023-08-02 11:18:10', 1, 'rjpm_new_price', 'rjpm_new_discount', 'rjpm_new_cost_price', 'rjpm_new_selling_price', 'rjpm_new_item_margin', 'rjpm_new_msq', 'rjpm_new_maq', 'rjpm_new_moq', 'rjpm_new_item_hsn', 'rjpm_new_item_uom', 'rjpm_new_item_curr_stock', 'rjpm_old_price', 'rjpm_old_discount', 'rjpm_old_cost_price', 'rjpm_old_selling_price', 'rjpm_old_item_margin', 'rjpm_old_msq', 'rjpm_old_maq', 'rjpm_old_moq', 'rjpm_old_item_curr_stock', 'rjpm_old_item_hsn', 'rjpm_old_item_uom', 'rjpm_item_price', 'rjpm_item_discount', 'rjpm_item_cost_price', 'rjpm_item_selling_price', 'rjpm_item_margin', 'rjpm_item_min_qty', 'rjpm_item_order_min_qty', 'rjpm_item_max_qty');
+
+-------------
+INSERT INTO `tbl_user` (`usr_id`, `emp_id`, `usr_group`, `usr_name`, `usr_email`, `usr_mobile`, `usr_logname`, `usr_logpwd`, `usr_type`, `usr_access`, `usr_avatar`, `usr_photo`, `usr_dashboard`, `pw_hint`, `branch_id`, `usr_status`) VALUES (NULL, NULL, 'B', 'Rajapalayam', 'rajapalayam@bie.com', '9999999999', 'rajapalayam@bie.com', '353c2f19e7dfae13ea5344387a4f89c9', 'S', '1', 'usravatar_2.jpg', '', '', 'kl11111', '3', '1'); 
+
+ALTER TABLE `tbl_multiuom_itemprice_history` ADD `new_min_discount` DECIMAL(6,2) NULL AFTER `new_discount`, ADD `new_max_discount` DECIMAL(6,2) NULL AFTER `new_min_discount`; 
+ALTER TABLE `tbl_multiuom_itemprice_history` ADD `old_min_discount` DECIMAL(6,2) NULL AFTER `old_discount`, ADD `old_max_discount` DECIMAL(6,2) NULL AFTER `old_min_discount`; 
+ALTER TABLE `tbl_multiuom_itemprice_history` CHANGE `new_min_discount` `new_min_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `new_max_discount` `new_max_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `old_min_discount` `old_min_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `old_max_discount` `old_max_discount` DECIMAL(6,2) NOT NULL DEFAULT '0'; 
+
+ALTER TABLE `mst_branch` ADD `branch_new_min_discount` VARCHAR(30) NULL AFTER `branch_new_discount`, ADD `branch_new_max_discount` VARCHAR(30) NULL AFTER `branch_new_min_discount`; 
+ALTER TABLE `mst_branch` ADD `branch_item_min_discount` VARCHAR(30) NULL AFTER `branch_item_discount`, ADD `branch_item_max_discount` VARCHAR(30) NULL AFTER `branch_item_min_discount`; 
+ALTER TABLE `mst_branch` ADD `branch_old_min_discount` VARCHAR(30) NULL AFTER `branch_old_discount`, ADD `branch_old_max_discount` VARCHAR(30) NULL AFTER `branch_old_min_discount`; 
+
+ALTER TABLE `tbl_itemprice_history` ADD `ho_new_min_discount` DECIMAL(6,2) NULL AFTER `ho_new_discount`, ADD `ho_new_max_discount` DECIMAL(6,2) NULL AFTER `ho_new_min_discount`; 
+ALTER TABLE `tbl_itemprice_history` ADD `kl_new_min_discount` DECIMAL(6,2) NULL AFTER `kl_new_discount`, ADD `kl_new_max_discount` DECIMAL(6,2) NULL AFTER `kl_new_min_discount`; 
+ALTER TABLE `tbl_itemprice_history` ADD `rjpm_new_min_discount` DECIMAL(6,2) NULL AFTER `rjpm_new_discount`, ADD `rjpm_new_max_discount` DECIMAL(6,2) NULL AFTER `rjpm_new_min_discount`; 
+
+ALTER TABLE `tbl_itemprice_history` ADD `ho_old_min_discount` DECIMAL(6,2) NULL AFTER `ho_old_discount`, ADD `ho_old_max_discount` DECIMAL(6,2) NULL AFTER `ho_old_min_discount`; 
+ALTER TABLE `tbl_itemprice_history` ADD `kl_old_min_discount` DECIMAL(6,2) NULL AFTER `kl_old_discount`, ADD `kl_old_max_discount` DECIMAL(6,2) NULL AFTER `kl_old_min_discount`; 
+ALTER TABLE `tbl_itemprice_history` ADD `rjpm_old_min_discount` DECIMAL(6,2) NULL AFTER `rjpm_old_discount`, ADD `rjpm_old_max_discount` DECIMAL(6,2) NULL AFTER `rjpm_old_min_discount`; 
+
+ALTER TABLE `tbl_itemprice_history` CHANGE `ho_new_min_discount` `ho_new_min_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `ho_new_max_discount` `ho_new_max_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `ho_old_min_discount` `ho_old_min_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `ho_old_max_discount` `ho_old_max_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `kl_new_min_discount` `kl_new_min_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `kl_new_max_discount` `kl_new_max_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `kl_old_min_discount` `kl_old_min_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `kl_old_max_discount` `kl_old_max_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `rjpm_new_min_discount` `rjpm_new_min_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `rjpm_new_max_discount` `rjpm_new_max_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE `rjpm_old_min_discount` `rjpm_old_min_discount` DECIMAL(6,2) NOT NULL DEFAULT '0', CHANGE[...]
+
+ALTER TABLE `tbl_item_stock` ADD `ho_item_min_discount` DECIMAL(12,2) NULL AFTER `ho_item_discount`, ADD `ho_item_max_discount` DECIMAL(12,2) NULL AFTER `ho_item_min_discount`; 
+ALTER TABLE `tbl_item_stock` ADD `kl_item_min_discount` DECIMAL(12,2) NULL AFTER `kl_item_discount`, ADD `kl_item_max_discount` DECIMAL(12,2) NULL AFTER `kl_item_min_discount`; 
+ALTER TABLE `tbl_item_stock` ADD `rjpm_item_min_discount` DECIMAL(12,2) NULL AFTER `rjpm_item_discount`, ADD `rjpm_item_max_discount` DECIMAL(12,2) NULL AFTER `rjpm_item_min_discount`; 
+
+ALTER TABLE `tbl_item_stock` CHANGE `ho_item_min_discount` `ho_item_min_discount` DECIMAL(12,2) NOT NULL DEFAULT '0', CHANGE `ho_item_max_discount` `ho_item_max_discount` DECIMAL(12,2) NOT NULL DEFAULT '0', CHANGE `kl_item_min_discount` `kl_item_min_discount` DECIMAL(12,2) NOT NULL DEFAULT '0', CHANGE `kl_item_max_discount` `kl_item_max_discount` DECIMAL(12,2) NOT NULL DEFAULT '0', CHANGE `rjpm_item_min_discount` `rjpm_item_min_discount` DECIMAL(12,2) NOT NULL DEFAULT '0', CHANGE `rjpm_item_max_discount` `rjpm_item_max_discount` DECIMAL(12,2) NOT NULL DEFAULT '0'; 
+
+UPDATE `mst_branch` SET `branch_old_max_discount` = 'rjpm_old_max_discount' WHERE `mst_branch`.`branch_id` = 3; 
+
+--------------------------
+CREATE TABLE `tbl_proforma` (
+  `pro_id` int(11) UNSIGNED NOT NULL,
+  `pro_slno` int(11) NOT NULL,
+  `pro_finyr` varchar(4) NOT NULL,
+  `pro_refno` varchar(30) NOT NULL,
+  `pro_date` date NOT NULL,
+  `quo_id` int(11) NOT NULL,
+  `so_id` int(11) NOT NULL,
+  `dc_id` int(11) NOT NULL,
+  `supp_id` int(11) UNSIGNED NOT NULL,
+  `cus_branch_id` int(11) UNSIGNED NOT NULL,
+  `pro_mode_of_trans` varchar(100) NOT NULL,
+  `pro_vechicle_no` varchar(75) NOT NULL,
+  `pro_trans_charge` decimal(12,2) NOT NULL,
+  `pro_tot_value` decimal(12,2) NOT NULL,
+  `pro_bal_value` decimal(12,2) NOT NULL,
+  `pro_dc_no` varchar(100) NOT NULL,
+  `pro_dc_date` date NOT NULL,
+  `pro_remarks` varchar(500) DEFAULT NULL,
+  `modify_date_time` datetime NOT NULL,
+  `modify_by` tinyint(3) NOT NULL,
+  `branch_id` int(11) NOT NULL,
+  `pay_id` int(11) NOT NULL,
+  `pay_chq_dt` date DEFAULT NULL,
+  `pay_refno` varchar(50) NOT NULL,
+  `pay_chq_no` varchar(50) NOT NULL,
+  `pay_cardno` varchar(20) NOT NULL,
+  `invoice_type` char(1) DEFAULT NULL COMMENT 'Q-quotation Proforma Inv\r\nD-DC Proforma Inv\r\nI-Direct Proforma Inv',
+  `credit_amount` decimal(12,2) DEFAULT NULL,
+  `credit_due_date` date DEFAULT NULL,
+  `credit_remarks` varchar(255) DEFAULT NULL,
+  `pro_status` tinyint(4) NOT NULL COMMENT '0 - draft, 1 - completed'
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tbl_proforma_details`
+--
+
+CREATE TABLE `tbl_proforma_details` (
+  `details_id` int(11) UNSIGNED NOT NULL,
+  `pro_id` int(11) UNSIGNED NOT NULL,
+  `item_id` int(11) UNSIGNED NOT NULL,
+  `pro_qty` int(11) NOT NULL,
+  `pro_unit` varchar(4) NOT NULL,
+  `unit_price` decimal(12,2) NOT NULL,
+  `pro_discount` decimal(6,2) NOT NULL,
+  `pro_discount_amt` decimal(12,2) NOT NULL,
+  `vat` decimal(6,2) NOT NULL,
+  `cgst_per` decimal(6,2) NOT NULL,
+  `sgst_per` decimal(6,2) NOT NULL,
+  `igst_per` decimal(6,2) NOT NULL,
+  `pro_value` decimal(12,2) NOT NULL,
+  `tax_value` decimal(12,2) NOT NULL,
+  `cgst_val` decimal(12,2) NOT NULL,
+  `sgst_val` decimal(12,2) NOT NULL,
+  `igst_val` decimal(12,2) NOT NULL,
+  `net_value` decimal(12,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tbl_proforma_pack_details`
+--
+
+CREATE TABLE `tbl_proforma_pack_details` (
+  `pack_pro_details_id` int(11) NOT NULL,
+  `pro_id` int(11) UNSIGNED NOT NULL,
+  `pro_pack_decp` varchar(100) DEFAULT NULL,
+  `pro_pack_percent` tinyint(1) DEFAULT NULL,
+  `pro_pack_text` decimal(12,2) DEFAULT NULL,
+  `pro_pack_taxable_val` decimal(12,2) NOT NULL,
+  `gst_id` int(11) UNSIGNED NOT NULL,
+  `pro_pack_vat` decimal(12,2) NOT NULL,
+  `pro_pack_value` decimal(12,2) NOT NULL,
+  `pro_pack_total` decimal(12,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `tbl_proforma`
+--
+ALTER TABLE `tbl_proforma`
+  ADD PRIMARY KEY (`pro_id`);
+
+--
+-- Indexes for table `tbl_proforma_details`
+--
+
+
+ALTER TABLE `tbl_proforma_details`
+  ADD PRIMARY KEY (`details_id`);
+
+--
+-- Indexes for table `tbl_proforma_pack_details`
+--
+ALTER TABLE `tbl_proforma_pack_details`
+  ADD PRIMARY KEY (`pack_pro_details_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `tbl_proforma`
+--
+ALTER TABLE `tbl_proforma`
+  MODIFY `pro_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `tbl_proforma_details`
+--
+ALTER TABLE `tbl_proforma_details`
+  MODIFY `details_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `tbl_proforma_pack_details`
+--
+ALTER TABLE `tbl_proforma_pack_details`
+  MODIFY `pack_pro_details_id` int(11) NOT NULL AUTO_INCREMENT;
+COMMIT;
+
+
+----------------------------------
+ALTER TABLE `tbl_proforma` CHANGE `pro_trans_charge` `pro_trans_charge` TINYINT NOT NULL; 
+
+ALTER TABLE `mst_supplier_new` ADD `discount_apply` TINYINT NOT NULL DEFAULT '0' COMMENT '0 - default\r\n1 - any discount allowed' AFTER `supp_status`; 

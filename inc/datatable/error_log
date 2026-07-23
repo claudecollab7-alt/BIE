@@ -1,0 +1,70 @@
+[25-May-2023 11:49:32 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'a.dc_remarks' in 'field list' in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php:55
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php(55): PDO->query('SELECT * ,a.dc_...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php on line 55
+[29-May-2023 11:33:38 Asia/Calcutta] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home4/tulipzbj/public_html/bie/inc/common/dbhandler.php:143
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxQuotationlist.php(127): dbhandler->GetSingleReconrd('tbl_invoice', 'inv_status', 'inv_id', 1)
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/common/dbhandler.php on line 143
+[29-May-2023 11:46:24 Asia/Calcutta] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in /home4/tulipzbj/public_html/bie/inc/common/dbhandler.php:169
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxSaleslist.php(96): dbhandler->GetCount('tbl_sales_order...', 'so_id', 5)
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/common/dbhandler.php on line 169
+[31-May-2023 12:07:09 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'dc_status' in order clause is ambiguous in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php:84
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php(84): PDO->query('SELECT * ,a.dc_...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php on line 84
+[31-May-2023 12:07:17 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'dc_status' in order clause is ambiguous in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php:84
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php(84): PDO->query('SELECT * ,a.dc_...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php on line 84
+[31-May-2023 14:41:13 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'sno' in 'order clause' in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php:65
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php(65): PDO->query('SELECT * FROM m...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php on line 65
+[31-May-2023 14:41:22 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'sno' in 'order clause' in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php:65
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php(65): PDO->query('SELECT * FROM m...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php on line 65
+[31-May-2023 14:41:28 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'sno' in 'order clause' in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php:65
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php(65): PDO->query('SELECT * FROM m...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php on line 65
+[31-May-2023 14:41:34 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'sno' in 'order clause' in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php:65
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php(65): PDO->query('SELECT * FROM m...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php on line 65
+[31-May-2023 14:41:41 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'sno' in 'order clause' in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php:65
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php(65): PDO->query('SELECT * FROM m...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxCustomerList.php on line 65
+[31-May-2023 16:05:02 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'dc_status' in order clause is ambiguous in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php:84
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php(84): PDO->query('SELECT * ,a.dc_...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php on line 84
+[31-May-2023 16:05:10 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'dc_status' in order clause is ambiguous in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php:84
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php(84): PDO->query('SELECT * ,a.dc_...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php on line 84
+[01-Jun-2023 10:38:58 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'dc_status' in order clause is ambiguous in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php:84
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php(84): PDO->query('SELECT * ,a.dc_...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php on line 84
+[01-Jun-2023 10:39:06 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[23000]: Integrity constraint violation: 1052 Column 'dc_status' in order clause is ambiguous in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php:84
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php(84): PDO->query('SELECT * ,a.dc_...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/datatable/ajaxDclist.php on line 84

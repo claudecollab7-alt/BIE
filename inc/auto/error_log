@@ -1,0 +1,10 @@
+[29-May-2023 14:26:22 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '%' OR item_desciption like '%cp- 7550-a - 5'%' OR item_purchase_code like '%cp- ' at line 2 in /home4/tulipzbj/public_html/bie/inc/auto/select_quotation_items.php:24
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/auto/select_quotation_items.php(24): PDO->query('SELECT * FROM t...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/auto/select_quotation_items.php on line 24
+[31-May-2023 17:26:10 Asia/Calcutta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '%' OR item_desciption like '%'%' OR item_purchase_code like '%'%')' at line 2 in /home4/tulipzbj/public_html/bie/inc/auto/select_quotation_items.php:24
+Stack trace:
+#0 /home4/tulipzbj/public_html/bie/inc/auto/select_quotation_items.php(24): PDO->query('SELECT * FROM t...')
+#1 {main}
+  thrown in /home4/tulipzbj/public_html/bie/inc/auto/select_quotation_items.php on line 24
