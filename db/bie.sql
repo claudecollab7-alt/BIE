@@ -5650,7 +5650,8 @@ INSERT INTO `mst_sub_menu` (`sm_id`, `mm_id`, `sm_index`, `sm_name`, `sm_url`, `
 (142, 22, 10, 'Sales Order Stock List', 'rpt_so_stock_list_branchwise.php', NULL, 1, '', NULL),
 (143, 25, 1, 'Spare Mapping', 'spare_mapping_list.php', NULL, 0, '', NULL),
 (144, 25, 2, 'Repair Indent', 'repair_indent_list.php', NULL, 1, '', NULL),
-(145, 22, 11, 'Item Branch Vise Discount', 'rpt_item_discount.php', NULL, 1, '', NULL);
+(145, 22, 11, 'Item Branch Vise Discount', 'rpt_item_discount.php', NULL, 1, '', NULL),
+(146, 1, 4, 'Common Settings', 'mst_common_settings.php', NULL, 1, '', NULL);
 
 -- --------------------------------------------------------
 
