@@ -212,6 +212,3 @@ COMMIT;
 ALTER TABLE `tbl_proforma` CHANGE `pro_trans_charge` `pro_trans_charge` TINYINT NOT NULL; 
 
 ALTER TABLE `mst_supplier_new` ADD `discount_apply` TINYINT NOT NULL DEFAULT '0' COMMENT '0 - default\r\n1 - any discount allowed' AFTER `supp_status`; 
-
-
-ALTER TABLE `mst_supplier_new` ADD `discount_skip_type` TINYINT NOT NULL DEFAULT '0' COMMENT '0 - default\r\n1 - any discount possible' AFTER `discount_apply`; 
