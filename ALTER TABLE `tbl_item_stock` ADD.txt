@@ -212,3 +212,5 @@ COMMIT;
 ALTER TABLE `tbl_proforma` CHANGE `pro_trans_charge` `pro_trans_charge` TINYINT NOT NULL; 
 
 ALTER TABLE `mst_supplier_new` ADD `discount_apply` TINYINT NOT NULL DEFAULT '0' COMMENT '0 - default\r\n1 - any discount allowed' AFTER `supp_status`; 
+
+INSERT INTO `mst_sub_menu` (`sm_id`, `mm_id`, `sm_index`, `sm_name`, `sm_url`, `sm_query`, `sm_show`, `sm_class`, `sm_default`) VALUES (146, 1, 4, 'Common Settings', 'mst_common_settings.php', NULL, 1, '', NULL);
