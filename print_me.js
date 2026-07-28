@@ -24,7 +24,7 @@
      //objWindow.close();
     }
 
-	function PrintPartsNew(arrElementNames, title) {
+	function PrintPartsNewPro(arrElementNames, title) {
 		var objWindow = window.open("about:blank", "print",
 			"left=0,top=0,width=900,height=600,toolbar=no,scrollbars=yes");
 
@@ -80,6 +80,40 @@
 		objWindow.document.write(strHtml);
 		objWindow.document.close();
 	}
+
+	
+	function PrintPartsNew(arrElementNames,title){
+     var objWindow=window.open("about:blank", "print", "left=0, top=0, width=800, height=450, toolbar=no, scrollbars=yes");
+     var strHtml="<!DOCTYPE html><html lang='en'>";
+	 strHtml += "<head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' />";
+	 strHtml += "<title>"+title+"</title>";
+	 strHtml += "<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' />";
+	 strHtml += "<link href='css/bootstrap.css' rel='stylesheet' type='text/css'>";
+	 strHtml += "<link href='css/bootstrap_limitless.css' rel='stylesheet' type='text/css'>";
+	 strHtml += "<link href='css/layout.css' rel='stylesheet' type='text/css'>";
+	 strHtml += "<link href='css/components.css' rel='stylesheet' type='text/css'>";
+	 strHtml += "<link href='css/colors.css' rel='stylesheet' type='text/css'>";
+	 strHtml += "<link href='css/custom.css' rel='stylesheet' type='text/css'>";
+	 strHtml += "</head>";
+     strHtml += "<body>";
+  	 strHtml += "<div class='invoice'>"
+	 for (var i=0; i<arrElementNames.length; i++)
+     {
+  	  var element=document.getElementById(arrElementNames[i]);
+  	  strHtml += element.innerHTML;
+     }
+	 //strHtml +="</body>";
+	 strHtml +="</div></body>";
+     strHtml += "</html>";
+	objWindow.document.write(strHtml);	
+	objWindow.onload = function () {
+		setTimeout(function () { // wait until all resources loaded 
+			objWindow.print();  // change window to winPrint
+			objWindow.close();// change window to winPrint
+		}, 200);
+	};
+	 objWindow.document.close();
+    }
 
 	/*function PrintPartsNew(arrElementNames, title) {
 		var objWindow = window.open("about:blank", "print", "left=0, top=0, width=800, height=450, toolbar=no, scrollbars=yes");

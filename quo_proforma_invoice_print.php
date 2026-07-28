@@ -196,7 +196,7 @@ if ($_REQUEST['pro_id'] != "") {
                                     <div class="list-icons">
                                         <a class="list-icons-item" href="home.php" title="Home"><i class="icon-home2 mr-2"></i></a>
                                         <a class="list-icons-item" href="lst_quotation.php" title="Proforma List"><i class="icon-arrow-left52 mr-2"></i></a>
-                                        <a class="list-icons-item" href="javascript:PrintPartsNew(['print_content1'],'<?php echo $obj->pro_refno; ?>');" title="Print Proforma"><i class="icon-printer2 mr-1"></i></a>
+                                        <a class="list-icons-item" href="javascript:PrintPartsNewPro(['print_content1'],'<?php echo $obj->pro_refno; ?>');" title="Print Proforma"><i class="icon-printer2 mr-1"></i></a>
                                         <a class="list-icons-item" data-action="fullscreen"></a>
                                     </div>
                                 </div>
