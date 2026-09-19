@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
-import part0, part1, part2, part3
+import part0, part1, part2, part3, part4, part5, part6, part7, part8
 
 meta = {
     "eyebrow": "BIE ERP  ·  FUNCTIONAL AND TECHNICAL DOCUMENTATION",
@@ -23,6 +23,8 @@ meta = {
 
 content = {"meta": meta, "chapters": [
     part0.chapter(), part1.chapter(), part2.chapter(), part3.chapter(),
+    part4.chapter(), part5.chapter(), part6.chapter(), part7.chapter(),
+    part8.chapter(),
 ]}
 
 def walk(o, path="root"):

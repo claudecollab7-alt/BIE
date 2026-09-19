@@ -5,6 +5,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from xlsx_data_p1 import SETTINGS, MASTERS, HR, TABLES_P1
+from xlsx_data_p2 import ITEMS, ATTEN, SALES, PURCHASE, STORES, TABLES_P2
 
 OUT = "/home/user/bie/docs/BIE_ERP_Documentation.xlsx"
 F = "Arial"
@@ -70,6 +71,11 @@ readme = [
  ("1. Settings", "3 screens - who may log in, which branches exist, and which suppliers get an automatic discount."),
  ("2. Masters", "9 screens - customers, suppliers, the address and org lookups, and the payroll calendar."),
  ("3. HR Management", "9 screens - the employee record, salary packages, advances, debit notes and shifts."),
+ ("4. Item Masters", "10 screens - the classification lists, the item record, kits, and the only screen that can change a price."),
+ ("5. Attendance+Salary", "5 screens - the biometric import, the payroll run, overtime and the PF return."),
+ ("6. Sales", "2 screens - the versioned quotation and the sales order generated from it."),
+ ("7. Purchase", "2 screens - the direct purchase order, and the pricing step between an indent and an order."),
+ ("8. Stores", "4 screens - the indent, the GRN (the only screen that increases stock), the return and the challan."),
  ("Tables Reference", "Every table touched in this phase, what it holds, and which screens use it."),
  ("Coverage", "Phase plan and progress, with live formulas."),
  ("", ""),
@@ -97,6 +103,12 @@ readme = [
  ("Included", "Only files the live menu actually opens - 63 screens across 11 menus."),
  ("Excluded", "Eight mst_sub_menu rows with no URL. Seven are hidden; one, Bank Account Details under Settings, is set to show but goes nowhere."),
  ("Field detail", "The fields that DRIVE behaviour, plus every table write in full. Not an exhaustive inventory of every input on every form."),
+ ("", ""),
+ ("WHAT ACTUALLY MOVES STOCK", ""),
+ ("Only four screens change it", "GRN (grn_add.php) puts stock UP. The three invoice screens - quo_invoice.php, dc_invoice.php, mng_invoice.php - put it DOWN. Nothing else in BIE touches tbl_item_stock's quantity columns, with one exception: Item Price Update writes the stock column too (see 4.10)."),
+ ("Two gaps, not design", "A DELIVERY CHALLAN takes goods out of the building and only the later invoice reduces stock, so anything despatched but not invoiced is counted twice. A PURCHASE RETURN sends goods back and NOTHING reduces stock at all, so the quantity stays up permanently."),
+ ("When a figure is wrong", "Check in this order: (1) challans raised but not invoiced, (2) purchase returns, (3) a price change made through Item Price Update, (4) whether you are reading tbl_item_details.item_curr_stock (stale) instead of the branch column on tbl_item_stock (live)."),
+ ("", ""),
  ("Related system", "Benzear is the sister codebase this one was forked from. Benzear is multi-COMPANY and keys on company_id; BIE is multi-BRANCH and keys on branch_id. A few unused company_id columns survive in BIE from that fork."),
 ]
 for label, text in readme:
@@ -179,16 +191,36 @@ menu_sheet("3. HR Management", "Menu 3  ·  HR Management  (mm_id = 23)",
            "9 screens. Setup: Labour Master, Salary Package, Shift Wise. Per person: the Employee form, which alone writes five tables. Ongoing: advances and debit notes, both of which post to the central journal.",
            HR)
 
+menu_sheet("4. Item Masters", "Menu 4  \u00b7  Item Masters  (mm_id = 3)",
+           "10 screens. Six one-field lists, HSN (which sets the tax), the item record - which creates the branch stock row - kits, and the price-change screen. An item lives in TWO tables: tbl_item_details says what it is, tbl_item_stock says what it costs and how many there are, per branch. The price and stock columns on tbl_item_details are STALE.",
+           ITEMS)
+
+menu_sheet("5. Attendance+Salary", "Menu 5  \u00b7  Attendance and Salary  (mm_id = 24)",
+           "5 screens. One imports punches, two calculate and pay, two report. Six things must be in place first: the employee and their bio_id, their CTC, their salary package, the month's working days, the punches, and the payment. Nothing is frozen until Issue Salary is pressed.",
+           ATTEN)
+
+menu_sheet("6. Sales", "Menu 6  \u00b7  Sales  (mm_id = 4)",
+           "2 menu items, a longer chain: quotation (versioned, verified then approved), sales order generated from it, delivery challan, invoice. STOCK DOES NOT MOVE UNTIL THE INVOICE - not on the quotation, not on the order, and not on the challan.",
+           SALES)
+
+menu_sheet("7. Purchase", "Menu 7  \u00b7  Purchase  (mm_id = 19)",
+           "2 screens, two routes to the same place. Either raise a purchase order directly, or let a store indent be priced up through PO Prepare. Both end at a purchase order waiting for goods, and both move no stock - the GRN does that.",
+           PURCHASE)
+
+menu_sheet("8. Stores", "Menu 8  \u00b7  Stores  (mm_id = 20)",
+           "4 screens, and the only place in BIE where stock goes UP. The GRN increases it; the store indent, the purchase return and the delivery challan all move nothing - and for the last two, that is a gap rather than a design.",
+           STORES)
+
 # ---------- TABLES REFERENCE ----------
 ws = wb.create_sheet("Tables Reference")
 set_widths(ws, [32, 14, 8, 74, 40])
-title_block(ws, "Tables Reference - Phase 1",
-            "Every table touched so far. The system has 105 tables in total; the rest arrive with the later menus.")
+title_block(ws, "Tables Reference - Phases 1 and 2",
+            "Every table touched so far. The system has 105 tables in total; the rest arrive with Accounts, Report and Service.")
 for i, h in enumerate(["Table", "Kind", "Cols", "What it holds", "Used by"], start=1):
     ws.cell(row=5, column=i, value=h)
 style_header(ws, 5, 5)
 r = 6
-for k, row in enumerate(TABLES_P1):
+for k, row in enumerate(TABLES_P1 + TABLES_P2):
     write_row(ws, r, row, zebra=(k % 2 == 1), bold_cols=(1,))
     ws.row_dimensions[r].height = 30 if len(row[3]) > 78 else 16
     r += 1
@@ -199,17 +231,20 @@ COV = [
  [1,  "Settings",              1,  3,  "Part 1",  "Phase 1", "Done"],
  [2,  "Masters",               2,  9,  "Part 2",  "Phase 1", "Done"],
  [3,  "HR Management",         23, 9,  "Part 3",  "Phase 1", "Done"],
- [4,  "Item Masters",          3,  10, "Part 4",  "Phase 2", "Pending"],
- [5,  "Attendance and Salary", 24, 5,  "Part 5",  "Phase 2", "Pending"],
- [6,  "Sales",                 4,  2,  "Part 6",  "Phase 2", "Pending"],
- [7,  "Purchase",              19, 2,  "Part 7",  "Phase 2", "Pending"],
- [8,  "Stores",                20, 4,  "Part 8",  "Phase 2", "Pending"],
+ [4,  "Item Masters",          3,  10, "Part 4",  "Phase 2", "Done"],
+ [5,  "Attendance and Salary", 24, 5,  "Part 5",  "Phase 2", "Done"],
+ [6,  "Sales",                 4,  2,  "Part 6",  "Phase 2", "Done"],
+ [7,  "Purchase",              19, 2,  "Part 7",  "Phase 2", "Done"],
+ [8,  "Stores",                20, 4,  "Part 8",  "Phase 2", "Done"],
  [9,  "Accounts",              21, 3,  "Part 9",  "Phase 3", "Pending"],
  [10, "Report",                22, 14, "Part 10", "Phase 3", "Pending"],
  [11, "Service",               25, 2,  "Part 11", "Phase 3", "Pending"],
 ]
 NOTES = {
  "Settings": "Administrators only. One menu item has no file behind it",
+ "Item Masters": "The item record creates the branch stock row",
+ "Attendance and Salary": "Nothing is frozen until Issue Salary",
+ "Sales": "Stock does not move until the invoice",
  "Masters":  "Month Master is the payroll calendar, not a lookup",
  "Report":   "Largest menu - 14 reports",
  "Stores":   "Where stock actually moves",

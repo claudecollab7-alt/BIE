@@ -169,14 +169,18 @@ def chapter():
          ("Files", "`lst_salary_package.php` (list) - `mst_salary_package_add.php` (add / edit) - "
                    "`inc/datatable/ajaxSalaryPackageList.php`"),
          ("Type", "Master - named pay structures")],
-        ["A salary package is a named breakdown of pay: **basic, DA, HRA, conveyance, PF and CCA**. Instead "
-         "of typing six figures for every employee, you define the package once and attach people to it.",
-         "A package is either **monthly** or **daily**, which changes what the figures mean - a monthly "
-         "amount, or a per-day rate."],
+        ["A salary package says **how a salary is split up** - what share of it is basic, DA, HRA, "
+         "conveyance and CCA, and what rate of PF applies. The six figures are **percentages, not amounts**: "
+         "the shipped packages all read 40, 25, 25, 10, 12.",
+         "The amount itself is not here. It lives on the employee, set in **Employee Salary Setting** "
+         "(section 3.4). A package is the shape; the employee's CTC is the size.",
+         "By convention the packages are **named after the CTC they go with** - '18000', '20000', '12000'. "
+         "That is a naming habit, not something the code enforces or reads."],
         [["`mst_salary_setting`", "One row per package, with the six components"]],
-        ["Open **HR Management > Salary Package**. The list shows package name, type and the components.",
+        ["Open **HR Management > Salary Package**. The list shows package name, type and the percentages.",
          "**Add New** opens `mst_salary_package_add.php`.",
-         "Name the package, choose **Monthly** or **Daily**, set the period, and enter the six amounts.",
+         "Name the package, choose **Monthly** or **Daily**, set the period, and enter the six "
+         "**percentages**.",
          "Save. One row, straight in.",
          "The dustbin sets `rec_del_status = 0`."],
         [["INSERT", "`mst_salary_setting`", "`sal_package_name`, `sal_type`, `sal_period`, `sal_basic`, "
@@ -188,47 +192,100 @@ def chapter():
          "and are apportioned by days worked",
          "**EPF Report** - through `sal_pf`"],
         fields=[
-            ["`sal_package_name`", "Free text, 25 characters. How you recognise it - keep it descriptive"],
-            ["`sal_type`", "**`M` monthly, `D` daily.** Decides whether the figures are a month's pay or a "
-             "day's"],
-            ["`sal_period`", "The period the package covers"],
-            ["`sal_basic`, `sal_da`, `sal_hra`, `sal_convey`, `sal_pf`, `sal_cca`", "The six components. "
-             "Each is `decimal(6,2)`"],
+            ["`sal_package_name`", "Free text, 25 characters. By convention the CTC figure it goes with"],
+            ["`sal_type`", "`M` monthly, `D` daily. A label - the calculation reads `sal_period`, not this"],
+            ["`sal_period`", "**This is the one that matters.** `2` means the CTC is a **monthly** figure, "
+             "so earned pay is `CTC / working days \u00d7 days paid`. Anything else means the CTC is a "
+             "**daily rate**, so earned pay is `CTC \u00d7 days paid`"],
+            ["`sal_basic`, `sal_da`, `sal_hra`, `sal_convey`, `sal_cca`", "**Percentages of earned pay**, "
+             "not amounts. 40 means 40 per cent"],
+            ["`sal_pf`", "The PF rate, also a percentage - but of **basic + DA**, not of the whole"],
         ],
         notes=[
-            warn("**Every component is `decimal(6,2)` - the largest value that fits is 9999.99.** A basic "
-                 "salary above ten thousand cannot be stored. MySQL will either refuse it or silently clamp "
-                 "it, depending on the server's strict-mode setting, and nothing on the screen warns you. "
-                 "Widening these columns is the fix; until then, check what was actually saved after "
-                 "entering a large figure."),
-            note("**Editing a package changes pay for everybody on it, including for past months.** The "
-                 "attendance and salary reports read the current package row each time they are opened - "
-                 "nothing is copied onto the employee or frozen at month end. To change pay for one person, "
-                 "move them to a different package; to change it from a date, make a new package."),
+            tip("**How the percentages are used.** The attendance reports first work out earned pay from "
+                "the employee's CTC and the days they were paid for, then split it:\n"
+                "`basic = earned \u00d7 sal_basic%`, and the same for DA, HRA and conveyance; then "
+                "`EPF = (basic + DA) \u00d7 sal_pf%`. So the percentages decide the **split and the PF "
+                "deduction**, never the total."),
+            warn("**Nothing checks that the percentages add up to 100.** Enter 40 / 25 / 25 / 10 and the "
+                 "four shares come to 100 per cent of earned pay, which is what the shipped packages do. "
+                 "Enter figures that sum to 90 and the payslip simply shows components that do not add up "
+                 "to the net - no warning, no error. Add them up yourself before saving."),
+            warn("**Editing a package changes pay for everybody on it, including for past months.** The "
+                 "attendance reports read the current package row each time they are opened - nothing is "
+                 "copied onto the employee or frozen at month end. To change one person's pay, change "
+                 "their CTC in Employee Salary Setting, which **is** versioned; only change a package when "
+                 "the split itself is wrong."),
         ])
     b += [pb()]
 
     # ------------------------------------------------------------------ 3.4
-    b += [h2("3.4  Employee Salary")]
-    b += [table([22, 78], None, [
-        ["What it does", "Shows every employee with their **CTC**, searchable and filterable. That is all - "
-         "**nothing on this screen writes anything**"],
-        ["Files", "`employee_salary.php` + `inc/datatable/ajaxEmployeeSalarySet.php` + "
-         "`modal_employee_det.php`"],
-        ["Tables", "`mst_employee` (for `emp_ctc`), left-joined to `mst_department` and `mst_designation`"],
-        ["Writes", "**None.** Read only"],
-        ["Filters", "Employee name, code, mobile, department or designation; plus branch and employee type"],
-    ], bold_first=True)]
-    b += [p("Despite the name, this is not where salary is set or run. It is a quick answer to *what is "
-            "everyone on?* - one line per employee showing code, name, department, designation and CTC. The "
-            "eye icon opens the full employee record in a modal.")]
-    b += [note("**Where salary actually happens.** The figures come from the **Salary Package** attached to "
-               "the employee, apportioned by the days in **Month Master** and the punches from **Import "
-               "Attendance**. The four **Attendance and Salary** reports do the calculation. Those are all "
-               "covered in Part 5.")]
-    b += [note("`emp_ctc` is a column on `mst_employee`, but the Employee form does not offer it and this "
-               "screen does not edit it. In the shipped code it is set directly in the database. If CTC "
-               "shows as zero for everyone, that is why.")]
+    b += form2(
+        "3.4", "Employee Salary Setting",
+        [("Menu", "HR Management > Employee Salary Setting"),
+         ("Files", "`employee_salary.php` (list) - `emp_setsalary.php` (**the actual setting screen**) - "
+                   "`inc/datatable/ajaxEmployeeSalarySet.php` - `modal_employee_det.php`"),
+         ("Type", "Versioned transaction - **without a row here, an employee has no pay**")],
+        ["The list answers *what is everyone on?* - one line per employee with code, name, department, "
+         "designation and CTC. It is the way in to the screen that matters.",
+         "Click an employee and `emp_setsalary.php` opens. There you set their **CTC**, the **salary "
+         "package** that says how it splits, their **overtime rate**, their **casual leave** entitlement, "
+         "and the date the figures take effect from.",
+         "Saving does **not** overwrite the old figures. It retires the previous row and writes a new one, "
+         "so the employee's whole salary history stays intact and last year's pay can still be explained."],
+        [["`tbl_emp_salary`", "**One row per salary revision.** The live one is flagged `em_current = 1`"],
+         ["`mst_employee`", "Updated - `emp_ctc` and `em_id` are cached onto the employee row"],
+         ["`mst_salary_setting`", "Read - the package dropdown"],
+         ["`mst_department`, `mst_designation`", "Read, for the list"]],
+        ["Open **HR Management > Employee Salary Setting**. Search by name, code, mobile, department or "
+         "designation; filter by branch and employee type.",
+         "Click through to `emp_setsalary.php` for one employee. Their current figures and the full history "
+         "of past revisions are shown.",
+         "Enter the new **CTC**, choose the **salary package**, set the **OT rate**, the **casual leave** "
+         "figure and whether function holidays are allowed, and give the **effective-from date** and a "
+         "remark.",
+         "Save. In one go: every existing row for this employee has `em_current` set to `0`; a new row is "
+         "inserted with `em_current = 1`; and `mst_employee.emp_ctc` and `em_id` are pointed at it.",
+         "The new CTC is used by the next attendance report you run."],
+        [["UPDATE", "`tbl_emp_salary`", "`SET em_current = 0` for this employee - **retires the old "
+          "revision, does not delete it**"],
+         ["INSERT", "`tbl_emp_salary`", "The new revision: `emp_id`, `sal_id`, `emp_ctc`, `emp_ot_sal`, "
+          "`emp_cl`, `is_allow_fh`, `em_from`, `em_current = 1`, `em_remarks`, `em_update_by`, "
+          "`em_date_time`"],
+         ["UPDATE", "`mst_employee`", "`emp_ctc` and `em_id` - a cached copy of the new current revision"]],
+        ["**Attendance Report (PF)** and **(Without PF)** - earned pay is `CTC / working days \u00d7 days "
+         "paid`, then split by the package's percentages",
+         "**OT Report** - through `emp_ot_sal`",
+         "**EPF Report** - PF is a percentage of basic + DA, both derived from this CTC",
+         "This list - the CTC column",
+         "The employee's own record - `mst_employee.emp_ctc`"],
+        fields=[
+            ["`emp_ctc`", "**The number everything else is derived from.** Monthly or daily depending on "
+             "the package's `sal_period`"],
+            ["`sal_id`", "Which **salary package** splits it - see section 3.3"],
+            ["`em_current`", "`1` on the live revision, `0` on every superseded one. Every payroll query "
+             "filters on it"],
+            ["`em_from`", "The date this revision takes effect"],
+            ["`emp_ot_sal`", "The overtime rate, used by the OT report"],
+            ["`emp_cl`", "Casual leave entitlement"],
+            ["`is_allow_fh`", "Whether function holidays are paid for this employee"],
+            ["`mst_employee.em_id`", "Points at the current `tbl_emp_salary` row - a cache, so screens can "
+             "find the live revision in one hop"],
+        ],
+        notes=[
+            warn("**An employee with no row here is paid nothing.** The Employee form does not ask for CTC, "
+                 "so a newly created employee has none until someone comes to this screen. The attendance "
+                 "reports will list them with zeros rather than warn you. Set the salary as the second step "
+                 "after creating anyone."),
+            note("**Two copies of the CTC exist**, and they are written together: the real one on the "
+                 "current `tbl_emp_salary` row, and a cached copy on `mst_employee.emp_ctc`. The list on "
+                 "this screen shows the cached copy; the payroll reports read the real one. They agree as "
+                 "long as changes go through this screen - a direct database edit to `mst_employee.emp_ctc` "
+                 "changes what you see and not what is paid."),
+            tip("**This is the `em_current` pattern**, and BIE uses it wherever history has to survive: "
+                "never overwrite, retire the old row and insert a new one, then cache the pointer on the "
+                "parent. `tbl_emp_advance` and `tbl_emp_debit_note` use the same idea with `is_current`."),
+        ])
     b += [pb()]
 
     # ------------------------------------------------------------------ 3.5
@@ -366,12 +423,13 @@ def chapter():
         [("Menu", "HR Management > Shift Wise"),
          ("Files", "`shift_wise.php` (list) - `shift_wise_time_setting.php` (edit the times)"),
          ("Type", "Settings - **the rules attendance is judged against**")],
-        ["Two shifts, DAY and NIGHT, and the exact clock times that define each one. This is a small screen "
-         "with a large reach: **it is what turns a raw biometric punch into a present, a late or an "
-         "overtime**.",
-         "Each shift carries six times, not two. The official check-in and check-out, plus a window around "
-         "each - the earliest and latest a punch will be accepted as that shift's check-in, and the same for "
-         "check-out. A punch outside the window is not counted as that shift at all."],
+        ["Two shifts, DAY and NIGHT, and the clock times that define each one. The official check-in and "
+         "check-out are what the attendance import measures lateness against: how many minutes after "
+         "`check_in` someone arrived, how many minutes before `check_out` they left.",
+         "Each shift row also carries a **window** around each of those times, a shift **duration**, and a "
+         "**next-day check-out** flag. They are on the form and they save - but as the code stands, "
+         "**nothing reads them.** Only `check_in` and `check_out` have any effect. See the warning below "
+         "before you spend time tuning the rest."],
         [["`mst_shifts`", "One row per shift, with the six times, the duration and the next-day flag"]],
         ["Open **HR Management > Shift Wise**. Two rows - DAY and NIGHT.",
          "Click the pencil to open `shift_wise_time_setting.php` for that shift.",
@@ -383,36 +441,41 @@ def chapter():
          "Update. **You cannot add or delete a shift here** - only edit the two that exist."],
         [["UPDATE", "`mst_shifts`", "The six times, `duration`, `work_day` and `is_nxtday_checkout` for the "
           "one shift you edited. **That is the only write this screen makes**"]],
-        ["**Import Attendance** - each punch is matched against these windows to decide which shift it "
-         "belongs to and whether it counts",
-         "**Attendance Report (PF)** and **(Without PF)** - present, absent and half-day come out of this",
-         "**OT Report** - overtime is time worked beyond `duration`"],
+        ["**Import Attendance** - after pairing punches into a check-in and a check-out, it reads this row "
+         "and works out `late_in`, `late_out`, `early_in` and `early_out` in minutes",
+         "**Attendance Report (PF)** and **(Without PF)** - those minutes feed present, absent and half-day",
+         "**OT Report** - overtime is derived from the recorded work time"],
         fields=[
             ["`shift_name`", "`DAY` or `NIGHT`"],
             ["`check_in`, `check_out`", "The official start and end. In the shipped data, DAY is 09:00 to "
              "17:30 and NIGHT is 19:00 to 07:00"],
-            ["`check_in_start`, `check_in_end`", "The window a check-in punch must fall in. DAY accepts "
-             "08:00 to 09:05 - so a punch at 09:06 is **not a late check-in, it is not a check-in at all**"],
-            ["`check_out_start`, `check_out_end`", "The same for going home. DAY accepts 17:30 to 23:00"],
-            ["`duration`", "Full shift length **in minutes** - 510 for DAY (8.5 hours), 540 for NIGHT (9). "
-             "Overtime is measured against this"],
-            ["`is_nxtday_checkout`", "**`1` means the shift ends the following day.** NIGHT is `1`: a "
-             "check-in at 19:00 pairs with a check-out at 07:00 the next morning"],
-            ["`work_day`", "How much of a working day one shift counts as"],
+            ["`check_in_start`, `check_in_end`", "Intended as the window a check-in punch must fall in - DAY "
+             "holds 08:00 to 09:05. **Stored and editable, but nothing reads them**"],
+            ["`check_out_start`, `check_out_end`", "The same for going home - DAY holds 17:30 to 23:00. "
+             "**Also unread**"],
+            ["`duration`", "Full shift length in minutes - 510 for DAY, 540 for NIGHT. Read-only on the "
+             "form, and **not used by the import or by the OT report**"],
+            ["`is_nxtday_checkout`", "Intended to mean the shift ends the following day - NIGHT holds `1`. "
+             "**No PHP file in BIE reads this column at all**"],
+            ["`work_day`", "How much of a working day one shift counts as. Not read either - the reports "
+             "compute their own `work_days` figure from Month Master"],
             ["`status`", "`1` active, `0` deleted"],
         ],
         notes=[
-            warn("**The windows are narrow, and a punch outside them is thrown away.** The DAY check-in "
-                 "window closes at 09:05. Someone punching at 09:15 has no check-in for that day, so the "
-                 "attendance report shows them absent rather than late. If a whole group shows as absent on "
-                 "a day you know they worked, widen `check_in_end` and import again."),
-            warn("**Changing these times changes attendance that was already imported and reported.** The "
-                 "reports re-derive present, absent and overtime from `mst_shifts` every time they run. "
-                 "Adjust a window and last month's figures change with it. Make shift changes at a month "
+            warn("**Six of the eight fields on this form do nothing.** The import fetches the shift row and "
+                 "uses only `check_in` and `check_out`, to work out how many minutes late or early someone "
+                 "was. The four window fields are fetched in the same query and then never looked at; "
+                 "`duration` and `work_day` are read by nothing; and **no file in BIE reads "
+                 "`is_nxtday_checkout` at all**. Changing them is harmless, and it is also pointless - do "
+                 "not tune a window expecting attendance to change."),
+            warn("**The NIGHT shift is never assigned.** `import_attendance.php` sets `shift_id = 1` for "
+                 "every punch it processes, so every employee is treated as DAY shift whatever time they "
+                 "actually worked. A night worker checking in at 19:00 is measured against DAY's 09:00 "
+                 "start and comes out enormously late. The NIGHT row exists and is editable, but until the "
+                 "import chooses a shift, editing it changes nothing."),
+            warn("**Changing `check_in` or `check_out` changes attendance already imported.** The late and "
+                 "early minutes are recalculated whenever a row is reprocessed. Make changes at a month "
                  "boundary, and print anything you need to keep first."),
-            note("**`is_nxtday_checkout` is what makes the night shift work.** Without it a 19:00 check-in "
-                 "and a 07:00 check-out look like twelve hours of absence rather than a completed shift. If "
-                 "night-shift attendance is wrong, check this flag before anything else."),
             note("There is no add or delete on this screen - `shift_wise.php` only lists and edits. Adding a "
                  "third shift means inserting a `mst_shifts` row directly, and then checking that the "
                  "import and the reports cope with three."),
