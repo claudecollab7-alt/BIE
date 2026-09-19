@@ -1,0 +1,520 @@
+[
+ {
+  "mm_id": 1,
+  "mm_index": 1,
+  "name": "Settings",
+  "subs": [
+   {
+    "sm_id": 1,
+    "mm_id": 1,
+    "idx": 1,
+    "name": "User",
+    "url": "mst_user.php"
+   },
+   {
+    "sm_id": 108,
+    "mm_id": 1,
+    "idx": 3,
+    "name": "Branch",
+    "url": "mst_branch.php"
+   },
+   {
+    "sm_id": 146,
+    "mm_id": 1,
+    "idx": 4,
+    "name": "Common Settings",
+    "url": "mst_common_settings.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 2,
+  "mm_index": 2,
+  "name": "Masters",
+  "subs": [
+   {
+    "sm_id": 4,
+    "mm_id": 2,
+    "idx": 1,
+    "name": "Customers",
+    "url": "lst_customers.php"
+   },
+   {
+    "sm_id": 5,
+    "mm_id": 2,
+    "idx": 2,
+    "name": "Suppliers",
+    "url": "lst_supplier.php"
+   },
+   {
+    "sm_id": 107,
+    "mm_id": 2,
+    "idx": 3,
+    "name": "Packing Box Type",
+    "url": "mst_boxtype.php"
+   },
+   {
+    "sm_id": 116,
+    "mm_id": 2,
+    "idx": 4,
+    "name": "State",
+    "url": "mst_state.php"
+   },
+   {
+    "sm_id": 117,
+    "mm_id": 2,
+    "idx": 5,
+    "name": "District",
+    "url": "mst_district.php"
+   },
+   {
+    "sm_id": 118,
+    "mm_id": 2,
+    "idx": 6,
+    "name": "City",
+    "url": "mst_city.php"
+   },
+   {
+    "sm_id": 121,
+    "mm_id": 2,
+    "idx": 7,
+    "name": "Department",
+    "url": "mst_department.php"
+   },
+   {
+    "sm_id": 122,
+    "mm_id": 2,
+    "idx": 8,
+    "name": "Designation",
+    "url": "mst_designation.php\\r\\n"
+   },
+   {
+    "sm_id": 50,
+    "mm_id": 2,
+    "idx": 9,
+    "name": "Month Master",
+    "url": "mst_month_master.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 23,
+  "mm_index": 3,
+  "name": "HR Management",
+  "subs": [
+   {
+    "sm_id": 120,
+    "mm_id": 23,
+    "idx": 1,
+    "name": "New Employee",
+    "url": "mst_employee_add.php\\r\\n"
+   },
+   {
+    "sm_id": 123,
+    "mm_id": 23,
+    "idx": 2,
+    "name": "Labour List",
+    "url": "lst_labour.php\\r\\n"
+   },
+   {
+    "sm_id": 124,
+    "mm_id": 23,
+    "idx": 3,
+    "name": "Staff List",
+    "url": "lst_staff.php\\r\\n"
+   },
+   {
+    "sm_id": 125,
+    "mm_id": 23,
+    "idx": 4,
+    "name": "Labour Group",
+    "url": "mst_labour.php"
+   },
+   {
+    "sm_id": 126,
+    "mm_id": 23,
+    "idx": 5,
+    "name": "Salary Package List",
+    "url": "lst_salary_package.php"
+   },
+   {
+    "sm_id": 127,
+    "mm_id": 23,
+    "idx": 6,
+    "name": "Employee Salary Setting",
+    "url": "employee_salary.php"
+   },
+   {
+    "sm_id": 56,
+    "mm_id": 23,
+    "idx": 7,
+    "name": "Employee Advance",
+    "url": "employee_advance.php"
+   },
+   {
+    "sm_id": 57,
+    "mm_id": 23,
+    "idx": 8,
+    "name": "Employee Debit Note",
+    "url": "employee_debit_note.php\\r\\n"
+   },
+   {
+    "sm_id": 58,
+    "mm_id": 23,
+    "idx": 9,
+    "name": "Shift Wise",
+    "url": "shift_wise.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 3,
+  "mm_index": 4,
+  "name": "Item Masters",
+  "subs": [
+   {
+    "sm_id": 6,
+    "mm_id": 3,
+    "idx": 1,
+    "name": "Principal",
+    "url": "mst_principal.php"
+   },
+   {
+    "sm_id": 7,
+    "mm_id": 3,
+    "idx": 2,
+    "name": "Division",
+    "url": "mst_division.php"
+   },
+   {
+    "sm_id": 8,
+    "mm_id": 3,
+    "idx": 3,
+    "name": "Category",
+    "url": "mst_category.php"
+   },
+   {
+    "sm_id": 9,
+    "mm_id": 3,
+    "idx": 4,
+    "name": "Brand / Make",
+    "url": "mst_brand.php"
+   },
+   {
+    "sm_id": 10,
+    "mm_id": 3,
+    "idx": 5,
+    "name": "Unit of Measurement (UOM)",
+    "url": "mst_uom.php"
+   },
+   {
+    "sm_id": 11,
+    "mm_id": 3,
+    "idx": 6,
+    "name": "HSN",
+    "url": "mst_hsn.php"
+   },
+   {
+    "sm_id": 12,
+    "mm_id": 3,
+    "idx": 7,
+    "name": "Color",
+    "url": "mst_color.php"
+   },
+   {
+    "sm_id": 13,
+    "mm_id": 3,
+    "idx": 8,
+    "name": "Item Details",
+    "url": "lst_item_details.php"
+   },
+   {
+    "sm_id": 14,
+    "mm_id": 3,
+    "idx": 9,
+    "name": "Item Grouping",
+    "url": "lst_item_grouping.php"
+   },
+   {
+    "sm_id": 15,
+    "mm_id": 3,
+    "idx": 10,
+    "name": "Item Price History",
+    "url": "mst_itemprice_history_list.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 24,
+  "mm_index": 4,
+  "name": "Attendance and Salary",
+  "subs": [
+   {
+    "sm_id": 51,
+    "mm_id": 24,
+    "idx": 1,
+    "name": "Attendance Update",
+    "url": "import_attendance.php"
+   },
+   {
+    "sm_id": 52,
+    "mm_id": 24,
+    "idx": 2,
+    "name": "Employee Salary Report - PF",
+    "url": "attendance_report_pf.php"
+   },
+   {
+    "sm_id": 53,
+    "mm_id": 24,
+    "idx": 3,
+    "name": "Employee Salary Report - WPF",
+    "url": "attendance_report_withoutpf.php"
+   },
+   {
+    "sm_id": 54,
+    "mm_id": 24,
+    "idx": 4,
+    "name": "Employee Salary Report - OT",
+    "url": "attendance_report_ot.php"
+   },
+   {
+    "sm_id": 55,
+    "mm_id": 24,
+    "idx": 5,
+    "name": "Employee Salary Report - EPF",
+    "url": "attendance_report_epf.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 4,
+  "mm_index": 5,
+  "name": "Sales",
+  "subs": [
+   {
+    "sm_id": 104,
+    "mm_id": 4,
+    "idx": 2,
+    "name": "Quotation List",
+    "url": "lst_quotation.php"
+   },
+   {
+    "sm_id": 105,
+    "mm_id": 4,
+    "idx": 3,
+    "name": "Sales Order List",
+    "url": "lst_sales_order.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 19,
+  "mm_index": 6,
+  "name": "Purchase",
+  "subs": [
+   {
+    "sm_id": 16,
+    "mm_id": 19,
+    "idx": 1,
+    "name": "Direct Purchase Order",
+    "url": "lst_direct_po.php"
+   },
+   {
+    "sm_id": 114,
+    "mm_id": 19,
+    "idx": 2,
+    "name": "Prepare Purchase Order",
+    "url": "po_prepare_list.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 20,
+  "mm_index": 7,
+  "name": "Stores",
+  "subs": [
+   {
+    "sm_id": 17,
+    "mm_id": 20,
+    "idx": 2,
+    "name": "GRN",
+    "url": "grn_list.php"
+   },
+   {
+    "sm_id": 113,
+    "mm_id": 20,
+    "idx": 5,
+    "name": "DC List",
+    "url": "dc_list.php"
+   },
+   {
+    "sm_id": 100,
+    "mm_id": 20,
+    "idx": 6,
+    "name": "Purchase Return List",
+    "url": "purchase_return_list.php"
+   },
+   {
+    "sm_id": 115,
+    "mm_id": 20,
+    "idx": 6,
+    "name": "Store Indent List",
+    "url": "store_indent_list.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 21,
+  "mm_index": 8,
+  "name": "Accounts",
+  "subs": [
+   {
+    "sm_id": 18,
+    "mm_id": 21,
+    "idx": 3,
+    "name": "Invoice List",
+    "url": "invoice_list.php"
+   },
+   {
+    "sm_id": 106,
+    "mm_id": 21,
+    "idx": 4,
+    "name": "Sales Order in Accounts",
+    "url": "lst_sales_receipt.php"
+   },
+   {
+    "sm_id": 59,
+    "mm_id": 21,
+    "idx": 5,
+    "name": "GRN Payment in Accounts",
+    "url": "grn_payment_details.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 22,
+  "mm_index": 9,
+  "name": "Report",
+  "subs": [
+   {
+    "sm_id": 22,
+    "mm_id": 22,
+    "idx": 1,
+    "name": "Stock",
+    "url": "store_stock_list.php"
+   },
+   {
+    "sm_id": 102,
+    "mm_id": 22,
+    "idx": 2,
+    "name": "Current Stock",
+    "url": "rpt_store_stock_list.php"
+   },
+   {
+    "sm_id": 109,
+    "mm_id": 22,
+    "idx": 2,
+    "name": "All Current Stock",
+    "url": "rpt_all_store_stock_list.php"
+   },
+   {
+    "sm_id": 110,
+    "mm_id": 22,
+    "idx": 3,
+    "name": "Branch Wise Current Stock",
+    "url": "rpt_branch_wise_stock.php"
+   },
+   {
+    "sm_id": 111,
+    "mm_id": 22,
+    "idx": 4,
+    "name": "Item Stock History",
+    "url": "rpt-item-stock-history.php"
+   },
+   {
+    "sm_id": 112,
+    "mm_id": 22,
+    "idx": 5,
+    "name": "Branch Wise Item Stock History",
+    "url": "rpt_item_stock_history_branch_wise.php"
+   },
+   {
+    "sm_id": 119,
+    "mm_id": 22,
+    "idx": 5,
+    "name": "Cost Work Sheet",
+    "url": "rpt_cost_worksheet.php"
+   },
+   {
+    "sm_id": 103,
+    "mm_id": 22,
+    "idx": 7,
+    "name": "Credit",
+    "url": "rpt_credit_list.php"
+   },
+   {
+    "sm_id": 137,
+    "mm_id": 22,
+    "idx": 7,
+    "name": "Quotation Report",
+    "url": "quotation_branch_rept.php"
+   },
+   {
+    "sm_id": 23,
+    "mm_id": 22,
+    "idx": 8,
+    "name": "Daily Sales",
+    "url": "rpt_sales_list.php"
+   },
+   {
+    "sm_id": 138,
+    "mm_id": 22,
+    "idx": 8,
+    "name": "Invoice Report",
+    "url": "invoice_report.php"
+   },
+   {
+    "sm_id": 139,
+    "mm_id": 22,
+    "idx": 9,
+    "name": "Sales Order Report",
+    "url": "rpt_sales_order.php"
+   },
+   {
+    "sm_id": 142,
+    "mm_id": 22,
+    "idx": 10,
+    "name": "Sales Order Stock List",
+    "url": "rpt_so_stock_list_branchwise.php"
+   },
+   {
+    "sm_id": 145,
+    "mm_id": 22,
+    "idx": 11,
+    "name": "Item Branch Vise Discount",
+    "url": "rpt_item_discount.php"
+   }
+  ]
+ },
+ {
+  "mm_id": 25,
+  "mm_index": 10,
+  "name": "Service",
+  "subs": [
+   {
+    "sm_id": 143,
+    "mm_id": 25,
+    "idx": 1,
+    "name": "Spare Mapping",
+    "url": "spare_mapping_list.php"
+   },
+   {
+    "sm_id": 144,
+    "mm_id": 25,
+    "idx": 2,
+    "name": "Repair Indent",
+    "url": "repair_indent_list.php"
+   }
+  ]
+ }
+]
