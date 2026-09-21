@@ -164,8 +164,8 @@ def chapter():
          ["INSERT", "`tbl_accounts`", "`voucher_type = 'Employee Salary'`, `acc_tran_value = net`, "
           "`dr_ledger_id = 1`, `cr_ledger_id` = the employee's ledger"]],
         ["**EPF Report** - reads the issued `WPF` rows; nothing appears there until salary is issued",
-         "**Day Book**, **Ledger Book**, **Trial Balance** - through `tbl_accounts`",
-         "The employee's ledger - the salary sits as a credit until paid out",
+         "`tbl_accounts` - a credit against the employee's ledger. **Written and never read** (see "
+         "section 9.1), so the payslip row is the record that matters",
          "**Employee Advance** and **Employee Debit Note** - balances fall as instalments are recovered"],
         fields=[
             ["`emp_pf`", "`2` puts the employee on the PF report; anything else on the Without PF report"],
@@ -185,8 +185,9 @@ def chapter():
                  "`tbl_emp_monthly_salary` for duplicates if anything is re-submitted."),
             warn("**The salary expense ledger is hardcoded as ledger id `1`.** Every salary posts "
                  "`dr_ledger_id = 1`. If ledger `1` in your database is not the salary account, every "
-                 "payroll entry lands in the wrong place, and the Trial Balance will still balance. Check "
-                 "what ledger `1` actually is before the first run."),
+                 "payroll entry names the wrong account. Nothing reads the journal, so nothing will ever "
+                 "tell you - but it matters the day someone builds a ledger report on top of it. Check "
+                 "what ledger `1` actually is."),
             warn("**A part-recovery of an advance marks it settled.** Same behaviour as section 3.5: the "
                  "(+) action sets `advance_status = 3` whatever the amount. The next month's report reads "
                  "the outstanding balance with `advance_status != 3`, so **an advance recovered in "
@@ -230,8 +231,7 @@ def chapter():
           "`salary_status = 1`, `issued_by`, `issued_dtm`"],
          ["INSERT", "`tbl_accounts`", "A second journal entry for the same employee and month, separate "
           "from their salary"]],
-        ["**Day Book**, **Ledger Book**, **Trial Balance**",
-         "The employee's ledger - a second credit for the month",
+        ["`tbl_accounts` - a second, separate credit against the employee's ledger for the month",
          "`tbl_emp_monthly_salary` - two rows for the month, one `WPF` or `WOPF` and one `OT`"],
         fields=[
             ["`emp_ot_sal`", "The rate **per hour**, held on `tbl_emp_salary` per revision"],

@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 import json
 import part0, part1, part2, part3, part4, part5, part6, part7, part8
+import part9, part10, part11
 
 meta = {
     "eyebrow": "BIE ERP  ·  FUNCTIONAL AND TECHNICAL DOCUMENTATION",
     "title": "BIE ERP",
     "subtitle": "Complete walkthrough, menu by menu — forms, tables, flows and where every change shows up",
     "coverPoints": [
-        "Phase 1 · Parts 0 to 3 · Settings, Masters and HR Management",
+        "Complete · all 11 menus · all 63 screens · Parts 0 to 11",
         "Written for both the people who use BIE and the people who maintain it.",
     ],
     "coverFacts": [
         ["System", "BIE ERP — PHP + MySQL, 105 tables, 11 menus, 63 screens, 3 branches"],
-        ["This document", "Phase 1 — Parts 0 to 3, covering 21 screens across 3 menus"],
+        ["This document", "Complete — Parts 0 to 11, covering all 63 screens across all 11 menus"],
         ["Schema source", "db/bie.sql (the current dump in the repository)"],
         ["Depth", "Purpose · tables used · driving fields · full flow · every table write · where it reflects"],
         ["Scope note", "Live menu-reachable files only. Legacy and duplicate variants are excluded"],
@@ -24,7 +25,7 @@ meta = {
 content = {"meta": meta, "chapters": [
     part0.chapter(), part1.chapter(), part2.chapter(), part3.chapter(),
     part4.chapter(), part5.chapter(), part6.chapter(), part7.chapter(),
-    part8.chapter(),
+    part8.chapter(), part9.chapter(), part10.chapter(), part11.chapter(),
 ]}
 
 def walk(o, path="root"):

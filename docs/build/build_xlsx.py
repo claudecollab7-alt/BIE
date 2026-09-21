@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""BIE ERP documentation workbook - Phase 1."""
+"""BIE ERP documentation workbook - all 11 menus, all 63 screens."""
 import json, os
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from xlsx_data_p1 import SETTINGS, MASTERS, HR, TABLES_P1
 from xlsx_data_p2 import ITEMS, ATTEN, SALES, PURCHASE, STORES, TABLES_P2
+from xlsx_data_p3 import ACCOUNTS, REPORTS, SERVICE, TABLES_P3
 
 OUT = "/home/user/bie/docs/BIE_ERP_Documentation.xlsx"
 F = "Arial"
@@ -60,10 +61,10 @@ ws = wb.active
 ws.title = "README"
 set_widths(ws, [34, 104])
 title_block(ws, "BIE ERP - Documentation Workbook",
-            "Phase 1  ·  Settings, Masters and HR Management  ·  21 of 63 screens  ·  companion to the Word document")
+            "Complete  ·  all 11 menus, all 63 screens  ·  companion to the Word document")
 r = 5
 readme = [
- ("What this workbook is", "One row per screen, one sheet per menu. The same material as the Word document, laid out for quick lookup and for tracking coverage as later phases are added."),
+ ("What this workbook is", "One row per screen, one sheet per menu, covering all 63 live screens. The same material as the Word document, laid out for quick lookup rather than for reading straight through."),
  ("How to read a menu sheet", "Columns run left to right in the order you need them: what the screen IS, then which TABLES it uses, then what it WRITES, then the FLOW, then where it REFLECTS, then the TRAPS."),
  ("", ""),
  ("SHEETS", ""),
@@ -76,8 +77,11 @@ readme = [
  ("6. Sales", "2 screens - the versioned quotation and the sales order generated from it."),
  ("7. Purchase", "2 screens - the direct purchase order, and the pricing step between an indent and an order."),
  ("8. Stores", "4 screens - the indent, the GRN (the only screen that increases stock), the return and the challan."),
- ("Tables Reference", "Every table touched in this phase, what it holds, and which screens use it."),
- ("Coverage", "Phase plan and progress, with live formulas."),
+ ("9. Accounts", "3 screens - the invoice, money in from customers, money out to suppliers. Read 9.1 first."),
+ ("10. Report", "14 reports, every one read-only. Six on stock, five on sales, one each on cost, discounts and quotations."),
+ ("11. Service", "2 screens - which spares fit which product, and repairs booked against an invoice."),
+ ("Tables Reference", "Every table the live menu touches - 89 of them - what it holds, and which screens use it."),
+ ("Coverage", "All 11 menus, complete, with live formulas."),
  ("", ""),
  ("THE ONE THING TO UNDERSTAND FIRST", ""),
  ("BIE is multi-BRANCH by COLUMN", "Most systems add a branch_id column and store one row per branch. BIE does not. It stores ONE ROW PER ITEM and gives each branch its own SET OF COLUMNS - ho_stock, kl_stock, rjpm_stock, and the same again for every price, discount, margin and bin location."),
@@ -88,7 +92,7 @@ readme = [
  ("R / W / RW", "Table is Read / Written / both by that screen."),
  ("Soft delete", "The dustbin icon sets a status column to 0 via inc/cis_ajax/jquery_delete_records.php (or jquery_delete_records_hr.php for HR). Nothing is physically removed, and lists filter on status = 1."),
  ("(W) on mst_ledger", "The screen auto-creates an accounts ledger BEFORE writing the master row, and stores its ledger_id on the master."),
- ("tbl_accounts", "The single central double-entry journal. Every money movement in the system posts here; Day Book, Ledger Book and Trial Balance are three readings of it."),
+ ("tbl_accounts", "Looks like a central journal, and is WRITE-ONLY. Four payroll files insert into it and nothing anywhere reads it. BIE has no Day Book, no Ledger Book and no Trial Balance - see sheet 9, section 9.1."),
  ("_temp tables", "Session-tagged staging for document lines while a form is open. Copied to the real table on save, then cleared."),
  ("", ""),
  ("FIVE RULES THAT HOLD NEARLY EVERYWHERE", ""),
@@ -106,8 +110,14 @@ readme = [
  ("", ""),
  ("WHAT ACTUALLY MOVES STOCK", ""),
  ("Only four screens change it", "GRN (grn_add.php) puts stock UP. The three invoice screens - quo_invoice.php, dc_invoice.php, mng_invoice.php - put it DOWN. Nothing else in BIE touches tbl_item_stock's quantity columns, with one exception: Item Price Update writes the stock column too (see 4.10)."),
+ ("A third and fourth gap", "REPAIR INDENT consumes parts and moves no stock either (11.2). And the price-update screen writes the stock column from a form field, so a price change can silently reset a quantity (4.10)."),
  ("Two gaps, not design", "A DELIVERY CHALLAN takes goods out of the building and only the later invoice reduces stock, so anything despatched but not invoiced is counted twice. A PURCHASE RETURN sends goods back and NOTHING reduces stock at all, so the quantity stays up permanently."),
- ("When a figure is wrong", "Check in this order: (1) challans raised but not invoiced, (2) purchase returns, (3) a price change made through Item Price Update, (4) whether you are reading tbl_item_details.item_curr_stock (stale) instead of the branch column on tbl_item_stock (live)."),
+ ("When a figure is wrong", "Check in this order: (1) challans raised but not invoiced, (2) purchase returns, (3) repair indents, (4) a price change made through Item Price Update, (5) whether you are reading tbl_item_details.item_curr_stock (stale) instead of the branch column on tbl_item_stock (live)."),
+ ("", ""),
+ ("THERE IS NO GENERAL LEDGER", ""),
+ ("What you might expect", "A Day Book, a Ledger Book, a Trial Balance, customer and supplier balances. BIE has none of them - no such screen exists, in the menu or as an unlinked file."),
+ ("What is actually there", "Money is tracked PER DOCUMENT. What a customer owes is tbl_invoice.inv_bal_value, reduced by credit payments and summed by the Credit List. What you owe a supplier is the GRN value less its payments, on GRN Payment Details. Nothing totals either by party."),
+ ("The trap", "SALES RECEIPT records money against the SALES ORDER and never touches the invoice, while the Credit List reads only invoice credit payments. Use both screens and you double-count. Pick one route per customer."),
  ("", ""),
  ("Related system", "Benzear is the sister codebase this one was forked from. Benzear is multi-COMPANY and keys on company_id; BIE is multi-BRANCH and keys on branch_id. A few unused company_id columns survive in BIE from that fork."),
 ]
@@ -127,7 +137,9 @@ for label, text in readme:
 
 # ---------- MENU INDEX ----------
 menu = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "menu.json")))
-PHASE = {1: "Part 1", 2: "Part 2", 23: "Part 3"}
+PHASE = {1: "Part 1", 2: "Part 2", 23: "Part 3", 3: "Part 4", 24: "Part 5",
+         4: "Part 6", 19: "Part 7", 20: "Part 8", 21: "Part 9", 22: "Part 10",
+         25: "Part 11"}
 
 def clean(v, sep):
     """Strip the literal and real CR/LF that some sm_url and sm_name values carry."""
@@ -144,7 +156,7 @@ for i, h in enumerate(["Order", "Main menu", "sm_id", "Sub-menu", "Opens (PHP fi
 style_header(ws, 5, 6)
 r = 6
 for g in menu:
-    st = PHASE.get(g["mm_id"], "Phase 2 / 3")
+    st = PHASE.get(g["mm_id"], "")
     subs = [s for s in g["subs"] if s.get("url")]
     if not subs:
         write_row(ws, r, [g["mm_index"], g["name"], "-", "(no live sub-menus)", "-", st])
@@ -211,16 +223,28 @@ menu_sheet("8. Stores", "Menu 8  \u00b7  Stores  (mm_id = 20)",
            "4 screens, and the only place in BIE where stock goes UP. The GRN increases it; the store indent, the purchase return and the delivery challan all move nothing - and for the last two, that is a gap rather than a design.",
            STORES)
 
+menu_sheet("9. Accounts", "Menu 9  \u00b7  Accounts  (mm_id = 21)",
+           "3 screens: the invoice - the step that reduces stock - money in from customers, and money out to suppliers. Read the README's 'There is no general ledger' section first: tbl_accounts is write-only, and money is tracked per document rather than per party.",
+           ACCOUNTS)
+
+menu_sheet("10. Report", "Menu 10  \u00b7  Report  (mm_id = 22)",
+           "14 reports and EVERY ONE IS READ-ONLY - not one writes a row. Six on stock, five on sales, one each on purchase cost, discounts and quotations. All of them print with the heading 'Day Book', which is a hardcoded string and means nothing.",
+           REPORTS)
+
+menu_sheet("11. Service", "Menu 11  \u00b7  Service  (mm_id = 25)",
+           "2 screens for after-sales work: which spare parts fit which product, and repairs booked in against an invoice the customer already has. The repair consumes parts and moves no stock.",
+           SERVICE)
+
 # ---------- TABLES REFERENCE ----------
 ws = wb.create_sheet("Tables Reference")
 set_widths(ws, [32, 14, 8, 74, 40])
-title_block(ws, "Tables Reference - Phases 1 and 2",
-            "Every table touched so far. The system has 105 tables in total; the rest arrive with Accounts, Report and Service.")
+title_block(ws, "Tables Reference - complete",
+            "Every table the live menu touches, across all 11 menus. The database holds 105 in total; the remainder belong to legacy screens the menu does not open.")
 for i, h in enumerate(["Table", "Kind", "Cols", "What it holds", "Used by"], start=1):
     ws.cell(row=5, column=i, value=h)
 style_header(ws, 5, 5)
 r = 6
-for k, row in enumerate(TABLES_P1 + TABLES_P2):
+for k, row in enumerate(TABLES_P1 + TABLES_P2 + TABLES_P3):
     write_row(ws, r, row, zebra=(k % 2 == 1), bold_cols=(1,))
     ws.row_dimensions[r].height = 30 if len(row[3]) > 78 else 16
     r += 1
@@ -236,9 +260,9 @@ COV = [
  [6,  "Sales",                 4,  2,  "Part 6",  "Phase 2", "Done"],
  [7,  "Purchase",              19, 2,  "Part 7",  "Phase 2", "Done"],
  [8,  "Stores",                20, 4,  "Part 8",  "Phase 2", "Done"],
- [9,  "Accounts",              21, 3,  "Part 9",  "Phase 3", "Pending"],
- [10, "Report",                22, 14, "Part 10", "Phase 3", "Pending"],
- [11, "Service",               25, 2,  "Part 11", "Phase 3", "Pending"],
+ [9,  "Accounts",              21, 3,  "Part 9",  "Phase 3", "Done"],
+ [10, "Report",                22, 14, "Part 10", "Phase 3", "Done"],
+ [11, "Service",               25, 2,  "Part 11", "Phase 3", "Done"],
 ]
 NOTES = {
  "Settings": "Administrators only. One menu item has no file behind it",
@@ -246,13 +270,15 @@ NOTES = {
  "Attendance and Salary": "Nothing is frozen until Issue Salary",
  "Sales": "Stock does not move until the invoice",
  "Masters":  "Month Master is the payroll calendar, not a lookup",
- "Report":   "Largest menu - 14 reports",
+ "Report":   "Largest menu - 14 reports, all read-only",
+ "Accounts": "No general ledger - money is tracked per document",
+ "Service":  "The repair consumes parts and moves no stock",
  "Stores":   "Where stock actually moves",
 }
 ws = wb.create_sheet("Coverage")
 set_widths(ws, [12, 30, 10, 12, 12, 12, 12, 46])
 title_block(ws, "Coverage tracker",
-            "Menu order follows the sidebar. Update the Status column as each phase lands - the totals below recalculate.")
+            "All 11 menus and all 63 live screens are documented. Menu order follows the sidebar; the totals below are live formulas.")
 for i, h in enumerate(["Order", "Main menu", "mm_id", "Screens", "Word part", "Phase", "Status", "Notes"], start=1):
     ws.cell(row=5, column=i, value=h)
 style_header(ws, 5, 8)

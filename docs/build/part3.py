@@ -16,9 +16,10 @@ def chapter():
         ["Employee Debit Note", "Amounts charged against an employee - damage, shortfall, penalties"],
         ["Shift Wise", "The two shifts and the exact clock times that define them"],
     ], bold_first=True)]
-    b += [tip("Remember Rule 3: an employee gets an **accounts ledger** created with them. Every advance, "
-              "debit note and salary payment posts against it, into the one central journal "
-              "`tbl_accounts`.")]
+    b += [tip("Remember Rule 3: an employee gets an **accounts ledger** created with them, and every "
+              "advance, debit note and salary posts a row into `tbl_accounts` against it. Employees are "
+              "the **only** party BIE does this for in practice - and **nothing reads those rows**. See "
+              "section 9.1 before you go looking for a ledger report.")]
 
     # ------------------------------------------------------------------ 3.1
     b += form2(
@@ -83,7 +84,8 @@ def chapter():
          "**Employee Advance** and **Employee Debit Note** - one row each per employee",
          "**Import Attendance** - punches are matched to an employee by `bio_id`",
          "**All four attendance and salary reports** - the pay calculation reads this row",
-         "**Accounts** - Day Book, Ledger and Trial Balance, through `ledger_id`",
+         "`tbl_accounts` - advances, debit notes and salaries post against this employee's ledger (though "
+         "nothing reads them back - see section 9.1)",
          "**Settings > User** - the login created here appears in that list too"],
         fields=[
             ["`emp_type`", "**`1` Staff, `2` Labour, `3` Others.** Drives the whole form, the code, and "
@@ -297,15 +299,16 @@ def chapter():
          ("Type", "Transaction, posted to accounts")],
         ["Money paid to an employee ahead of their salary. The list shows, for every employee, **advanced**, "
          "**returned** and **balance still owed**.",
-         "Recording an advance posts a real accounts entry, so the money shows up in the Day Book and on the "
-         "employee's ledger immediately.",
+         "Recording an advance writes a real double-entry row into `tbl_accounts` against the employee's "
+         "ledger. Be aware that **no screen in BIE ever displays those rows** (section 9.1) - the figures "
+         "you work from are the three totals on this list.",
          "Recovery is **not done from this screen**. It happens from the attendance reports, where you "
          "deduct an instalment from that month's net pay."],
         [["`tbl_emp_advance`", "One row per advance - amount, date, payment mode, cheque details, balance"],
          ["`tbl_emp_advance_return_payment`", "One row per recovery instalment, tagged with the attendance "
           "month and year"],
-         ["`tbl_accounts`", "**The central journal.** Both the advance and each recovery post a "
-          "double-entry row here"],
+         ["`tbl_accounts`", "The journal. Both the advance and each recovery post a double-entry row "
+          "here - **which nothing reads back**"],
          ["`mst_employee`", "Read for the list, and for the employee's `ledger_id`"],
          ["`mst_finyear`", "Read - the active financial year, which numbers the advance"]],
         ["Open **HR Management > Employee Advance**. Every employee is listed with their advanced, returned "
@@ -334,8 +337,7 @@ def chapter():
          ["UPDATE", "`tbl_emp_advance`", "On recovery - `return_amount = return_amount + paid`, "
           "`balance_amount = balance_amount - paid`, and **`advance_status = 3`**"],
          ["INSERT", "`tbl_accounts`", "On recovery - the reverse entry"]],
-        ["**Day Book**, **Ledger Book**, **Trial Balance** - through `tbl_accounts`",
-         "The employee's own ledger - the advance sits as a debit until recovered",
+        ["`tbl_accounts` - a debit against the employee's ledger. Written, never read (section 9.1)",
          "**Attendance Report (PF)** and **(Without PF)** - the advance deduction column, and the (+) link "
          "that records a recovery",
          "This list - the three totals are recalculated from `tbl_emp_advance` every time it loads"],
@@ -396,8 +398,7 @@ def chapter():
           "`ledger_id`, reason, `is_current = 1`, `debit_status`"],
          ["INSERT", "`tbl_accounts`", "The double-entry row, tagged as an employee debit note"],
          ["UPDATE", "`tbl_emp_debit_note`", "On recovery - `return_amount` up, `balance_amount` down"]],
-        ["**Day Book**, **Ledger Book**, **Trial Balance**",
-         "The employee's ledger - the charge sits against them",
+        ["`tbl_accounts` - a charge against the employee's ledger. Written, never read",
          "**Attendance Report (PF)** and **(Without PF)** - the deduction column",
          "This list - totals recalculated on every load"],
         fields=[
@@ -411,9 +412,10 @@ def chapter():
                  "from the same code: a part-recovery can mark the note settled, there is no cancel or "
                  "correct, and the totals on the list and inside the entry screen can disagree. Read "
                  "section 3.5 and treat this screen the same way."),
-            note("A debit note is a real accounting charge, not a note to self. It hits the employee's "
-                 "ledger and the Trial Balance the moment you save it. If you only want to record that "
-                 "something happened, write it in the remarks on the employee record instead."),
+            note("A debit note is a real charge against the employee, not a note to self: it goes onto "
+                 "this list and is deducted from their pay on the next attendance report. If you only want "
+                 "to record that something happened, write it in the remarks on the employee record "
+                 "instead."),
         ])
     b += [pb()]
 

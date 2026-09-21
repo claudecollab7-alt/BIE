@@ -67,7 +67,7 @@ def chapter():
           "balance still appears in the accounts"]],
         ["**Quotation**, **Sales Order**, **Invoice** - the customer dropdown, and the branch dropdown under it",
          "**Delivery Challan** - the delivery address comes from the chosen customer branch",
-         "**Sales Receipt** and every accounts report - through the `ledger_id`",
+         "**Sales Receipt** - the ledger dropdown, which is the only place a customer's `ledger_id` is used",
          "**Credit List** and **Sales reports** - grouped by this customer",
          "**Common Settings** - no, that screen lists suppliers only"],
         fields=[

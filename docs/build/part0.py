@@ -132,7 +132,13 @@ def chapter():
     b += [h3("Rule 3  A party or an employee is also a ledger")]
     b += [p("You never create an accounts ledger by hand for a customer, supplier or employee. The master "
             "screen inserts into **`mst_ledger`** first, takes the new `ledger_id`, and stores it on the "
-            "master row. From then on every transaction for that party posts against that ledger.")]
+            "master row.")]
+    b += [warn("**Do not read more into that than is there.** BIE creates the ledgers and then barely uses "
+               "them. Only the payroll screens post anything against a ledger, and **nothing in BIE reads "
+               "those postings back** - there is no Day Book, no Ledger Book and no Trial Balance. What a "
+               "customer owes is tracked per invoice, and what you owe a supplier per GRN. Part 9 explains "
+               "this properly; it is the biggest single difference from Benzear, and the thing most likely "
+               "to catch out anyone who knows that system.")]
 
     b += [h3("Rule 4  Documents with lines use a `_temp` staging table")]
     b += [p("While you are still typing a document there is no header id to attach lines to, so the lines "
