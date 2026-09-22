@@ -240,6 +240,7 @@ else
 																<th><b>Before Qty</b></th>
 																<th><b>Transaction Quantity</b></th>														
 																<th><b>After Qty</b></th>
+																<th><b>Reason / Remarks</b></th>
 																<th><b>Approved By</b></th>
                                                                
                                                                
@@ -263,13 +264,19 @@ else
                                         $Sno = 1;
                                         while ($obj = $result->fetch()) {
 
+                                            /* Reset on every row - otherwise an unrecognised trans_type
+                                               silently reuses the previous row's colour and values. */
+                                            $color      = '';
+                                            $trans_code = '';
+                                            $approve_by = '';
+                                            $trans_type = fnStockTransLabel($obj->trans_type);
+                                            $trans_qty  = fnStockSignedQty($obj);
+                                            $remarks    = isset($obj->trans_remarks) ? $obj->trans_remarks : '';
 
                                             //------grn ------//
 
                                             if ($obj->trans_type == 'GRN') {
                                                 $color = 'style="background-color:#bcedc88f"';
-                                                $trans_qty = ($obj->trans_qty);
-                                                $trans_type = 'GRN';
 
                                                 $trans_code = $dbconn->GetSingleReconrd("tbl_grn", "grn_ref_code", "grn_id", $obj->trans_id);
 
@@ -285,8 +292,6 @@ else
 
                                             } else if ($obj->trans_type == 'INV') {
                                                 $color = 'style="background-color:#7dc5f5"';
-                                                $trans_qty = ($obj->trans_qty);
-                                                $trans_type = 'INV';
 
                                                 $trans_code = $dbconn->GetSingleReconrd("tbl_invoice", "inv_refno", "inv_id", $obj->trans_id);
 
@@ -296,6 +301,34 @@ else
 
                                                 $approve_by = $dbconn->GetSingleReconrd("tbl_user", "
                                             	usr_name", "usr_id ", $created_by) . ' on ' . date('d-M-y @ h:i a', strtotime($created_dtm)) . "<br>";
+                                                //--------- Stock Adjustment -----//
+
+                                            } else if ($obj->trans_type == 'ADJ') {
+                                                $color = 'style="background-color:#ffe9b3"';
+
+                                                $trans_code = $dbconn->GetSingleReconrd("tbl_stock_adjustment", "adj_refno", "adj_id", $obj->trans_id);
+
+                                                $adj_by  = $dbconn->GetSingleReconrd("tbl_stock_adjustment", "created_by", "adj_id", $obj->trans_id);
+                                                $adj_dtm = $dbconn->GetSingleReconrd("tbl_stock_adjustment", "created_dtm", "adj_id", $obj->trans_id);
+
+                                                if ($adj_by == '') {
+                                                    $adj_by  = $obj->modify_by;
+                                                    $adj_dtm = $obj->modify_date_time;
+                                                }
+                                                if ($remarks == '') {
+                                                    $remarks = $dbconn->GetSingleReconrd("tbl_stock_adjustment", "adj_reason", "adj_id", $obj->trans_id);
+                                                }
+
+                                                $approve_by = $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", $adj_by)
+                                                            . ' on ' . date('d-M-y @ h:i a', strtotime($adj_dtm)) . "<br>";
+
+                                                //--------- Opening balance / any other type -----//
+
+                                            } else {
+                                                $color = 'style="background-color:#eeeeee"';
+
+                                                $approve_by = $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", $obj->modify_by)
+                                                            . ' on ' . date('d-M-y @ h:i a', strtotime($obj->modify_date_time)) . "<br>";
                                             }
 
                                             echo '<tr ' . $color . '>
@@ -307,6 +340,7 @@ else
 												        <td>' . $obj->before_qty . '</td>
 												        <td>' . $trans_qty . '</td>
 												        <td>' . $obj->after_qty . '</td>
+												        <td align="left">' . htmlspecialchars($remarks) . '</td>
 												        <td align="left">' . $approve_by . '</td>
                                                                           						
 											    </tr>';
@@ -314,7 +348,7 @@ else
                                         }
                                     } else {
                                         echo ' <tr class="font-weight-semibold rpt_footer ">
-											            <td colspan="8" align="center">No History found..!</td>
+											            <td colspan="9" align="center">No History found..!</td>
 											  </tr>';
                                     }
 

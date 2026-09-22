@@ -90,6 +90,15 @@ for ($item_id = $from_id; $item_id <= $to_id; $item_id++) {
     $ho_margin   = $kl_margin   = $rjpm_margin   = $margin;
 
 
+    /* Opening stock per branch. These seed rows are created empty on purpose:
+       anything non-zero here is a real stock movement and is pushed through
+       fnApplyStockMovement() below so tbl_stock_flow records it. */
+    $opening_stock = array(
+        'ho_stock'   => 0,
+        'kl_stock'   => 0,
+        'rjpm_stock' => 0
+    );
+
     $sql = "INSERT INTO `tbl_item_stock`
     (
         `item_id`,
@@ -110,7 +119,7 @@ for ($item_id = $from_id; $item_id <= $to_id; $item_id++) {
     VALUES
     (
         {$item_id},
-        0, 0,
+        {$opening_stock['ho_stock']}, {$opening_stock['kl_stock']},
         0, 0,
         0, 0,
         {$ho_price}, {$ho_discount}, 0, 10,
@@ -119,13 +128,42 @@ for ($item_id = $from_id; $item_id <= $to_id; $item_id++) {
         {$kl_price}, {$kl_discount}, 0, 10,
         {$kl_cost}, {$kl_selling}, {$kl_margin},
         1, 1, 1,
-        0, 0, 0,
+        {$opening_stock['rjpm_stock']}, 0, 0,
         {$rjpm_price}, {$rjpm_discount}, 0, 10,
         {$rjpm_cost}, {$rjpm_selling}, {$rjpm_margin},
         1, 1, 1
     )";
 
     $result = $conn->query($sql);
+
+    /* Record any non-zero opening balance in the stock ledger. */
+    if ($result) {
+        foreach ($opening_stock as $stock_col => $open_qty) {
+            if ((float)$open_qty == 0) {
+                continue;
+            }
+            $open_branch_id = $dbconn->GetSingleReconrd("mst_branch", "branch_id", "branch_stock_field", $stock_col);
+            if ($open_branch_id == '') {
+                continue;
+            }
+            try {
+                fnApplyStockMovement($conn, array(
+                    'item_id'     => $item_id,
+                    'branch_id'   => $open_branch_id,
+                    'stock_field' => $stock_col,
+                    'dir'         => ((float)$open_qty < 0) ? 'O' : 'I',
+                    'qty'         => $open_qty,
+                    'trans_type'  => STOCK_TRANS_OPEN,
+                    'trans_id'    => 0,
+                    'item_price'  => $cost,
+                    'remarks'     => 'Opening stock loaded by ' . basename(__FILE__)
+                ));
+            } catch (Exception $e) {
+                echo "<p style='color:red;'>Stock ledger failed for item_id {$item_id} / {$stock_col}: "
+                   . htmlspecialchars($e->getMessage()) . "</p>";
+            }
+        }
+    }
 
     $brand_label = $item_brand_make == 12 ? 'STANLEY' : ($item_brand_make == 13 ? 'TAPARIA' : 'OTHER');
 

@@ -113,8 +113,10 @@ if (isset($_POST['SAVE'])) {
 
 		$last_id = $conn->lastInsertId();
 		if ($last_id > 0) {
-			$stock_id = $conn->query("INSERT INTO tbl_item_stock (item_id) VALUES ('" . $last_id . "')");
-			$stock_id = $conn->lastInsertId();
+			/* Create the stock row for the new item. Opening quantity is 0, so
+			   there is no movement to record in tbl_stock_flow yet - stock only
+			   arrives through GRN or Stock Adjustment, both of which log it. */
+			$stock_id = fnEnsureItemStockRow($conn, $last_id);
 			$result1 =  $conn->query("SELECT * FROM mst_branch");
 
 			while ($obj = $result1->fetchAll(PDO::FETCH_ASSOC)) {
