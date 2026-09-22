@@ -110,7 +110,7 @@ if (isset($_POST['SAVE1'])) {
 		}
 
 		if (
-			$_REQUEST['branch_new_price'] != $obj->branch_new_price || $_REQUEST['branch_stock_field'] != $obj->branch_stock_field || $_REQUEST['branch_new_discount'] != $obj->branch_new_discount || $_REQUEST['branch_new_cost_price'] != $obj->branch_new_cost_price ||
+			$_REQUEST['branch_new_price'] != $obj->branch_new_price || $_REQUEST['branch_stock_field'] != $old->branch_stock_field || $_REQUEST['branch_new_discount'] != $obj->branch_new_discount || $_REQUEST['branch_new_cost_price'] != $obj->branch_new_cost_price ||
 			$_REQUEST['branch_new_selling_price'] != $obj->branch_new_selling_price || $_REQUEST['margin_percent'] != $obj->branch_new_margin || $_REQUEST['branch_new_msq'] != $obj->branch_new_msq || $_REQUEST['branch_new_maq'] != $obj->branch_new_maq ||
 			$_REQUEST['branch_new_moq'] != $obj->branch_new_moq || $_REQUEST['new_item_uom'] != $obj->branch_new_item_uom || $_REQUEST['new_item_hsn'] != $obj->branch_new_item_hsn
 		) {
@@ -182,7 +182,6 @@ if (isset($_POST['SAVE1'])) {
 				" . $obj->branch_item_cost_price . " = :branch_item_cost_price,
 				" . $obj->branch_item_selling_price . " = :branch_item_selling_price, 
 				" . $obj->branch_item_margin . " = :branch_item_margin, 
-				" . $obj->branch_stock_field . " = :branch_stock_field, 
 				" . $obj->branch_item_msq . " = :branch_item_msq, 
 				" . $obj->branch_item_maq . " = :branch_item_maq,
 				" . $obj->branch_item_moq . " = :branch_item_moq 
@@ -197,7 +196,6 @@ if (isset($_POST['SAVE1'])) {
 					':branch_item_cost_price' => $_REQUEST['branch_new_cost_price'],
 					':branch_item_selling_price' => $_REQUEST['branch_new_selling_price'],
 					':branch_item_margin' => $_REQUEST['margin_percent'],
-					':branch_stock_field' => $_REQUEST['branch_stock_field'],
 					':branch_item_msq' => $_REQUEST['branch_new_msq'],
 					':branch_item_maq' => $_REQUEST['branch_new_maq'],
 					':branch_item_moq' => $_REQUEST['branch_new_moq']
@@ -206,6 +204,19 @@ if (isset($_POST['SAVE1'])) {
 				$stmt1->execute($data1);
 				//print_r($data1);
 				//	 echo 1;
+
+				/* Stock quantity is NOT editable from this screen - use Stock
+				   Adjustment. If a quantity still arrives (old bookmark, tampered
+				   post) apply it through the ledger instead of silently writing it. */
+				if (isset($_REQUEST['branch_stock_field']) && $_REQUEST['branch_stock_field'] !== '') {
+					fnSetStockToQty($conn, $update_id, $_REQUEST['branch_stock_field'], array(
+						'branch_id'  => $_SESSION['_user_branch'],
+						'trans_type' => STOCK_TRANS_ADJ,
+						'trans_id'   => 0,
+						'item_price' => $_REQUEST['branch_new_cost_price'],
+						'remarks'    => 'Stock changed from Item Price History screen'
+					));
+				}
 			}
 			//print_r($data1);
 			//die();
@@ -707,7 +718,8 @@ if ($_REQUEST['item_id'] != "") {
 										</div>
 										<label class="col-lg-2 col-form-label">Current Stock</label>
 										<div class="col-lg-4">
-											<input type="text" class="form-control" name="branch_stock_field" id="branch_stock_field" maxlength="9" value="" placeholder="Enter MAQ" onKeyPress="return isNumberKey_with_dot(event)" />
+											<input type="text" class="form-control bg-light" name="branch_stock_field" id="branch_stock_field" maxlength="9" value="" readonly="readonly" tabindex="-1" title="Stock cannot be changed from this screen" />
+											<span class="form-text text-muted">Read only &mdash; use <a href="stock_adjustment.php">Stock Adjustment</a> to change stock.</span>
 										</div>
 
 									</div>
