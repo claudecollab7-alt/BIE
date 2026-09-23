@@ -229,6 +229,7 @@ error_reporting(E_ALL);
                                                 <th><b>Before Qty</b></th>
                                                 <th><b>Quantity</b></th>																
                                                 <th><b>After Qty</b></th>
+                                                <th><b>Reason / Remarks</b></th>
                                                 <!--<th><b>Unit Value</b></th>
                                                 <th><b>Total</b></th>-->
                                             </tr>
@@ -254,19 +255,17 @@ error_reporting(E_ALL);
                                         $Sno = 1;
                                         while ($obj = $result->fetch()) {
                                             $tot_sales_value = 0;
-                                            $name = $trans_type = $color = $trans_qty = $trans_code = $approve_by = '';
+                                            $name = $color = $trans_code = $approve_by = '';
+                                            $trans_type = fnStockTransLabel($obj->trans_type);
+                                            $trans_qty  = fnStockSignedQty($obj);
+                                            $remarks    = isset($obj->trans_remarks) ? $obj->trans_remarks : '';
 
                                             if ($obj->trans_type == 'GRN') {
                                                 $color = 'style="background-color:#d9def9"';
-                                                $trans_qty = $obj->trans_qty;
-                                                $trans_type = 'GRN';
                                                 $trans_code = $dbconn->GetSingleReconrd("tbl_grn", "grn_ref_code", "grn_id ", $obj->trans_id);
                                                 $approve_by = "";
                                             } else if ($obj->trans_type == 'SALE') {
                                                 $color = 'style="background-color:#defbe9"';
-
-                                                $trans_qty = ($obj->trans_qty * -1);
-                                                $trans_type = 'SALE';
 
                                                 /*$trans_code = $dbconn->GetSingleReconrd("hk_laund_head","lau_code","lau_id",
 																	$obj->trans_id);
@@ -275,26 +274,33 @@ error_reporting(E_ALL);
 */
                                             } else if ($obj->trans_type == 'ADJ') {
                                                 $color = 'style="background-color:#ffe4e4"';
-                                                $trans_qty = ($obj->trans_qty);
-                                                $trans_type = 'Adjustment';
-                                                /*	$trans_code = $dbconn->GetSingleReconrd("hk_item_adjustment_head","adj_code","adj_id",$obj->trans_id);
-																	
-																	$approval_qry = "SELECT apprv_usr_id,apprv_usr_dtm FROM hk_item_adjustment_approval_dets WHERE adj_id = ".$obj->trans_id." "; 
-																	$approval_res = $conn->query($approval_qry);
-																	if($approval_res->rowCount() > 0)
-																	{
-																		$approve_by = "";
-																		while($approveObj = $approval_res->fetch())
-																		{
-																
-																			$approve_by .= $dbconn->GetSingleReconrd("tbl_user","
-																			usr_name","usr_id ",$approveObj->apprv_usr_id).' on '.date('d-M-y @ h:i a',strtotime($approveObj->apprv_usr_dtm))."<br>";
-																		}
-																	}*/
+
+                                                $trans_code = $dbconn->GetSingleReconrd("tbl_stock_adjustment", "adj_refno", "adj_id", $obj->trans_id);
+
+                                                $adj_by  = $dbconn->GetSingleReconrd("tbl_stock_adjustment", "created_by", "adj_id", $obj->trans_id);
+                                                $adj_dtm = $dbconn->GetSingleReconrd("tbl_stock_adjustment", "created_dtm", "adj_id", $obj->trans_id);
+
+                                                if ($adj_by == '') {
+                                                    $adj_by  = $obj->modify_by;
+                                                    $adj_dtm = $obj->modify_date_time;
+                                                }
+                                                if ($remarks == '') {
+                                                    $remarks = $dbconn->GetSingleReconrd("tbl_stock_adjustment", "adj_reason", "adj_id", $obj->trans_id);
+                                                }
+
+                                                $approve_by = $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", $adj_by)
+                                                            . ' on ' . date('d-M-y @ h:i a', strtotime($adj_dtm)) . "<br>";
+
+                                            } else if ($obj->trans_type == 'INV') {
+                                                $color = 'style="background-color:#7dc5f5"';
+                                                $trans_code = $dbconn->GetSingleReconrd("tbl_invoice", "inv_refno", "inv_id", $obj->trans_id);
+
+                                            } else {
+                                                $color = 'style="background-color:#eeeeee"';
                                             }
                                             $name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $obj->item_id);
 
-                                            $total = ((int)$obj->trans_qty * (int)$obj->item_price);
+                                            $total = ($trans_qty * (float)$obj->item_price);
                                             echo '<tr ' . $color . '>
 																			<td>' . $Sno . '</td>
 																			<td align="center">' . date('d-m-y', strtotime($obj->trans_date)) . '</td>
@@ -304,6 +310,7 @@ error_reporting(E_ALL);
 																			<td>' . $obj->before_qty . '</td>
 																			<td>' . $trans_qty . '</td>
 																			<td>' . $obj->after_qty . '</td>
+																			<td align="left">' . htmlspecialchars($remarks) . '</td>
 																			<!--<td align="right">Rs. ' . number_format($obj->item_price, 2, ".", "") . '</td>
 																			<td align="right">Rs. ' . number_format($total, 2, ".", "") . '</td>-->
 																		</tr>';
@@ -317,7 +324,7 @@ error_reporting(E_ALL);
                                                 </tr>-->';
                                     } else {
                                         echo ' <tr class="font-weight-semibold rpt_footer ">
-																	   <td colspan="10" align="center">No History found..!</td>
+																	   <td colspan="9" align="center">No History found..!</td>
 																	</tr>';
                                     }
 

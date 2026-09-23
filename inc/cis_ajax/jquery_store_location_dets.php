@@ -26,6 +26,16 @@ if ($_POST['mode'] == 'save') {
     $branch_rack = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_location_rack_field", "branch_id", $_SESSION['_user_branch']);
     $branch_row = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_location_row_field", "branch_id", $_SESSION['_user_branch']);
 
+    /* Location only - this endpoint must never touch a *_stock quantity
+       column, so no tbl_stock_flow row is written here. Guard the column
+       names that get interpolated into the statement. */
+    if (!preg_match('/^[A-Za-z0-9_]{1,30}$/', (string)$branch_row)
+        || !preg_match('/^[A-Za-z0-9_]{1,30}$/', (string)$branch_rack)
+        || substr($branch_row, -6) === '_stock' || substr($branch_rack, -6) === '_stock') {
+        echo "Invalid location columns configured for this branch.";
+        die();
+    }
+
     $stmt = null;
     $stmt = $conn->prepare("UPDATE  tbl_item_stock SET $branch_row = :branch_loc_row, $branch_rack = :branch_loc_rack WHERE item_id = :item_id");
     $data = array(
