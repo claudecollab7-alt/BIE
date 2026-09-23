@@ -189,7 +189,9 @@ else
                                 <hr>
 
                                 <?php
-                                if (isset($_POST['Report'])) {
+                                /* $_REQUEST, not $_POST, so the View All link on the Item Stock
+                                   List can open this report already run for one item + branch. */
+                                if (isset($_REQUEST['Report']) && $_REQUEST['item_id'] != '') {
                                     $from_dt = date("Y-m-d", strtotime($_REQUEST['from_dt']));
                                     $to_dt = date("Y-m-d", strtotime($_REQUEST['to_dt']));
 
@@ -251,15 +253,19 @@ else
                                                         // $field_name = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_SESSION['_user_branch']);
 
 
-                                    $SQL = " SELECT * FROM tbl_stock_flow
-											 WHERE stock_status = 0 AND trans_qty > 0 AND trans_date between '" . $from_dt . "' AND '" . $to_dt . "'
-                                             AND item_id ='" . $_REQUEST['item_id'] . "' AND branch_id =" . $_REQUEST['branch_id']." ORDER BY auto_id asc ";
-
-                                    
-
-                                    //   echo $SQL;
-
-                                    $result = $conn->query($SQL);
+                                    /* Bound, not interpolated - this report is reachable by GET
+                                       from the Item Stock List modal's View All link. */
+                                    $result = $conn->prepare("SELECT * FROM tbl_stock_flow
+                                             WHERE stock_status = 0 AND trans_qty > 0
+                                               AND trans_date BETWEEN :from_dt AND :to_dt
+                                               AND item_id = :item_id AND branch_id = :branch_id
+                                             ORDER BY auto_id ASC");
+                                    $result->execute(array(
+                                        ':from_dt'   => $from_dt,
+                                        ':to_dt'     => $to_dt,
+                                        ':item_id'   => (int)$_REQUEST['item_id'],
+                                        ':branch_id' => (int)$_REQUEST['branch_id']
+                                    ));
                                     if ($result->rowCount() > 0) {
                                         $Sno = 1;
                                         while ($obj = $result->fetch()) {

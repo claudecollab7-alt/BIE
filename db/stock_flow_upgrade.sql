@@ -97,3 +97,20 @@ SELECT DISTINCT ur.`usr_id`, 20, 147
  WHERE ur.`mm_id` = 20
    AND NOT EXISTS (SELECT 1 FROM `tbl_user_rights` x
                     WHERE x.`usr_id` = ur.`usr_id` AND x.`sm_id` = 147);
+
+
+-- ---------------------------------------------------------------------------
+-- 4. Menu entry - "Item Stock List" under Item Masters (mm_id 3)
+-- ---------------------------------------------------------------------------
+INSERT INTO `mst_sub_menu` (`sm_id`, `mm_id`, `sm_index`, `sm_name`, `sm_url`, `sm_query`, `sm_show`, `sm_class`, `sm_default`)
+SELECT 148, 3, 11, 'Item Stock List', 'lst_item_stock.php', NULL, 1, '', NULL
+  FROM DUAL
+ WHERE NOT EXISTS (SELECT 1 FROM `mst_sub_menu` WHERE `sm_url` = 'lst_item_stock.php');
+
+-- Grant it to every user who can already reach the Item Masters menu (mm_id 3).
+INSERT INTO `tbl_user_rights` (`usr_id`, `mm_id`, `sm_id`)
+SELECT DISTINCT ur.`usr_id`, 3, 148
+  FROM `tbl_user_rights` ur
+ WHERE ur.`mm_id` = 3
+   AND NOT EXISTS (SELECT 1 FROM `tbl_user_rights` x
+                    WHERE x.`usr_id` = ur.`usr_id` AND x.`sm_id` = 148);
