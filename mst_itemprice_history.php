@@ -107,6 +107,23 @@ if (isset($_POST['SAVE1'])) {
 
 		if ($result2->rowCount() > 0) {
 			$old = $result2->fetch(PDO::FETCH_OBJ);
+		} else {
+			$stmt_stock = $conn->prepare("INSERT INTO tbl_item_stock (item_id) VALUES (:item_id)");
+			$stmt_stock->execute(array(':item_id' => $_REQUEST['item_id']));
+
+			$old = (object) array(
+				'item_max_qty' => 0,
+				'branch_stock_field' => 0,
+				'item_price' => 0,
+				'item_discount' => 0,
+				'item_min_discount' => 0,
+				'item_max_discount' => 0,
+				'item_cost_price' => 0,
+				'item_selling_price' => 0,
+				'item_branch_margin' => 0,
+				'item_min_qty' => 0,
+				'item_order_min_qty' => 0
+			);
 		}
 
 		if (
