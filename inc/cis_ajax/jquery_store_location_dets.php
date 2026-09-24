@@ -5,6 +5,10 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/csrf.php");
+
+// 2026-09-22 column names validated, cannot touch a qty column
+// 2026-09-24 login + csrf check added
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -14,6 +18,12 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 //-------------------save--------------//
+
+// login + csrf required before any write
+if (empty($_SESSION['_user_id']) || !csrf_check_ajax()) {
+    echo "Session expired. Please reload the page.";
+    die();
+}
 
 if ($_POST['mode'] == 'save') {
 
@@ -26,9 +36,7 @@ if ($_POST['mode'] == 'save') {
     $branch_rack = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_location_rack_field", "branch_id", $_SESSION['_user_branch']);
     $branch_row = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_location_row_field", "branch_id", $_SESSION['_user_branch']);
 
-    /* Location only - this endpoint must never touch a *_stock quantity
-       column, so no tbl_stock_flow row is written here. Guard the column
-       names that get interpolated into the statement. */
+    // location only, never a qty column, so nothing is written to tbl_stock_flow
     if (!preg_match('/^[A-Za-z0-9_]{1,30}$/', (string)$branch_row)
         || !preg_match('/^[A-Za-z0-9_]{1,30}$/', (string)$branch_rack)
         || substr($branch_row, -6) === '_stock' || substr($branch_rack, -6) === '_stock') {

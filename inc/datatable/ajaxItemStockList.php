@@ -1,7 +1,5 @@
 <?php
-/* Server-side rows for lst_item_stock.php.
-   One stock column per active branch, each one clickable to open the
-   stock-flow modal for that item + branch. */
+// 2026-09-23 new - rows for lst_item_stock.php, one stock column per active branch
 
 ob_start();
 session_start();
@@ -35,26 +33,25 @@ if (isset($_POST['order'][0]['column'])) {
     }
 }
 
-/* DataTables sends length -1 for "All". */
+// DataTables sends -1 for All
 if ($rowperpage <= 0) {
     $rowperpage = 1000;
 }
 
-## Branch stock columns, driven by the branch master so a new branch needs
-## no code change here.
+## branch stock columns, read from the branch master
 $branches   = array();
 $branch_res = $conn->query("SELECT branch_id, branch_name, branch_code, branch_stock_field
                               FROM mst_branch
                              WHERE branch_status = 1 AND branch_stock_field <> ''
                              ORDER BY branch_id");
 while ($b = $branch_res->fetch(PDO::FETCH_OBJ)) {
-    /* Guard: the column name is interpolated into the ORDER BY / SELECT below. */
+    // column name goes into the SQL below, so only allow real ones
     if (preg_match('/^[A-Za-z0-9_]{1,30}$/', $b->branch_stock_field)) {
         $branches[] = $b;
     }
 }
 
-## Only these columns may be sorted on - anything else falls back.
+## sortable columns, anything else falls back
 $sortable = array('item_code' => 'a.item_code', 'item_purchase_code' => 'a.item_purchase_code',
                   'item_desciption' => 'a.item_desciption', 'uom_name' => 'b.uom_name',
                   'category_name' => 'c.category_name');
@@ -88,7 +85,7 @@ if ($itemTypeId != '' && ctype_digit((string)$itemTypeId)) {
     $params[':item_type'] = (int)$itemTypeId;
 }
 
-/* Stock filter works on the total across every branch column. */
+// stock filter works on the total across all branches
 $stock_sum = '0';
 foreach ($branches as $b) {
     $stock_sum .= ' + COALESCE(d.' . $b->branch_stock_field . ', 0)';
@@ -149,7 +146,7 @@ while ($rs = $itemRecords->fetch(PDO::FETCH_OBJ)) {
         "category_name"      => htmlspecialchars($rs->category_name)
     );
 
-    /* Each branch quantity is a link that opens the stock-flow modal. */
+    // each qty is a link that opens the stock flow modal
     foreach ($branches as $b) {
         $key = 'stock_' . $b->branch_id;
         $qty = (float)$rs->$key;

@@ -1,12 +1,6 @@
 <?php
-/* ===========================================================================
- *  Stock Adjustment
- * ---------------------------------------------------------------------------
- *  Manually increase or decrease the logged-in branch's stock for one item.
- *  Every adjustment writes a tbl_stock_adjustment header AND a tbl_stock_flow
- *  ledger row - the quantity is never touched outside fnApplyStockMovement().
- *  A reason is mandatory.
- * ======================================================================== */
+// 2026-09-22 new screen - manual stock increase/decrease, reason mandatory, logs to tbl_stock_flow
+// 2026-09-24 csrf token check + transaction rollback
 
 ob_start();
 session_start();
@@ -24,6 +18,10 @@ $dbconn = new dbhandler();
 
 if (isset($_POST['SAVE'])) {
 
+    if (!csrf_check('stock_adjustment')) {
+        csrf_fail('stock_adjustment.php');
+    }
+
     $item_id    = isset($_REQUEST['item_id']) ? (int)$_REQUEST['item_id'] : 0;
     $adj_type   = (isset($_REQUEST['adj_type']) && $_REQUEST['adj_type'] == 'D') ? 'D' : 'I';
     $adj_qty    = isset($_REQUEST['adj_qty']) ? (float)$_REQUEST['adj_qty'] : 0;
@@ -32,7 +30,7 @@ if (isset($_POST['SAVE'])) {
                 ? date('Y-m-d', strtotime($_REQUEST['adj_date']))
                 : date('Y-m-d');
 
-    /* ---- validation (the browser checks this too, never trust that) ---- */
+    // validated again here, browser checks are not trusted
     if ($item_id <= 0) {
         $_SESSION['_msg_err'] = "Please select an item..!";
         header("location:stock_adjustment.php");
@@ -53,13 +51,13 @@ if (isset($_POST['SAVE'])) {
         $branch_id   = (int)$_SESSION['_user_branch'];
         $stock_field = fnGetBranchStockField($conn, $branch_id);
 
-        $conn->beginTransaction();
+        db_begin($conn);
 
         $before_qty = fnGetItemBranchStock($conn, $item_id, $stock_field);
 
-        /* A decrease may not take the branch below zero. */
+        // decrease cannot take the branch below zero
         if ($adj_type == 'D' && $adj_qty > $before_qty) {
-            $conn->rollBack();
+            db_rollback($conn);
             $_SESSION['_msg_err'] = "Cannot decrease by " . $adj_qty
                                   . " - only " . $before_qty . " in stock at this branch..!";
             header("location:stock_adjustment.php");
@@ -103,7 +101,7 @@ if (isset($_POST['SAVE'])) {
 
         $adj_id = $conn->lastInsertId();
 
-        /* Moves the balance AND writes the tbl_stock_flow ledger row. */
+        // moves the balance and writes the ledger row
         fnApplyStockMovement($conn, array(
             'item_id'     => $item_id,
             'branch_id'   => $branch_id,
@@ -117,15 +115,13 @@ if (isset($_POST['SAVE'])) {
             'remarks'     => $adj_reason
         ));
 
-        $conn->commit();
+        db_commit($conn);
 
         $_SESSION['_msg'] = "Stock adjusted successfully - " . $adj_refno
                           . " (" . $before_qty . " &rarr; " . $after_qty . ")";
 
     } catch (Exception $e) {
-        if ($conn->inTransaction()) {
-            $conn->rollBack();
-        }
+        db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
     }
@@ -190,6 +186,7 @@ try {
                     <!-- ---------------- Adjustment form ---------------- -->
                     <div class="col-md-5">
                         <form name="adjForm" id="adjForm" class="form-horizontal" method="POST" action="" onSubmit="return fnValidate();">
+                        	<?php csrf_fields('stock_adjustment'); ?>
                             <div class="card">
                                 <div class="card-header bg-pgheader text-white header-elements-inline">
                                     <h6 class="card-title">New Stock Adjustment</h6>
@@ -414,8 +411,7 @@ try {
         });
     });
 
-    /* Digits and a single decimal point only (no minus - direction is the
-       Increase/Decrease dropdown, not the sign of the quantity). */
+    // digits and one decimal point only, direction comes from the dropdown
     function isNumberKey_with_dot(evt) {
         var charCode = evt.which ? evt.which : evt.keyCode;
         var input = evt.target;

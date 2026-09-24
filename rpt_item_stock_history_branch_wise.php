@@ -24,6 +24,9 @@ if ($_REQUEST['branch_id'] == '')
 else
     $branch = $_REQUEST['branch_id'];
 
+// 2026-09-22 reason column + ADJ rows, qty shown signed
+// 2026-09-23 runs from GET so the stock list View All link works, query now bound
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -189,8 +192,7 @@ else
                                 <hr>
 
                                 <?php
-                                /* $_REQUEST, not $_POST, so the View All link on the Item Stock
-                                   List can open this report already run for one item + branch. */
+                                // $_REQUEST not $_POST so the View All link can open it already run
                                 if (isset($_REQUEST['Report']) && $_REQUEST['item_id'] != '') {
                                     $from_dt = date("Y-m-d", strtotime($_REQUEST['from_dt']));
                                     $to_dt = date("Y-m-d", strtotime($_REQUEST['to_dt']));
@@ -253,8 +255,7 @@ else
                                                         // $field_name = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_SESSION['_user_branch']);
 
 
-                                    /* Bound, not interpolated - this report is reachable by GET
-                                       from the Item Stock List modal's View All link. */
+                                    // bound, not interpolated - reachable by GET from the stock list modal
                                     $result = $conn->prepare("SELECT * FROM tbl_stock_flow
                                              WHERE stock_status = 0 AND trans_qty > 0
                                                AND trans_date BETWEEN :from_dt AND :to_dt
@@ -270,8 +271,7 @@ else
                                         $Sno = 1;
                                         while ($obj = $result->fetch()) {
 
-                                            /* Reset on every row - otherwise an unrecognised trans_type
-                                               silently reuses the previous row's colour and values. */
+                                            // reset each row, else an unknown type reuses the last row's values
                                             $color      = '';
                                             $trans_code = '';
                                             $approve_by = '';
@@ -328,7 +328,7 @@ else
                                                 $approve_by = $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", $adj_by)
                                                             . ' on ' . date('d-M-y @ h:i a', strtotime($adj_dtm)) . "<br>";
 
-                                                //--------- Opening balance / any other type -----//
+                                                //--------- opening / other -----//
 
                                             } else {
                                                 $color = 'style="background-color:#eeeeee"';

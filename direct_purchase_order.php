@@ -7,6 +7,8 @@ require_once("inc/common/userclass.php");
 isAdmin();
 
 
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $conn = new dbconnect();
@@ -16,7 +18,11 @@ $po_date = date("Y-m-d");
 
 
 if (isset($_POST['Draft'])) {
+	if (!csrf_check('direct_po')) {
+		csrf_fail('lst_direct_po.php');
+	}
 	try {
+		db_begin($conn);
 		$_REQUEST['po_date'] = date("Y-m-d", strtotime($_REQUEST['po_date']));
 
 		$_REQUEST['po_slno'] = $dbconn->GetMaxValue('tbl_purchase_order', 'po_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND 1 ', 1) + 1;
@@ -130,7 +136,9 @@ if (isset($_POST['Draft'])) {
 			':po_value' => $po_value
 		);
 		$update_po->execute($data1);
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -144,8 +152,12 @@ if (isset($_POST['Draft'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('direct_po')) {
+		csrf_fail('lst_direct_po.php');
+	}
 	$update_id = $_REQUEST['txtHid'];
 	try {
+		db_begin($conn);
 		$_REQUEST['po_date'] = date("Y-m-d", strtotime($_REQUEST['po_date']));
 		$po_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
 		$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
@@ -248,7 +260,9 @@ if (isset($_POST['UPDATE'])) {
 			':po_value' => $po_value
 		);
 		$update_po->execute($data1);
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -259,9 +273,13 @@ if (isset($_POST['UPDATE'])) {
 
 
 if (isset($_POST['FINALIZE'])) {
+	if (!csrf_check('direct_po')) {
+		csrf_fail('lst_direct_po.php');
+	}
 	$update_id = $_REQUEST['txtHid'];
 	if ($_REQUEST['txtHid'] != '' && $_REQUEST['txtHid'] > 0) {
 		try {
+			db_begin($conn);
 			$_REQUEST['po_date'] = date("Y-m-d", strtotime($_REQUEST['po_date']));
 			$po_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
 			$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
@@ -366,15 +384,18 @@ if (isset($_POST['FINALIZE'])) {
 			);
 			$update_po->execute($data1);
 
+			db_commit($conn);
 			$_SESSION['_msg'] = "Direct Purchase Order succesfully Sent..!";
 			header("location:lst_direct_po.php");
 			die();
 		} catch (Exception $e) {
+			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
 		}
 	} else {
 		try {
+			db_begin($conn);
 			$_REQUEST['po_date'] = date("Y-m-d", strtotime($_REQUEST['po_date']));
 
 			$_REQUEST['po_slno'] = $dbconn->GetMaxValue('tbl_purchase_order', 'po_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND 1 ', 1) + 1;
@@ -496,10 +517,12 @@ if (isset($_POST['FINALIZE'])) {
 			);
 
 			$update_po->execute($data1);
+			db_commit($conn);
 			$_SESSION['_msg'] = "Direct Purchase Order succesfully Sent..!";
 			header("location:lst_direct_po.php");
 			die();
 		} catch (Exception $e) {
+			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
 		}
@@ -973,6 +996,7 @@ if (isset($_REQUEST['po_id']) && $_REQUEST['po_id'] != "") {
 
 							</div>
 							<form name='thisForm' class="form-horizontal" method='POST' action="">
+								<?php csrf_fields('direct_po'); ?>
 								<input type="hidden" name="po_items" id="po_items" value="-1">
 								<input type="hidden" name="gst" id="gst" value="">
 								<input type="hidden" name="item_hsn" id="item_hsn" value="">

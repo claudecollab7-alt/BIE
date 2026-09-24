@@ -1,6 +1,5 @@
 <?php
-/* Returns the logged-in branch's current stock for one item.
-   Used by stock_adjustment.php to show the before/after preview. */
+// 2026-09-22 new - current branch stock for one item, used by stock_adjustment.php
 
 ob_start();
 session_start();

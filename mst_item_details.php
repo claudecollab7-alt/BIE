@@ -9,11 +9,18 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-22 stock row for a new item created via fnEnsureItemStockRow()
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL); 
 
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_item_details')) {
+		csrf_fail('lst_item_details.php');
+	}
 	try {
+		db_begin($conn);
 		if (isset($_FILES['item_image']) && $_FILES['item_image']['name'] != "") {
 			$ext = pathinfo($_FILES['item_image']['name'], PATHINFO_EXTENSION);
 			$customfilename = str_replace("/", "-", $_REQUEST['item_code']) . '.' . $ext;
@@ -113,9 +120,7 @@ if (isset($_POST['SAVE'])) {
 
 		$last_id = $conn->lastInsertId();
 		if ($last_id > 0) {
-			/* Create the stock row for the new item. Opening quantity is 0, so
-			   there is no movement to record in tbl_stock_flow yet - stock only
-			   arrives through GRN or Stock Adjustment, both of which log it. */
+			// new item starts at 0, so no stock flow row yet
 			$stock_id = fnEnsureItemStockRow($conn, $last_id);
 			$result1 =  $conn->query("SELECT * FROM mst_branch");
 
@@ -143,7 +148,9 @@ if (isset($_POST['SAVE'])) {
 			}
 		}
 		$_SESSION['_msg'] = "Item details successfully saved..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -153,8 +160,12 @@ if (isset($_POST['SAVE'])) {
 }
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_item_details')) {
+		csrf_fail('lst_item_details.php');
+	}
 	$update_id = $_REQUEST['txtHid'];
 	try {
+		db_begin($conn);
 		$item_dept_sales = 1;
 		$item_dept_purchase = 1;
 
@@ -231,7 +242,9 @@ if (isset($_POST['UPDATE'])) {
 		//echo $stmt->fullQuery;
 
 		$_SESSION['_msg'] = "Item details successfully updated..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -616,6 +629,7 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 					<div class="col-md-12">
 						<!-- This Form UI Starts here --->
 						<form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<?php csrf_fields('mst_item_details'); ?>
 							<input type="hidden" name="session_user_id" value="<?php echo $_SESSION['_userid']; ?>">
 							<div class="card">
 								<div class="card-header bg-pgheader text-white header-elements-inline">

@@ -1,4 +1,4 @@
-<!-- Stock flow modal - filled by inc/cis_ajax/jquery_modal_item_stock_flow.php -->
+<!-- 2026-09-23 new - stock flow modal, filled by inc/cis_ajax/jquery_modal_item_stock_flow.php -->
 <div id="modalItemStockFlow" class="modal fade" tabindex="-1">
 	<div class="modal-dialog modal-lg modal-dialog-scrollable">
 		<div class="modal-content">

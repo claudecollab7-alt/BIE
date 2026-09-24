@@ -7,6 +7,9 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-09-24 try/catch added, handlers had none before
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -14,146 +17,158 @@ $dbconn = new dbhandler();
 //-------------------------------------------- SAVE DATABASE -------------------------------//
 
 if (isset($_POST['SAVE'])) {
+    if (!csrf_check('quo_invoice')) {
+        csrf_fail('invoice_list.php');
+    }
+    try {
+        db_begin($conn);
     
-    $_REQUEST['select_branch_id'] = (isset($_REQUEST['select_branch_id'])) ? ($_REQUEST['select_branch_id']) : '';
-    // try {
+        $_REQUEST['select_branch_id'] = (isset($_REQUEST['select_branch_id'])) ? ($_REQUEST['select_branch_id']) : '';
+        // try {
 
-    $_REQUEST['inv_date'] = date("Y-m-d", strtotime($_REQUEST['inv_date']));
-    $_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
-    $_REQUEST['inv_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
-    $_REQUEST['inv_slno'] = $dbconn->GetMaxValue('tbl_invoice', 'inv_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND inv_finyr="'.$_REQUEST['inv_finyr'].'" AND 1', 1) + 1;
+        $_REQUEST['inv_date'] = date("Y-m-d", strtotime($_REQUEST['inv_date']));
+        $_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
+        $_REQUEST['inv_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
+        $_REQUEST['inv_slno'] = $dbconn->GetMaxValue('tbl_invoice', 'inv_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND inv_finyr="'.$_REQUEST['inv_finyr'].'" AND 1', 1) + 1;
 
-    $_REQUEST['inv_refno'] = 'INV/'. leadingZeros($_REQUEST['inv_slno'], 4) .'/BIE/' .$_REQUEST['branch'].'/'  . $_REQUEST['inv_finyr'];
+        $_REQUEST['inv_refno'] = 'INV/'. leadingZeros($_REQUEST['inv_slno'], 4) .'/BIE/' .$_REQUEST['branch'].'/'  . $_REQUEST['inv_finyr'];
 
 
-    $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-    $_REQUEST['modify_by'] = $_SESSION['_user_id'];
-    if($_REQUEST['branch_id']>0)
-    {
-        $_REQUEST['cus_branch_id']=$_REQUEST['branch_id'];    
-    }
-    else
-    {
-        $_REQUEST['cus_branch_id']='0';    
-    }
-
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_invoice (inv_finyr, inv_slno, inv_refno, inv_date, supp_id, cus_branch_id, quo_id, inv_mode_of_trans, inv_vechicle_no, inv_trans_charge,inv_tot_value,inv_bal_value,inv_remarks, pay_id, pay_chq_dt, pay_refno, pay_chq_no, pay_cardno, credit_remarks, invoice_type, modify_by, modify_date_time, branch_id) VALUES (:inv_finyr, :inv_slno, :inv_refno, :inv_date, :supp_id, :cus_branch_id, :quo_id, :inv_mode_of_trans, :inv_vechicle_no, :inv_trans_charge, :inv_tot_value, :inv_bal_value, :inv_remarks, :pay_id, :pay_chq_dt, :pay_refno, :pay_chq_no, :pay_cardno, :credit_remarks, :invoice_type, :modify_by, :modify_date_time, :branch_id)");
-    $data = array(
-        ':inv_finyr' => $_REQUEST['inv_finyr'],      
-        ':inv_slno' => $_REQUEST['inv_slno'],
-        ':inv_refno' => $_REQUEST['inv_refno'],
-        ':inv_date' => $_REQUEST['inv_date'],
-        ':supp_id' => $_REQUEST['supp_id'],
-        ':cus_branch_id' => $_REQUEST['cus_branch_id'],
-        ':quo_id' => $_REQUEST['quo_id'],
-        ':inv_mode_of_trans' => $_REQUEST['inv_mode_of_trans'],
-        ':inv_vechicle_no' => $_REQUEST['inv_vechicle_no'],
-        ':inv_trans_charge' => $_REQUEST['inv_trans_charge'],
-        ':inv_tot_value' => $_REQUEST['inv_tot_value'],
-        ':inv_bal_value' => $_REQUEST['inv_tot_value'],
-        ':inv_remarks' => $_REQUEST['inv_remarks'],
-        ':pay_id' => $_REQUEST['pay_id'],
-        ':pay_chq_dt' => $_REQUEST['pay_chq_dt'],
-        ':pay_refno' => $_REQUEST['pay_refno'],
-        ':pay_chq_no' => $_REQUEST['pay_chq_no'],
-        ':pay_cardno' => $_REQUEST['pay_cardno'],
-        ':credit_remarks' => $_REQUEST['credit_remarks'],
-        ':invoice_type' => 'Q',
-        ':modify_by' => $_REQUEST['modify_by'],
-        ':modify_date_time' => $_REQUEST['modify_date_time'],
-        ':branch_id' => $_SESSION['_user_branch']
-    );
-    // print_r($data);
-    $stmt->execute($data);
-    $last_id = $conn->lastInsertId();
-    if($last_id>0)
-    {
-        $conn->query("UPDATE tbl_quotation SET inv_gen_status = 1, quo_inv_id='".$last_id."' WHERE quo_id=" . $_REQUEST['quo_id']);
-    }
-
-    // Individual item ...
-
-    $delete_details =  "DELETE FROM  tbl_invoice_details WHERE inv_id = '" . $last_id . "'";
-    $result = $conn->prepare($delete_details);
-    $result->execute();
-
-    $stmt1 = null;
-    $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, inv_value, tax_value, net_value) 
-	VALUES (:inv_id, :item_id, :inv_qty, :inv_unit, :unit_price, :inv_discount, :inv_discount_amt, :vat, :inv_value, :tax_value, :net_value)");
-
-    $row_count = count($_REQUEST['temp_item_id']);
-
-    for ($n = 0; $n < $row_count; $n++) {
-        $data1 = array(
-            ':inv_id' => $last_id,
-            ':item_id' => $_REQUEST['temp_item_id'][$n],
-            ':inv_qty' => $_REQUEST['temp_qty'][$n],
-            ':inv_unit' => $_REQUEST['temp_unit'][$n],
-            ':unit_price' => $_REQUEST['temp_selling_price'][$n],
-            ':inv_discount' => $_REQUEST['temp_discount_per'][$n],
-            ':inv_discount_amt' => $_REQUEST['temp_discount_val'][$n],
-            ':vat' => $_REQUEST['temp_vat'][$n],
-            ':inv_value' => $_REQUEST['temp_quo_price'][$n],
-            ':tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
-            ':net_value' => $_REQUEST['temp_net_amt'][$n]
-        );
-        $stmt1->execute($data1);
-        // print_r($data1);die();
-    }
-// echo "<pre>";
-//     print_r($_POST);
-//     echo "<pre>";
-//     exit;
-    // package charges details...
-
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_invoice_pack_details (inv_id, inv_pack_decp, inv_pack_percent, inv_pack_text, inv_pack_taxable_val, gst_id, inv_pack_vat, inv_pack_value, inv_pack_total)
-		                    VALUES (:inv_id, :inv_pack_decp, :inv_pack_percent, :inv_pack_text, :inv_pack_taxable_val, :gst_id, :inv_pack_vat, :inv_pack_value, :inv_pack_total)");
-
-    $row_count = (count($_REQUEST['pack_id']));
-    if ($row_count > 0) {
-        for ($n = 0; $n < $row_count; $n++) {
-            $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
-            $data = array(
-                ':inv_id' => $last_id,
-                ':inv_pack_decp' => $_REQUEST['pack_id'][$n],
-                ':inv_pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
-                ':inv_pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
-                ':inv_pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
-                ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
-                ':inv_pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
-                ':inv_pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
-                ':inv_pack_total' => $_REQUEST['quo_pack_total'][$n]
-            );
-            $stmt->execute($data);
+        $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
+        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
+        if($_REQUEST['branch_id']>0)
+        {
+            $_REQUEST['cus_branch_id']=$_REQUEST['branch_id'];    
         }
-    }
+        else
+        {
+            $_REQUEST['cus_branch_id']='0';    
+        }
 
-    if($_REQUEST['pay_id']==1)
-    {
-        $sql = "DELETE FROM tbl_invoice_denomination_details WHERE inv_id = '" . $last_id . "'";
-        $result = $conn->prepare($sql);
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_invoice (inv_finyr, inv_slno, inv_refno, inv_date, supp_id, cus_branch_id, quo_id, inv_mode_of_trans, inv_vechicle_no, inv_trans_charge,inv_tot_value,inv_bal_value,inv_remarks, pay_id, pay_chq_dt, pay_refno, pay_chq_no, pay_cardno, credit_remarks, invoice_type, modify_by, modify_date_time, branch_id) VALUES (:inv_finyr, :inv_slno, :inv_refno, :inv_date, :supp_id, :cus_branch_id, :quo_id, :inv_mode_of_trans, :inv_vechicle_no, :inv_trans_charge, :inv_tot_value, :inv_bal_value, :inv_remarks, :pay_id, :pay_chq_dt, :pay_refno, :pay_chq_no, :pay_cardno, :credit_remarks, :invoice_type, :modify_by, :modify_date_time, :branch_id)");
+        $data = array(
+            ':inv_finyr' => $_REQUEST['inv_finyr'],      
+            ':inv_slno' => $_REQUEST['inv_slno'],
+            ':inv_refno' => $_REQUEST['inv_refno'],
+            ':inv_date' => $_REQUEST['inv_date'],
+            ':supp_id' => $_REQUEST['supp_id'],
+            ':cus_branch_id' => $_REQUEST['cus_branch_id'],
+            ':quo_id' => $_REQUEST['quo_id'],
+            ':inv_mode_of_trans' => $_REQUEST['inv_mode_of_trans'],
+            ':inv_vechicle_no' => $_REQUEST['inv_vechicle_no'],
+            ':inv_trans_charge' => $_REQUEST['inv_trans_charge'],
+            ':inv_tot_value' => $_REQUEST['inv_tot_value'],
+            ':inv_bal_value' => $_REQUEST['inv_tot_value'],
+            ':inv_remarks' => $_REQUEST['inv_remarks'],
+            ':pay_id' => $_REQUEST['pay_id'],
+            ':pay_chq_dt' => $_REQUEST['pay_chq_dt'],
+            ':pay_refno' => $_REQUEST['pay_refno'],
+            ':pay_chq_no' => $_REQUEST['pay_chq_no'],
+            ':pay_cardno' => $_REQUEST['pay_cardno'],
+            ':credit_remarks' => $_REQUEST['credit_remarks'],
+            ':invoice_type' => 'Q',
+            ':modify_by' => $_REQUEST['modify_by'],
+            ':modify_date_time' => $_REQUEST['modify_date_time'],
+            ':branch_id' => $_SESSION['_user_branch']
+        );
+        // print_r($data);
+        $stmt->execute($data);
+        $last_id = $conn->lastInsertId();
+        if($last_id>0)
+        {
+            $conn->query("UPDATE tbl_quotation SET inv_gen_status = 1, quo_inv_id='".$last_id."' WHERE quo_id=" . $_REQUEST['quo_id']);
+        }
+
+        // Individual item ...
+
+        $delete_details =  "DELETE FROM  tbl_invoice_details WHERE inv_id = '" . $last_id . "'";
+        $result = $conn->prepare($delete_details);
         $result->execute();
-        $cash = null;
-        $cash = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
 
-        $cash_row_count = (count($_REQUEST['temp_cash_id']));
-        if ($cash_row_count > 0) {
-            for ($n = 0; $n < $cash_row_count; $n++) {
-                
-                $cash_data = array(
+        $stmt1 = null;
+        $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, inv_value, tax_value, net_value) 
+    	VALUES (:inv_id, :item_id, :inv_qty, :inv_unit, :unit_price, :inv_discount, :inv_discount_amt, :vat, :inv_value, :tax_value, :net_value)");
+
+        $row_count = count($_REQUEST['temp_item_id']);
+
+        for ($n = 0; $n < $row_count; $n++) {
+            $data1 = array(
+                ':inv_id' => $last_id,
+                ':item_id' => $_REQUEST['temp_item_id'][$n],
+                ':inv_qty' => $_REQUEST['temp_qty'][$n],
+                ':inv_unit' => $_REQUEST['temp_unit'][$n],
+                ':unit_price' => $_REQUEST['temp_selling_price'][$n],
+                ':inv_discount' => $_REQUEST['temp_discount_per'][$n],
+                ':inv_discount_amt' => $_REQUEST['temp_discount_val'][$n],
+                ':vat' => $_REQUEST['temp_vat'][$n],
+                ':inv_value' => $_REQUEST['temp_quo_price'][$n],
+                ':tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
+                ':net_value' => $_REQUEST['temp_net_amt'][$n]
+            );
+            $stmt1->execute($data1);
+            // print_r($data1);die();
+        }
+    // echo "<pre>";
+    //     print_r($_POST);
+    //     echo "<pre>";
+    //     exit;
+        // package charges details...
+
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_invoice_pack_details (inv_id, inv_pack_decp, inv_pack_percent, inv_pack_text, inv_pack_taxable_val, gst_id, inv_pack_vat, inv_pack_value, inv_pack_total)
+    		                    VALUES (:inv_id, :inv_pack_decp, :inv_pack_percent, :inv_pack_text, :inv_pack_taxable_val, :gst_id, :inv_pack_vat, :inv_pack_value, :inv_pack_total)");
+
+        $row_count = (count($_REQUEST['pack_id']));
+        if ($row_count > 0) {
+            for ($n = 0; $n < $row_count; $n++) {
+                $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
+                $data = array(
                     ':inv_id' => $last_id,
-                    ':cash_id' => $_REQUEST['temp_cash_id'][$n],
-                    ':den_name' => $_REQUEST['temp_cash_name'][$n],
-                    ':den_count' => $_REQUEST['temp_cash_count'][$n],
-                    ':den_total' => $_REQUEST['temp_total'][$n]
+                    ':inv_pack_decp' => $_REQUEST['pack_id'][$n],
+                    ':inv_pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
+                    ':inv_pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
+                    ':inv_pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
+                    ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
+                    ':inv_pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
+                    ':inv_pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
+                    ':inv_pack_total' => $_REQUEST['quo_pack_total'][$n]
                 );
-                $cash->execute($cash_data);
+                $stmt->execute($data);
             }
         }
-    }
 
+        if($_REQUEST['pay_id']==1)
+        {
+            $sql = "DELETE FROM tbl_invoice_denomination_details WHERE inv_id = '" . $last_id . "'";
+            $result = $conn->prepare($sql);
+            $result->execute();
+            $cash = null;
+            $cash = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
+
+            $cash_row_count = (count($_REQUEST['temp_cash_id']));
+            if ($cash_row_count > 0) {
+                for ($n = 0; $n < $cash_row_count; $n++) {
+                
+                    $cash_data = array(
+                        ':inv_id' => $last_id,
+                        ':cash_id' => $_REQUEST['temp_cash_id'][$n],
+                        ':den_name' => $_REQUEST['temp_cash_name'][$n],
+                        ':den_count' => $_REQUEST['temp_cash_count'][$n],
+                        ':den_total' => $_REQUEST['temp_total'][$n]
+                    );
+                    $cash->execute($cash_data);
+                }
+            }
+        }
+
+        db_commit($conn);
+    } catch (Exception $e) {
+        db_rollback($conn);
+        $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+        header("location:invoice_list.php");
+        die();
+    }
     $_SESSION['_msg'] = "Invoice succesfully Saved..!";
     header("location:invoice_list.php");
     die();
@@ -161,125 +176,137 @@ if (isset($_POST['SAVE'])) {
 
 if (isset($_POST['UPDATE'])) 
 {
-
-    $update_id = $_REQUEST['txtHid'];
-    $_REQUEST['modify_by'] = $_SESSION['_user_id'];
-    $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-     if($_REQUEST['branch_id']>0)
-    {
-        $_REQUEST['cus_branch_id']=$_REQUEST['branch_id'];    
+    if (!csrf_check('quo_invoice')) {
+        csrf_fail('invoice_list.php');
     }
-    else
-    {
-        $_REQUEST['cus_branch_id']='0';    
-    }
+    try {
+        db_begin($conn);
 
-    $stmt = null;
-    $stmt = $conn->prepare("UPDATE tbl_invoice SET inv_date = :inv_date, supp_id = :supp_id, cus_branch_id = :cus_branch_id, inv_mode_of_trans = :inv_mode_of_trans, inv_vechicle_no = :inv_vechicle_no, inv_trans_charge = :inv_trans_charge, inv_tot_value = :inv_tot_value, inv_bal_value = :inv_bal_value, inv_remarks = :inv_remarks, pay_id = :pay_id, pay_chq_dt = :pay_chq_dt, pay_refno = :pay_refno, pay_chq_no = :pay_chq_no, pay_cardno = :pay_cardno, credit_remarks=:credit_remarks, modify_date_time = :modify_date_time, modify_by = :modify_by  WHERE  inv_id = :inv_id");
-
-    $data = array(
-        ':inv_id' => $update_id,
-        ':inv_date' => $_REQUEST['inv_date'],       
-        ':supp_id' => $_REQUEST['supp_id'],
-        ':cus_branch_id' => $_REQUEST['cus_branch_id'],
-        ':inv_mode_of_trans' => $_REQUEST['inv_mode_of_trans'],
-        ':inv_vechicle_no' => $_REQUEST['inv_vechicle_no'],
-        ':inv_trans_charge' => $_REQUEST['inv_trans_charge'],
-        ':inv_tot_value' => $_REQUEST['inv_tot_value'],
-        ':inv_bal_value' => $_REQUEST['inv_tot_value'],
-        ':inv_remarks' => $_REQUEST['inv_remarks'],
-        ':pay_id' => $_REQUEST['pay_id'],
-        ':pay_chq_dt' => $_REQUEST['pay_chq_dt'],
-        ':pay_refno' => $_REQUEST['pay_refno'],
-        ':pay_chq_no' => $_REQUEST['pay_chq_no'],
-        ':pay_cardno' => $_REQUEST['pay_cardno'],
-        ':credit_remarks' => $_REQUEST['credit_remarks'],       
-        ':modify_date_time' => $_REQUEST['modify_date_time'],
-        ':modify_by' => $_REQUEST['modify_by']
-    );
-    $stmt->execute($data);
-    // print_r($data);die();
-    // $conn->query("UPDATE tbl_quotation SET so_des_gen = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
-    // $conn->query("UPDATE tbl_sales_order SET accounts_status = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
-
-    $sql = "DELETE FROM tbl_invoice_details WHERE inv_id = '" . $update_id . "'";
-    $result = $conn->prepare($sql);
-    $result->execute();
-
-    $stmt1 = null;
-    $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, inv_value, tax_value, net_value) 
-    VALUES (:inv_id, :item_id, :inv_qty, :inv_unit, :unit_price, :inv_discount, :inv_discount_amt, :vat, :inv_value, :tax_value, :net_value)");
-
-    $row_count = count($_REQUEST['temp_item_id']);
-
-    for ($n = 0; $n < $row_count; $n++) {
-        $data1 = array(
-            ':inv_id' => $update_id,
-            ':item_id' => $_REQUEST['temp_item_id'][$n],
-            ':inv_qty' => $_REQUEST['temp_qty'][$n],
-            ':inv_unit' => $_REQUEST['temp_unit'][$n],
-            ':unit_price' => $_REQUEST['temp_selling_price'][$n],
-            ':inv_discount' => $_REQUEST['temp_discount_per'][$n],
-            ':inv_discount_amt' => $_REQUEST['temp_discount_val'][$n],
-            ':vat' => $_REQUEST['temp_vat'][$n],
-            ':inv_value' => $_REQUEST['temp_quo_price'][$n],
-            ':tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
-            ':net_value' => $_REQUEST['temp_net_amt'][$n]
-        );
-        $stmt1->execute($data1);
-        // print_r($data1);die();
-    }
-    $sql = "DELETE FROM tbl_invoice_pack_details WHERE inv_id = '" . $update_id . "'";
-    $result = $conn->prepare($sql);
-    $result->execute();
-
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_invoice_pack_details (inv_id, inv_pack_decp, inv_pack_percent, inv_pack_text, inv_pack_taxable_val, gst_id, inv_pack_vat, inv_pack_value, inv_pack_total)
-                            VALUES (:inv_id, :inv_pack_decp, :inv_pack_percent, :inv_pack_text, :inv_pack_taxable_val, :gst_id, :inv_pack_vat, :inv_pack_value, :inv_pack_total)");
-
-    $row_count = (count($_REQUEST['pack_id']));
-    if ($row_count > 0) {
-        for ($n = 0; $n < $row_count; $n++) {
-            $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
-            $data = array(
-                ':inv_id' => $update_id,
-                ':inv_pack_decp' => $_REQUEST['pack_id'][$n],
-                ':inv_pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
-                ':inv_pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
-                ':inv_pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
-                ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
-                ':inv_pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
-                ':inv_pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
-                ':inv_pack_total' => $_REQUEST['quo_pack_total'][$n]
-            );
-            $stmt->execute($data);
+        $update_id = $_REQUEST['txtHid'];
+        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
+        $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
+         if($_REQUEST['branch_id']>0)
+        {
+            $_REQUEST['cus_branch_id']=$_REQUEST['branch_id'];    
         }
-    }
+        else
+        {
+            $_REQUEST['cus_branch_id']='0';    
+        }
 
-    if($_REQUEST['pay_id']==1)
-    {
-        $sql = "DELETE FROM tbl_invoice_denomination_details WHERE inv_id = '" . $update_id . "'";
+        $stmt = null;
+        $stmt = $conn->prepare("UPDATE tbl_invoice SET inv_date = :inv_date, supp_id = :supp_id, cus_branch_id = :cus_branch_id, inv_mode_of_trans = :inv_mode_of_trans, inv_vechicle_no = :inv_vechicle_no, inv_trans_charge = :inv_trans_charge, inv_tot_value = :inv_tot_value, inv_bal_value = :inv_bal_value, inv_remarks = :inv_remarks, pay_id = :pay_id, pay_chq_dt = :pay_chq_dt, pay_refno = :pay_refno, pay_chq_no = :pay_chq_no, pay_cardno = :pay_cardno, credit_remarks=:credit_remarks, modify_date_time = :modify_date_time, modify_by = :modify_by  WHERE  inv_id = :inv_id");
+
+        $data = array(
+            ':inv_id' => $update_id,
+            ':inv_date' => $_REQUEST['inv_date'],       
+            ':supp_id' => $_REQUEST['supp_id'],
+            ':cus_branch_id' => $_REQUEST['cus_branch_id'],
+            ':inv_mode_of_trans' => $_REQUEST['inv_mode_of_trans'],
+            ':inv_vechicle_no' => $_REQUEST['inv_vechicle_no'],
+            ':inv_trans_charge' => $_REQUEST['inv_trans_charge'],
+            ':inv_tot_value' => $_REQUEST['inv_tot_value'],
+            ':inv_bal_value' => $_REQUEST['inv_tot_value'],
+            ':inv_remarks' => $_REQUEST['inv_remarks'],
+            ':pay_id' => $_REQUEST['pay_id'],
+            ':pay_chq_dt' => $_REQUEST['pay_chq_dt'],
+            ':pay_refno' => $_REQUEST['pay_refno'],
+            ':pay_chq_no' => $_REQUEST['pay_chq_no'],
+            ':pay_cardno' => $_REQUEST['pay_cardno'],
+            ':credit_remarks' => $_REQUEST['credit_remarks'],       
+            ':modify_date_time' => $_REQUEST['modify_date_time'],
+            ':modify_by' => $_REQUEST['modify_by']
+        );
+        $stmt->execute($data);
+        // print_r($data);die();
+        // $conn->query("UPDATE tbl_quotation SET so_des_gen = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
+        // $conn->query("UPDATE tbl_sales_order SET accounts_status = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
+
+        $sql = "DELETE FROM tbl_invoice_details WHERE inv_id = '" . $update_id . "'";
         $result = $conn->prepare($sql);
         $result->execute();
-        $cash = null;
-        $cash = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
 
-        $cash_row_count = (count($_REQUEST['temp_cash_id']));
-        if ($cash_row_count > 0) {
-            for ($n = 0; $n < $cash_row_count; $n++) {
-                
-                $cash_data = array(
+        $stmt1 = null;
+        $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, inv_value, tax_value, net_value) 
+        VALUES (:inv_id, :item_id, :inv_qty, :inv_unit, :unit_price, :inv_discount, :inv_discount_amt, :vat, :inv_value, :tax_value, :net_value)");
+
+        $row_count = count($_REQUEST['temp_item_id']);
+
+        for ($n = 0; $n < $row_count; $n++) {
+            $data1 = array(
+                ':inv_id' => $update_id,
+                ':item_id' => $_REQUEST['temp_item_id'][$n],
+                ':inv_qty' => $_REQUEST['temp_qty'][$n],
+                ':inv_unit' => $_REQUEST['temp_unit'][$n],
+                ':unit_price' => $_REQUEST['temp_selling_price'][$n],
+                ':inv_discount' => $_REQUEST['temp_discount_per'][$n],
+                ':inv_discount_amt' => $_REQUEST['temp_discount_val'][$n],
+                ':vat' => $_REQUEST['temp_vat'][$n],
+                ':inv_value' => $_REQUEST['temp_quo_price'][$n],
+                ':tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
+                ':net_value' => $_REQUEST['temp_net_amt'][$n]
+            );
+            $stmt1->execute($data1);
+            // print_r($data1);die();
+        }
+        $sql = "DELETE FROM tbl_invoice_pack_details WHERE inv_id = '" . $update_id . "'";
+        $result = $conn->prepare($sql);
+        $result->execute();
+
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_invoice_pack_details (inv_id, inv_pack_decp, inv_pack_percent, inv_pack_text, inv_pack_taxable_val, gst_id, inv_pack_vat, inv_pack_value, inv_pack_total)
+                                VALUES (:inv_id, :inv_pack_decp, :inv_pack_percent, :inv_pack_text, :inv_pack_taxable_val, :gst_id, :inv_pack_vat, :inv_pack_value, :inv_pack_total)");
+
+        $row_count = (count($_REQUEST['pack_id']));
+        if ($row_count > 0) {
+            for ($n = 0; $n < $row_count; $n++) {
+                $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
+                $data = array(
                     ':inv_id' => $update_id,
-                    ':cash_id' => $_REQUEST['temp_cash_id'][$n],
-                    ':den_name' => $_REQUEST['temp_cash_name'][$n],
-                    ':den_count' => $_REQUEST['temp_cash_count'][$n],
-                    ':den_total' => $_REQUEST['temp_total'][$n]
+                    ':inv_pack_decp' => $_REQUEST['pack_id'][$n],
+                    ':inv_pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
+                    ':inv_pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
+                    ':inv_pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
+                    ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
+                    ':inv_pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
+                    ':inv_pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
+                    ':inv_pack_total' => $_REQUEST['quo_pack_total'][$n]
                 );
-                $cash->execute($cash_data);
+                $stmt->execute($data);
             }
         }
+
+        if($_REQUEST['pay_id']==1)
+        {
+            $sql = "DELETE FROM tbl_invoice_denomination_details WHERE inv_id = '" . $update_id . "'";
+            $result = $conn->prepare($sql);
+            $result->execute();
+            $cash = null;
+            $cash = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
+
+            $cash_row_count = (count($_REQUEST['temp_cash_id']));
+            if ($cash_row_count > 0) {
+                for ($n = 0; $n < $cash_row_count; $n++) {
+                
+                    $cash_data = array(
+                        ':inv_id' => $update_id,
+                        ':cash_id' => $_REQUEST['temp_cash_id'][$n],
+                        ':den_name' => $_REQUEST['temp_cash_name'][$n],
+                        ':den_count' => $_REQUEST['temp_cash_count'][$n],
+                        ':den_total' => $_REQUEST['temp_total'][$n]
+                    );
+                    $cash->execute($cash_data);
+                }
+            }
+        }
+        // print_r($data);die();
+        db_commit($conn);
+    } catch (Exception $e) {
+        db_rollback($conn);
+        $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+        header("location:invoice_list.php");
+        die();
     }
-    // print_r($data);die();
     $_SESSION['_msg'] = "Invoice succesfully Updated..!";
     header("location:invoice_list.php");
     die();
@@ -287,201 +314,183 @@ if (isset($_POST['UPDATE']))
 
 if (isset($_POST['FINALIZE'])) 
 {
-
-    $update_id = $_REQUEST['txtHid'];
-    $_REQUEST['modify_by'] = $_SESSION['_user_id'];
-    $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-     if($_REQUEST['branch_id']>0)
-    {
-        $_REQUEST['cus_branch_id']=$_REQUEST['branch_id'];    
+    if (!csrf_check('quo_invoice')) {
+        csrf_fail('invoice_list.php');
     }
-    else
-    {
-        $_REQUEST['cus_branch_id']='0';    
-    }
+    try {
+        db_begin($conn);
 
-    $stmt = null;
-    $stmt = $conn->prepare("UPDATE tbl_invoice SET inv_date = :inv_date, supp_id = :supp_id, cus_branch_id = :cus_branch_id, inv_mode_of_trans = :inv_mode_of_trans, inv_vechicle_no = :inv_vechicle_no, inv_trans_charge = :inv_trans_charge, inv_tot_value = :inv_tot_value, inv_bal_value = :inv_bal_value, inv_remarks = :inv_remarks, pay_id = :pay_id, pay_chq_dt = :pay_chq_dt, pay_refno = :pay_refno, pay_chq_no = :pay_chq_no, pay_cardno = :pay_cardno, credit_remarks=:credit_remarks, modify_date_time = :modify_date_time, modify_by = :modify_by, inv_status = :inv_status  WHERE  inv_id = :inv_id");
-
-    $data = array(
-        ':inv_id' => $update_id,
-        ':inv_date' => $_REQUEST['inv_date'],       
-        ':supp_id' => $_REQUEST['supp_id'],
-        ':cus_branch_id' => $_REQUEST['cus_branch_id'],
-        ':inv_mode_of_trans' => $_REQUEST['inv_mode_of_trans'],
-        ':inv_vechicle_no' => $_REQUEST['inv_vechicle_no'],
-        ':inv_trans_charge' => $_REQUEST['inv_trans_charge'],
-        ':inv_tot_value' => $_REQUEST['inv_tot_value'],
-        ':inv_bal_value' => $_REQUEST['inv_tot_value'],
-        ':inv_remarks' => $_REQUEST['inv_remarks'],
-        ':pay_id' => $_REQUEST['pay_id'],
-        ':pay_chq_dt' => $_REQUEST['pay_chq_dt'],
-        ':pay_refno' => $_REQUEST['pay_refno'],
-        ':pay_chq_no' => $_REQUEST['pay_chq_no'],
-        ':pay_cardno' => $_REQUEST['pay_cardno'],
-        ':credit_remarks' => $_REQUEST['credit_remarks'],
-        ':modify_date_time' => $_REQUEST['modify_date_time'],
-        ':modify_by' => $_REQUEST['modify_by'],
-        ':inv_status' => 1
-    );
-    $stmt->execute($data);
-    // print_r($data);die();
-    // $conn->query("UPDATE tbl_quotation SET so_des_gen = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
-    // $conn->query("UPDATE tbl_sales_order SET accounts_status = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
-
-    $sql = "DELETE FROM tbl_invoice_details WHERE inv_id = '" . $update_id . "'";
-    $result = $conn->prepare($sql);
-    $result->execute();
-
-    $stmt1 = null;
-    $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, inv_value, tax_value, net_value) 
-    VALUES (:inv_id, :item_id, :inv_qty, :inv_unit, :unit_price, :inv_discount, :inv_discount_amt, :vat, :inv_value, :tax_value, :net_value)");
-
-    $row_count = count($_REQUEST['temp_item_id']);
-
-    for ($n = 0; $n < $row_count; $n++) {
-        $data1 = array(
-            ':inv_id' => $update_id,
-            ':item_id' => $_REQUEST['temp_item_id'][$n],
-            ':inv_qty' => $_REQUEST['temp_qty'][$n],
-            ':inv_unit' => $_REQUEST['temp_unit'][$n],
-            ':unit_price' => $_REQUEST['temp_selling_price'][$n],
-            ':inv_discount' => $_REQUEST['temp_discount_per'][$n],
-            ':inv_discount_amt' => $_REQUEST['temp_discount_val'][$n],
-            ':vat' => $_REQUEST['temp_vat'][$n],
-            ':inv_value' => $_REQUEST['temp_quo_price'][$n],
-            ':tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
-            ':net_value' => $_REQUEST['temp_net_amt'][$n]
-        );
-        $stmt1->execute($data1);
-        // print_r($data1);die();
-    }
-    $sql = "DELETE FROM tbl_invoice_pack_details WHERE inv_id = '" . $update_id . "'";
-    $result = $conn->prepare($sql);
-    $result->execute();
-
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_invoice_pack_details (inv_id, inv_pack_decp, inv_pack_percent, inv_pack_text, inv_pack_taxable_val, gst_id, inv_pack_vat, inv_pack_value, inv_pack_total)
-                            VALUES (:inv_id, :inv_pack_decp, :inv_pack_percent, :inv_pack_text, :inv_pack_taxable_val, :gst_id, :inv_pack_vat, :inv_pack_value, :inv_pack_total)");
-
-    $row_count = (count($_REQUEST['pack_id']));
-    if ($row_count > 0) {
-        for ($n = 0; $n < $row_count; $n++) {
-            $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
-            $data = array(
-                ':inv_id' => $update_id,
-                ':inv_pack_decp' => $_REQUEST['pack_id'][$n],
-                ':inv_pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
-                ':inv_pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
-                ':inv_pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
-                ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
-                ':inv_pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
-                ':inv_pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
-                ':inv_pack_total' => $_REQUEST['quo_pack_total'][$n]
-            );
-            $stmt->execute($data);
+        $update_id = $_REQUEST['txtHid'];
+        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
+        $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
+         if($_REQUEST['branch_id']>0)
+        {
+            $_REQUEST['cus_branch_id']=$_REQUEST['branch_id'];    
         }
-    }
-
-    if($_REQUEST['pay_id']==1)
-    {
-        $sql = "DELETE FROM tbl_invoice_denomination_details WHERE inv_id = '" . $update_id . "'";
-        $result = $conn->prepare($sql);
-        $result->execute();
-        $cash = null;
-        $cash = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
-
-        $cash_row_count = (count($_REQUEST['temp_cash_id']));
-        if ($cash_row_count > 0) {
-            for ($n = 0; $n < $cash_row_count; $n++) {
-                
-                $cash_data = array(
-                    ':inv_id' => $update_id,
-                    ':cash_id' => $_REQUEST['temp_cash_id'][$n],
-                    ':den_name' => $_REQUEST['temp_cash_name'][$n],
-                    ':den_count' => $_REQUEST['temp_cash_count'][$n],
-                    ':den_total' => $_REQUEST['temp_total'][$n]
-                );
-                $cash->execute($cash_data);
-            }
+        else
+        {
+            $_REQUEST['cus_branch_id']='0';    
         }
-    }
 
-
-    /* STOCK DETAILS */
-
-    $stmt1 = null;
-    $stmt1 = $conn->prepare("INSERT INTO tbl_stock_flow 
-                (trans_type, trans_id, branch_id, trans_date, item_id, item_price, before_qty, rcvd_qty, trans_qty, reje_qty, pend_qty, after_qty, modify_by, modify_date_time) 
-                VALUES
-                (:trans_type, :trans_id, :branch_id, :trans_date, :item_id, :item_price, :before_qty, :rcvd_qty, :trans_qty, :reje_qty, :pend_qty, :after_qty, :modify_by, :modify_date_time)");
-
-    /* New Current Stock Update Branch */
-    $field_name = $dbconn->GetSingleReconrd("mst_branch","branch_stock_field","branch_id",$_SESSION['_user_branch']);
-    $stmt2 = null;
-    $stmt2 = $conn->prepare("UPDATE tbl_item_stock SET ".$field_name." = :branch_stock WHERE item_id = :item_id ");
-
-    for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
-       
-       // $item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_details", "item_curr_stock", "item_id", $_REQUEST['temp_item_id'][$x]);
-       $item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_stock", "$field_name", "item_id", $_REQUEST['temp_item_id'][$x]);
-
-       $after_qty =  (int)$item_curr_stock - (int)$_REQUEST['temp_qty'][$x];
-       $price = $dbconn->GetSingleReconrd("tbl_item_details", "item_selling_price", "item_id", $_REQUEST['temp_item_id'][$x]);
+        $stmt = null;
+        $stmt = $conn->prepare("UPDATE tbl_invoice SET inv_date = :inv_date, supp_id = :supp_id, cus_branch_id = :cus_branch_id, inv_mode_of_trans = :inv_mode_of_trans, inv_vechicle_no = :inv_vechicle_no, inv_trans_charge = :inv_trans_charge, inv_tot_value = :inv_tot_value, inv_bal_value = :inv_bal_value, inv_remarks = :inv_remarks, pay_id = :pay_id, pay_chq_dt = :pay_chq_dt, pay_refno = :pay_refno, pay_chq_no = :pay_chq_no, pay_cardno = :pay_cardno, credit_remarks=:credit_remarks, modify_date_time = :modify_date_time, modify_by = :modify_by, inv_status = :inv_status  WHERE  inv_id = :inv_id");
 
         $data = array(
-            ':trans_type' => 'INV',
-            ':trans_id' => $update_id,
-            ':branch_id' => $_SESSION['_user_branch'],
-            ':trans_date' => date('Y-m-d'),
-            ':item_id' => $_REQUEST['temp_item_id'][$x],
-            ':item_price' => $price,
-            ':before_qty' => $item_curr_stock,
-            ':rcvd_qty' => 0,
-            ':trans_qty' => $_REQUEST['temp_qty'][$x],
-            ':reje_qty' => 0,
-            ':pend_qty' => 0,
-            ':after_qty' => $after_qty,
-            ':modify_by' => $_SESSION['_user_id'],
-            ':modify_date_time' => date('Y-m-d H:i:s')
+            ':inv_id' => $update_id,
+            ':inv_date' => $_REQUEST['inv_date'],       
+            ':supp_id' => $_REQUEST['supp_id'],
+            ':cus_branch_id' => $_REQUEST['cus_branch_id'],
+            ':inv_mode_of_trans' => $_REQUEST['inv_mode_of_trans'],
+            ':inv_vechicle_no' => $_REQUEST['inv_vechicle_no'],
+            ':inv_trans_charge' => $_REQUEST['inv_trans_charge'],
+            ':inv_tot_value' => $_REQUEST['inv_tot_value'],
+            ':inv_bal_value' => $_REQUEST['inv_tot_value'],
+            ':inv_remarks' => $_REQUEST['inv_remarks'],
+            ':pay_id' => $_REQUEST['pay_id'],
+            ':pay_chq_dt' => $_REQUEST['pay_chq_dt'],
+            ':pay_refno' => $_REQUEST['pay_refno'],
+            ':pay_chq_no' => $_REQUEST['pay_chq_no'],
+            ':pay_cardno' => $_REQUEST['pay_cardno'],
+            ':credit_remarks' => $_REQUEST['credit_remarks'],
+            ':modify_date_time' => $_REQUEST['modify_date_time'],
+            ':modify_by' => $_REQUEST['modify_by'],
+            ':inv_status' => 1
         );
-        $stmt1->execute($data);
+        $stmt->execute($data);
+        // print_r($data);die();
+        // $conn->query("UPDATE tbl_quotation SET so_des_gen = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
+        // $conn->query("UPDATE tbl_sales_order SET accounts_status = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
 
-        $branch_item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_stock", "$field_name", "item_id", $_REQUEST['temp_item_id'][$x]);
-        $after_qty2 =  (int)$branch_item_curr_stock - (int)$_REQUEST['temp_qty'][$x];
+        $sql = "DELETE FROM tbl_invoice_details WHERE inv_id = '" . $update_id . "'";
+        $result = $conn->prepare($sql);
+        $result->execute();
 
-        $data2 = array(
-            ':item_id' => $_REQUEST['temp_item_id'][$x],
-            ':branch_stock' => $after_qty2,
-        );
-        $stmt2->execute($data2);
+        $stmt1 = null;
+        $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, inv_value, tax_value, net_value) 
+        VALUES (:inv_id, :item_id, :inv_qty, :inv_unit, :unit_price, :inv_discount, :inv_discount_amt, :vat, :inv_value, :tax_value, :net_value)");
+
+        $row_count = count($_REQUEST['temp_item_id']);
+
+        for ($n = 0; $n < $row_count; $n++) {
+            $data1 = array(
+                ':inv_id' => $update_id,
+                ':item_id' => $_REQUEST['temp_item_id'][$n],
+                ':inv_qty' => $_REQUEST['temp_qty'][$n],
+                ':inv_unit' => $_REQUEST['temp_unit'][$n],
+                ':unit_price' => $_REQUEST['temp_selling_price'][$n],
+                ':inv_discount' => $_REQUEST['temp_discount_per'][$n],
+                ':inv_discount_amt' => $_REQUEST['temp_discount_val'][$n],
+                ':vat' => $_REQUEST['temp_vat'][$n],
+                ':inv_value' => $_REQUEST['temp_quo_price'][$n],
+                ':tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
+                ':net_value' => $_REQUEST['temp_net_amt'][$n]
+            );
+            $stmt1->execute($data1);
+            // print_r($data1);die();
+        }
+        $sql = "DELETE FROM tbl_invoice_pack_details WHERE inv_id = '" . $update_id . "'";
+        $result = $conn->prepare($sql);
+        $result->execute();
+
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_invoice_pack_details (inv_id, inv_pack_decp, inv_pack_percent, inv_pack_text, inv_pack_taxable_val, gst_id, inv_pack_vat, inv_pack_value, inv_pack_total)
+                                VALUES (:inv_id, :inv_pack_decp, :inv_pack_percent, :inv_pack_text, :inv_pack_taxable_val, :gst_id, :inv_pack_vat, :inv_pack_value, :inv_pack_total)");
+
+        $row_count = (count($_REQUEST['pack_id']));
+        if ($row_count > 0) {
+            for ($n = 0; $n < $row_count; $n++) {
+                $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
+                $data = array(
+                    ':inv_id' => $update_id,
+                    ':inv_pack_decp' => $_REQUEST['pack_id'][$n],
+                    ':inv_pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
+                    ':inv_pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
+                    ':inv_pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
+                    ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
+                    ':inv_pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
+                    ':inv_pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
+                    ':inv_pack_total' => $_REQUEST['quo_pack_total'][$n]
+                );
+                $stmt->execute($data);
+            }
+        }
+
+        if($_REQUEST['pay_id']==1)
+        {
+            $sql = "DELETE FROM tbl_invoice_denomination_details WHERE inv_id = '" . $update_id . "'";
+            $result = $conn->prepare($sql);
+            $result->execute();
+            $cash = null;
+            $cash = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
+
+            $cash_row_count = (count($_REQUEST['temp_cash_id']));
+            if ($cash_row_count > 0) {
+                for ($n = 0; $n < $cash_row_count; $n++) {
+                
+                    $cash_data = array(
+                        ':inv_id' => $update_id,
+                        ':cash_id' => $_REQUEST['temp_cash_id'][$n],
+                        ':den_name' => $_REQUEST['temp_cash_name'][$n],
+                        ':den_count' => $_REQUEST['temp_cash_count'][$n],
+                        ':den_total' => $_REQUEST['temp_total'][$n]
+                    );
+                    $cash->execute($cash_data);
+                }
+            }
+        }
+
+
+        /* STOCK DETAILS */
+
+        for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+            if ($_REQUEST['temp_qty'][$x] <= 0) {
+                continue;
+            }
+            // moves the branch qty and writes tbl_stock_flow on $conn, inside this transaction
+            fnApplyStockMovement($conn, array(
+                'item_id'    => $_REQUEST['temp_item_id'][$x],
+                'branch_id'  => $_SESSION['_user_branch'],
+                'dir'        => 'O',
+                'qty'        => $_REQUEST['temp_qty'][$x],
+                'trans_type' => STOCK_TRANS_INV,
+                'trans_id'   => $update_id,
+                'item_price' => $dbconn->GetSingleReconrd('tbl_item_details', 'item_selling_price', 'item_id', $_REQUEST['temp_item_id'][$x]),
+                'remarks'    => 'Invoice'
+            ));
+        }
+
+        /* STOCK DETAILS */
+
+
+       /* ITEM DETAILS */
+
+        // $_REQUEST['modify_by'] = $_SESSION['_user_id'];
+        // $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
+
+        // for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+        //     $stmt3 = null;
+        //     $stmt3 = $conn->prepare("UPDATE tbl_item_details SET item_curr_stock = :item_curr_stock, modify_date_time=:modify_date_time, modify_by=:modify_by WHERE item_id = :item_id ");
+
+        //     $item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_details", "item_curr_stock", "item_id", $_REQUEST['temp_item_id'][$x]);
+
+        //     $data = array(
+        //         ':item_id' => $_REQUEST['temp_item_id'][$x],
+        //         ':item_curr_stock' => $after_qty,
+        //         ':modify_date_time' => $_REQUEST['modify_date_time'],
+        //         ':modify_by' => $_REQUEST['modify_by'],
+        //     );
+        //     $stmt3->execute($data);
+        // }
+
+        /* ITEM DETAILS */
+        // print_r($data);die();
+        db_commit($conn);
+    } catch (Exception $e) {
+        db_rollback($conn);
+        $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+        header("location:invoice_list.php");
+        die();
     }
-
-    /* STOCK DETAILS */
-
-
-   /* ITEM DETAILS */
-
-    // $_REQUEST['modify_by'] = $_SESSION['_user_id'];
-    // $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-
-    // for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
-    //     $stmt3 = null;
-    //     $stmt3 = $conn->prepare("UPDATE tbl_item_details SET item_curr_stock = :item_curr_stock, modify_date_time=:modify_date_time, modify_by=:modify_by WHERE item_id = :item_id ");
-
-    //     $item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_details", "item_curr_stock", "item_id", $_REQUEST['temp_item_id'][$x]);
-
-    //     $data = array(
-    //         ':item_id' => $_REQUEST['temp_item_id'][$x],
-    //         ':item_curr_stock' => $after_qty,
-    //         ':modify_date_time' => $_REQUEST['modify_date_time'],
-    //         ':modify_by' => $_REQUEST['modify_by'],
-    //     );
-    //     $stmt3->execute($data);
-    // }
-
-    /* ITEM DETAILS */
-    // print_r($data);die();
     $_SESSION['_msg'] = "Invoice succesfully Updated..!";
     header("location:invoice_list.php");
     die();
@@ -575,6 +584,7 @@ if (isset($_REQUEST['inv_id'])) {
                 <div class="row">
                     <div class="col-md-12">
                         <form name='thisForm' id="validate" class="form-horizontal" method='post' action="quo_invoice.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('quo_invoice'); ?>
                             <input type="hidden" name="quo_id" id="quo_id" value="<?php echo $_REQUEST['quo_id']; ?>">
                             <fieldset>
                                 <div class="card">

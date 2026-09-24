@@ -10,14 +10,20 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 // ini_set('display_errors', '	1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $rtn_date = date("Y-m-d");
 
 if (isset($_POST['SAVE']))
 {
+    if (!csrf_check('purchase_return')) {
+    	csrf_fail('purchase_return_list.php');
+    }
 	try
 	{
+		db_begin($conn);
 		$_REQUEST['rtn_date'] = date("Y-m-d", strtotime($_REQUEST['rtn_date']));
 
 		
@@ -110,9 +116,11 @@ if (isset($_POST['SAVE']))
 			$update_po->execute($data1);
 		}
 	
+		db_commit($conn);
 	}
 	catch (Exception $e)
 	{		
+		db_rollback($conn);
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
 	}
@@ -127,9 +135,13 @@ if (isset($_POST['SAVE']))
 
 if (isset($_POST['UPDATE']))
 {
+    if (!csrf_check('purchase_return')) {
+    	csrf_fail('purchase_return_list.php');
+    }
   	$update_id = $_REQUEST['txtHid'];
 	try
 	{
+		db_begin($conn);
 		$_REQUEST['rtn_date'] = date("Y-m-d", strtotime($_REQUEST['rtn_date']));
 
 		$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
@@ -187,9 +199,11 @@ if (isset($_POST['UPDATE']))
 			// $result = $conn->prepare($sql);
 			// $result->execute();
 		}
+		db_commit($conn);
 	}
 	catch (Exception $e)
 	{		
+		db_rollback($conn);
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		echo $_SESSION['_msg_err'] = $str;			
 	}
@@ -200,9 +214,13 @@ if (isset($_POST['UPDATE']))
 
 if (isset($_POST['FINALIZE']))
 {
+    if (!csrf_check('purchase_return')) {
+    	csrf_fail('purchase_return_list.php');
+    }
   	$update_id = $_REQUEST['txtHid'];
 	try
 	{
+		db_begin($conn);
 		$_REQUEST['rtn_date'] = date("Y-m-d", strtotime($_REQUEST['rtn_date']));
 
 		
@@ -263,9 +281,11 @@ if (isset($_POST['FINALIZE']))
 			// $result = $conn->prepare($sql);
 			// $result->execute();
 		}
+		db_commit($conn);
 	}
 	catch (Exception $e)
 	{		
+		db_rollback($conn);
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		echo $_SESSION['_msg_err'] = $str;			
 	}
@@ -465,6 +485,7 @@ $(function() {
 
 							</div>
 							<form name='thisForm' id="validate" class="form-horizontal" method='post' action="purchase_return_add.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+								<?php csrf_fields('purchase_return'); ?>
                                   
                                 <fieldset>
                                     <?php 

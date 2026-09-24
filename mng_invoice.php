@@ -7,6 +7,9 @@ require_once("inc/common/userclass.php");
 isAdmin();
 
 
+// 2026-09-22 stock update moved to fnApplyStockMovement(), writes tbl_stock_flow
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $conn = new dbconnect();
@@ -17,7 +20,11 @@ $inv_date = date("Y-m-d");
 
 
 if (isset($_POST['Draft'])) {
+    if (!csrf_check('mng_invoice')) {
+    	csrf_fail('invoice_list.php');
+    }
     try {
+    	db_begin($conn);
         $_REQUEST['inv_date'] = date("Y-m-d", strtotime($_REQUEST['inv_date']));
         $_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='" . $_SESSION['_user_branch'] . "' AND branch_status", 1);
         $_REQUEST['inv_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
@@ -140,7 +147,9 @@ if (isset($_POST['Draft'])) {
         }
 
         /* details */
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
     }
@@ -154,6 +163,9 @@ if (isset($_POST['Draft'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+    if (!csrf_check('mng_invoice')) {
+    	csrf_fail('invoice_list.php');
+    }
     $update_id = $_REQUEST['txtHid'];
     //echo $update_id;exit;
     echo "<pre>";
@@ -161,6 +173,7 @@ if (isset($_POST['UPDATE'])) {
     echo "<pre>";
     // exit;
     try {
+    	db_begin($conn);
 
         $_REQUEST['inv_date'] = date("Y-m-d", strtotime($_REQUEST['inv_date']));
         $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
@@ -273,7 +286,9 @@ if (isset($_POST['UPDATE'])) {
         }
 
         /* details */
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
     }
@@ -285,8 +300,12 @@ if (isset($_POST['UPDATE'])) {
 
 
 if (isset($_POST['FINALIZE'])) {
+    if (!csrf_check('mng_invoice')) {
+    	csrf_fail('invoice_list.php');
+    }
     $update_id = $_REQUEST['txtHid'];
     try {
+    	db_begin($conn);
 
         $_REQUEST['inv_date'] = date("Y-m-d", strtotime($_REQUEST['inv_date']));
         $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
@@ -402,52 +421,21 @@ if (isset($_POST['FINALIZE'])) {
 
         /* STOCK DETAILS */
 
-        $stmt1 = null;
-        $stmt1 = $conn->prepare("INSERT INTO tbl_stock_flow 
-                        (trans_type, trans_id, branch_id, trans_date, item_id, item_price, before_qty, rcvd_qty, trans_qty, reje_qty, pend_qty, after_qty, modify_by, modify_date_time) 
-                        VALUES
-                        (:trans_type, :trans_id, :branch_id, :trans_date, :item_id, :item_price, :before_qty, :rcvd_qty, :trans_qty, :reje_qty, :pend_qty, :after_qty, :modify_by, :modify_date_time)");
-
-        /* New Current Stock Update Branch */
-        $field_name = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_SESSION['_user_branch']);
-        $stmt2 = null;
-        $stmt2 = $conn->prepare("UPDATE tbl_item_stock SET " . $field_name . " = :branch_stock WHERE item_id = :item_id ");
-
         for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
-
-            //$item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_details", "item_curr_stock", "item_id", $_REQUEST['temp_item_id'][$x]);
-
-            $item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_stock", "$field_name", "item_id", $_REQUEST['temp_item_id'][$x]);
-
-            $after_qty =  (int)$item_curr_stock - (int)$_REQUEST['temp_qty'][$x];
-            $price = $dbconn->GetSingleReconrd("tbl_item_details", "item_selling_price", "item_id", $_REQUEST['temp_item_id'][$x]);
-
-            $data = array(
-                ':trans_type' => 'INV',
-                ':trans_id' => $update_id,
-                ':branch_id' => $_SESSION['_user_branch'],
-                ':trans_date' => date('Y-m-d'),
-                ':item_id' => $_REQUEST['temp_item_id'][$x],
-                ':item_price' => $price,
-                ':before_qty' => $item_curr_stock,
-                ':rcvd_qty' => 0,
-                ':trans_qty' => $_REQUEST['temp_qty'][$x],
-                ':reje_qty' => 0,
-                ':pend_qty' => 0,
-                ':after_qty' => $after_qty,
-                ':modify_by' => $_SESSION['_user_id'],
-                ':modify_date_time' => date('Y-m-d H:i:s')
-            );
-            $stmt1->execute($data);
-
-            $branch_item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_stock", "$field_name", "item_id", $_REQUEST['temp_item_id'][$x]);
-            $after_qty2 =  (int)$branch_item_curr_stock - (int)$_REQUEST['temp_qty'][$x];
-
-            $data2 = array(
-                ':item_id' => $_REQUEST['temp_item_id'][$x],
-                ':branch_stock' => $after_qty2,
-            );
-            $stmt2->execute($data2);
+            if ($_REQUEST['temp_qty'][$x] <= 0) {
+                continue;
+            }
+            // moves the branch qty and writes tbl_stock_flow on $conn, inside this transaction
+            fnApplyStockMovement($conn, array(
+                'item_id'    => $_REQUEST['temp_item_id'][$x],
+                'branch_id'  => $_SESSION['_user_branch'],
+                'dir'        => 'O',
+                'qty'        => $_REQUEST['temp_qty'][$x],
+                'trans_type' => STOCK_TRANS_INV,
+                'trans_id'   => $update_id,
+                'item_price' => $dbconn->GetSingleReconrd('tbl_item_details', 'item_selling_price', 'item_id', $_REQUEST['temp_item_id'][$x]),
+                'remarks'    => 'Invoice'
+            ));
         }
 
         /* STOCK DETAILS */
@@ -474,7 +462,9 @@ if (isset($_POST['FINALIZE'])) {
         // }
 
         /* ITEM DETAILS */
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
     }
@@ -1256,6 +1246,7 @@ if (isset($_REQUEST['inv_id']) && $_REQUEST['inv_id'] != "") {
 
                             </div>
                             <form name='thisForm' class="form-horizontal" method='POST' action="">
+                            	<?php csrf_fields('mng_invoice'); ?>
                                 <input type="hidden" name="inv_items" id="inv_items" value="-1">
                                 <input type="hidden" name="gst" id="gst" value="">
                                 <input type="hidden" name="item_hsn" id="item_hsn" value="">

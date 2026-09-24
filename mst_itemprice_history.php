@@ -12,14 +12,21 @@ $dbconn = new dbhandler();
 // if (!isset($_REQUEST['branch_id']) || $_REQUEST['branch_id'] == '') {
 //     $_REQUEST['branch_id'] = 2	;
 // //}
+// 2026-09-22 Current Stock made read only, price save no longer writes qty
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 //  ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('itemprice_history')) {
+		csrf_fail('mst_itemprice_history_list.php');
+	}
 	// print_r($_POST);
 	// exit;
 	try {
+		db_begin($conn);
 		$result = $conn->query("SELECT * FROM tbl_item_details WHERE item_id = " . $_REQUEST['item_id']);
 		if ($result->rowCount() > 0) {
 			$obj = $result->fetch(PDO::FETCH_OBJ);
@@ -71,7 +78,9 @@ if (isset($_POST['SAVE'])) {
 			// die();
 			$_SESSION['_msg'] = "Item Price History successfully saved..!";
 		}
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		echo $_SESSION['_msg_err'] = $str;
 	}
@@ -80,7 +89,11 @@ if (isset($_POST['SAVE'])) {
 }
 
 if (isset($_POST['SAVE1'])) {
+	if (!csrf_check('itemprice_history')) {
+		csrf_fail('mst_itemprice_history_list.php');
+	}
 	try {
+		db_begin($conn);
 		$result = $conn->query("SELECT * FROM mst_branch WHERE branch_id = '" . $_REQUEST['branch_id'] . "' ");
 		if ($result->rowCount() > 0) {
 			$obj = $result->fetch(PDO::FETCH_OBJ);
@@ -222,9 +235,8 @@ if (isset($_POST['SAVE1'])) {
 				//print_r($data1);
 				//	 echo 1;
 
-				/* Stock quantity is NOT editable from this screen - use Stock
-				   Adjustment. If a quantity still arrives (old bookmark, tampered
-				   post) apply it through the ledger instead of silently writing it. */
+				// stock is not editable here, use Stock Adjustment. Anything that still
+				// arrives goes through the ledger instead of being written silently.
 				if (isset($_REQUEST['branch_stock_field']) && $_REQUEST['branch_stock_field'] !== '') {
 					fnSetStockToQty($conn, $update_id, $_REQUEST['branch_stock_field'], array(
 						'branch_id'  => $_SESSION['_user_branch'],
@@ -243,7 +255,9 @@ if (isset($_POST['SAVE1'])) {
 
 			$_SESSION['_msg'] = "Item Price History successfully saved..!";
 		}
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		echo $_SESSION['_msg_err'] = $str;
 	}
@@ -255,9 +269,13 @@ if (isset($_POST['SAVE1'])) {
 /*
 if(isset($_POST['UPDATE']))
 {
+    if (!csrf_check('itemprice_history')) {
+    	csrf_fail('mst_itemprice_history_list.php');
+    }
 	$update_id = $_REQUEST['txtHid'];
 	try
 		{
+		db_begin($conn);
 			$result = $conn->query("SELECT * FROM tbl_item_details WHERE item_id = ".$_REQUEST['item_id']);	
 			if ($result->rowCount()>0)
 			{
@@ -304,8 +322,10 @@ if(isset($_POST['UPDATE']))
 				$_SESSION['_msg'] = "Item Price History successfully updated..!";
 			}
 		}
+			db_commit($conn);
 		catch (Exception $e)
 		{		
+			db_rollback($conn);
 			$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 			$_SESSION['_msg_err'] = $str;			
 		}
@@ -615,6 +635,7 @@ if ($_REQUEST['item_id'] != "") {
 
 						<!-- Basic datatable -->
 						<form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<?php csrf_fields('itemprice_history'); ?>
 							<input type="hidden" name="item_id" id="item_id" value="<?php echo $_REQUEST['item_id']; ?>">
 
 							<div class="card">
