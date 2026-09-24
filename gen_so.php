@@ -7,6 +7,9 @@ isAdmin();
 $conn = new dbconnect();
  $dbconn = new dbhandler();
 
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-09-24 try/catch added, handlers had none before
+
     // ini_set('display_errors', '1');
     // ini_set('display_startup_errors', '1');
     // error_reporting(E_ALL);
@@ -17,206 +20,242 @@ $_REQUEST['so_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr
 
 
 if (isset($_POST['SAVE'])) {
-    $_REQUEST['select_branch_id'] = (isset($_REQUEST['select_branch_id'])) ? ($_REQUEST['select_branch_id']) : '';
-    // try {
-
-    $_REQUEST['so_date'] = date("Y-m-d", strtotime($_REQUEST['so_date']));
-    $_REQUEST['despatch_date'] = date("Y-m-d", strtotime($_REQUEST['despatch_date']));
-
-    $_REQUEST['so_slno'] = $_REQUEST['so_no'];
-	// $_REQUEST['so_slno'] = $dbconn->GetMaxValue('tbl_sales_order', 'so_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND 1 ', 1) + 1;
-
-
-    $_REQUEST['so_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
-	$_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
-
-	$_REQUEST['so_refno'] = 'SO/' . leadingZeros($_REQUEST['so_slno'], 4) . '/BIE/'.$_REQUEST['branch'].'/' . $_REQUEST['so_finyr'];
-
-
-    $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-    $_REQUEST['modify_by'] = $_SESSION['_user_id'];
-
-
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_sales_order (so_finyr, so_slno, so_refno, so_ref, so_date, bie_branch_id, despatch_date, quo_id, supp_id, branch_id, item_net_val,bal_value, so_remarks, modify_date_time, modify_by ) VALUES (:so_finyr, :so_slno, :so_refno, :so_ref, :so_date, :bie_branch_id, :despatch_date, :quo_id, :supp_id, :branch_id, :item_net_val,  :bal_value, :so_remarks,  :modify_date_time, :modify_by)");
-    $data = array(
-        ':so_finyr' => $_REQUEST['so_finyr'],
-        ':so_slno' => $_REQUEST['so_slno'],
-        ':so_refno' => $_REQUEST['so_refno'],
-        ':so_ref' => $_REQUEST['so_ref'],
-        ':so_date' => $_REQUEST['so_date'],
-		':bie_branch_id' => $_SESSION['_user_branch'],
-        ':despatch_date' => $_REQUEST['despatch_date'],
-        ':quo_id' => $_REQUEST['quo_id'],
-        ':supp_id' => $_REQUEST['supp_id'],
-        ':branch_id' => $_REQUEST['select_branch_id'],
-        ':item_net_val' => $_REQUEST['sales_order_total'],
-        ':bal_value' => $_REQUEST['sales_order_total'],
-        ':so_remarks' => $_REQUEST['so_remarks'],
-        ':modify_date_time' => $_REQUEST['modify_date_time'],
-        ':modify_by' => $_REQUEST['modify_by']
-    );
-    // print_r($data);
-    $stmt->execute($data);
-    $last_id = $conn->lastInsertId();
-    if($last_id>0)
-    {
-        $conn->query("UPDATE tbl_quotation SET so_gen_status = 1, quo_so_id='".$last_id."' WHERE quo_id=" . $_REQUEST['quo_id']);
+    if (!csrf_check('gen_so')) {
+        csrf_fail('lst_sales_order.php');
     }
-   
-    // Individual item ...
+    try {
+        db_begin($conn);
+        $_REQUEST['select_branch_id'] = (isset($_REQUEST['select_branch_id'])) ? ($_REQUEST['select_branch_id']) : '';
+        // try {
 
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_sales_order_details (so_id,  item_id, so_qty, so_unit, so_selling_price, so_discount, so_discount_amt, so_vat, so_value, so_tax_value, item_total) 
-	VALUES (:so_id, :item_id, :so_qty,  :so_unit, :so_selling_price, :so_discount, :so_discount_amt, :so_vat, :so_value, :so_tax_value, :item_total)");
-    $row_count = count($_REQUEST['temp_item_id']);
+        $_REQUEST['so_date'] = date("Y-m-d", strtotime($_REQUEST['so_date']));
+        $_REQUEST['despatch_date'] = date("Y-m-d", strtotime($_REQUEST['despatch_date']));
 
-    for ($n = 0; $n < $row_count; $n++) {
+        $_REQUEST['so_slno'] = $_REQUEST['so_no'];
+    	// $_REQUEST['so_slno'] = $dbconn->GetMaxValue('tbl_sales_order', 'so_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND 1 ', 1) + 1;
+
+
+        $_REQUEST['so_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
+    	$_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
+
+    	$_REQUEST['so_refno'] = 'SO/' . leadingZeros($_REQUEST['so_slno'], 4) . '/BIE/'.$_REQUEST['branch'].'/' . $_REQUEST['so_finyr'];
+
+
+        $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
+        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
+
+
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_sales_order (so_finyr, so_slno, so_refno, so_ref, so_date, bie_branch_id, despatch_date, quo_id, supp_id, branch_id, item_net_val,bal_value, so_remarks, modify_date_time, modify_by ) VALUES (:so_finyr, :so_slno, :so_refno, :so_ref, :so_date, :bie_branch_id, :despatch_date, :quo_id, :supp_id, :branch_id, :item_net_val,  :bal_value, :so_remarks,  :modify_date_time, :modify_by)");
         $data = array(
-            ':so_id' => $last_id,
-            ':item_id' => $_REQUEST['temp_item_id'][$n],
-            ':so_qty' => $_REQUEST['temp_qty'][$n],
-            ':so_unit' => $_REQUEST['temp_unit'][$n],
-            ':so_selling_price' => $_REQUEST['temp_selling_price'][$n],
-            ':so_discount' => $_REQUEST['temp_discount_per'][$n],
-            ':so_discount_amt' => $_REQUEST['temp_discount_val'][$n],
-            ':so_vat' => $_REQUEST['temp_vat'][$n],
-            ':so_value' => $_REQUEST['temp_quo_price'][$n],
-            ':so_tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
-            ':item_total' => $_REQUEST['temp_net_amt'][$n]
+            ':so_finyr' => $_REQUEST['so_finyr'],
+            ':so_slno' => $_REQUEST['so_slno'],
+            ':so_refno' => $_REQUEST['so_refno'],
+            ':so_ref' => $_REQUEST['so_ref'],
+            ':so_date' => $_REQUEST['so_date'],
+    		':bie_branch_id' => $_SESSION['_user_branch'],
+            ':despatch_date' => $_REQUEST['despatch_date'],
+            ':quo_id' => $_REQUEST['quo_id'],
+            ':supp_id' => $_REQUEST['supp_id'],
+            ':branch_id' => $_REQUEST['select_branch_id'],
+            ':item_net_val' => $_REQUEST['sales_order_total'],
+            ':bal_value' => $_REQUEST['sales_order_total'],
+            ':so_remarks' => $_REQUEST['so_remarks'],
+            ':modify_date_time' => $_REQUEST['modify_date_time'],
+            ':modify_by' => $_REQUEST['modify_by']
         );
-        // print_r($data);die();
+        // print_r($data);
         $stmt->execute($data);
-    }
+        $last_id = $conn->lastInsertId();
+        if($last_id>0)
+        {
+            $conn->query("UPDATE tbl_quotation SET so_gen_status = 1, quo_so_id='".$last_id."' WHERE quo_id=" . $_REQUEST['quo_id']);
+        }
+   
+        // Individual item ...
 
-    // package charges details...
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_sales_order_details (so_id,  item_id, so_qty, so_unit, so_selling_price, so_discount, so_discount_amt, so_vat, so_value, so_tax_value, item_total) 
+    	VALUES (:so_id, :item_id, :so_qty,  :so_unit, :so_selling_price, :so_discount, :so_discount_amt, :so_vat, :so_value, :so_tax_value, :item_total)");
+        $row_count = count($_REQUEST['temp_item_id']);
 
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_sales_order_pack_dts (so_id, pack_decp, pack_percent, pack_text, pack_taxable_val, gst_id, pack_vat, pack_value, pack_total)
-		                    VALUES (:so_id, :pack_decp, :pack_percent, :pack_text, :pack_taxable_val, :gst_id, :pack_vat, :pack_value, :pack_total)");
-    if(isset($_REQUEST['pack_id'])){
-        $row_count = (count($_REQUEST['pack_id']));
-        if ($row_count > 0) {
-            for ($n = 0; $n < $row_count; $n++) {
-                $quo_pack_total = isset($_REQUEST['pack_total'][$n]) ? $_REQUEST['pack_total'][$n] : '';
-                $data = array(
-                    ':so_id' => $last_id,
-                    ':pack_decp' => $_REQUEST['pack_id'][$n],
-                    ':pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
-                    ':pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
-                    ':pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
-                    ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
-                    ':pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
-                    ':pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
-                    ':pack_total' => $_REQUEST['quo_pack_total'][$n]
-                );
-                $stmt->execute($data);
+        for ($n = 0; $n < $row_count; $n++) {
+            $data = array(
+                ':so_id' => $last_id,
+                ':item_id' => $_REQUEST['temp_item_id'][$n],
+                ':so_qty' => $_REQUEST['temp_qty'][$n],
+                ':so_unit' => $_REQUEST['temp_unit'][$n],
+                ':so_selling_price' => $_REQUEST['temp_selling_price'][$n],
+                ':so_discount' => $_REQUEST['temp_discount_per'][$n],
+                ':so_discount_amt' => $_REQUEST['temp_discount_val'][$n],
+                ':so_vat' => $_REQUEST['temp_vat'][$n],
+                ':so_value' => $_REQUEST['temp_quo_price'][$n],
+                ':so_tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
+                ':item_total' => $_REQUEST['temp_net_amt'][$n]
+            );
+            // print_r($data);die();
+            $stmt->execute($data);
+        }
+
+        // package charges details...
+
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_sales_order_pack_dts (so_id, pack_decp, pack_percent, pack_text, pack_taxable_val, gst_id, pack_vat, pack_value, pack_total)
+    		                    VALUES (:so_id, :pack_decp, :pack_percent, :pack_text, :pack_taxable_val, :gst_id, :pack_vat, :pack_value, :pack_total)");
+        if(isset($_REQUEST['pack_id'])){
+            $row_count = (count($_REQUEST['pack_id']));
+            if ($row_count > 0) {
+                for ($n = 0; $n < $row_count; $n++) {
+                    $quo_pack_total = isset($_REQUEST['pack_total'][$n]) ? $_REQUEST['pack_total'][$n] : '';
+                    $data = array(
+                        ':so_id' => $last_id,
+                        ':pack_decp' => $_REQUEST['pack_id'][$n],
+                        ':pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
+                        ':pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
+                        ':pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
+                        ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
+                        ':pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
+                        ':pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
+                        ':pack_total' => $_REQUEST['quo_pack_total'][$n]
+                    );
+                    $stmt->execute($data);
+                }
             }
         }
+        db_commit($conn);
+    } catch (Exception $e) {
+        db_rollback($conn);
+        $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+        header("location:lst_sales_order.php");
+        die();
     }
     header("location:lst_sales_order.php");
     die();
 }
 if (isset($_POST['UPDATE'])) {
+    if (!csrf_check('gen_so')) {
+        csrf_fail('lst_sales_order.php');
+    }
+    try {
+        db_begin($conn);
 
-    $update_id = $_REQUEST['txtHid'];
-    $_REQUEST['modify_by'] = $_SESSION['_user_id'];
-    $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-    $_REQUEST['so_slno'] = $_REQUEST['so_no'];
-    // $_REQUEST['so_slno'] = $dbconn->GetMaxValue('tbl_sales_order', 'so_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND 1 ', 1) + 1;
-    $_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
+        $update_id = $_REQUEST['txtHid'];
+        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
+        $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
+        $_REQUEST['so_slno'] = $_REQUEST['so_no'];
+        // $_REQUEST['so_slno'] = $dbconn->GetMaxValue('tbl_sales_order', 'so_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND 1 ', 1) + 1;
+        $_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
 
-	$_REQUEST['so_refno'] = 'SO/' . leadingZeros($_REQUEST['so_slno'], 4) . '/BIE/'.$_REQUEST['branch'].'/' . $_REQUEST['so_finyr'];
+    	$_REQUEST['so_refno'] = 'SO/' . leadingZeros($_REQUEST['so_slno'], 4) . '/BIE/'.$_REQUEST['branch'].'/' . $_REQUEST['so_finyr'];
 
-    $stmt = null;
-    $stmt = $conn->prepare("UPDATE tbl_sales_order SET so_finyr = :so_finyr, so_slno = :so_slno, so_refno = :so_refno, so_ref = :so_ref, so_date = :so_date, despatch_date = :despatch_date, quo_id = :quo_id, supp_id = :supp_id, branch_id = :branch_id, item_net_val = :item_net_val, so_remarks = :so_remarks, modify_date_time = :modify_date_time, modify_by = :modify_by  WHERE  so_id = :so_id");
+        $stmt = null;
+        $stmt = $conn->prepare("UPDATE tbl_sales_order SET so_finyr = :so_finyr, so_slno = :so_slno, so_refno = :so_refno, so_ref = :so_ref, so_date = :so_date, despatch_date = :despatch_date, quo_id = :quo_id, supp_id = :supp_id, branch_id = :branch_id, item_net_val = :item_net_val, so_remarks = :so_remarks, modify_date_time = :modify_date_time, modify_by = :modify_by  WHERE  so_id = :so_id");
 
-    $data = array(
-        ':so_id' => $update_id,
-        ':so_finyr' => $_REQUEST['so_finyr'],
-        ':so_slno' => $_REQUEST['so_slno'],
-        ':so_refno' => $_REQUEST['so_refno'],
-        ':so_ref' => $_REQUEST['so_ref'],
-        ':so_date' => $_REQUEST['so_date'],
-        ':despatch_date' => $_REQUEST['despatch_date'],
-        ':quo_id' => $_REQUEST['quo_id'],
-        ':supp_id' => $_REQUEST['supp_id'],
-        ':branch_id' => $_REQUEST['select_branch_id'],
-        ':item_net_val' => $_REQUEST['sales_order_total'],
-        ':so_remarks' => $_REQUEST['so_remarks'],
-        ':modify_date_time' => $_REQUEST['modify_date_time'],
-        ':modify_by' => $_REQUEST['modify_by']
-    );
-    $stmt->execute($data);
-    // print_r($data);die();
-    // $conn->query("UPDATE tbl_quotation SET so_des_gen = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
-    // $conn->query("UPDATE tbl_sales_order SET accounts_status = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
-
-    $sql = "DELETE FROM tbl_sales_order_details WHERE so_id = '" . $update_id . "'";
-    $result = $conn->prepare($sql);
-    $result->execute();
-
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_sales_order_details (so_id,  item_id, so_qty, so_unit, so_selling_price, so_discount, so_discount_amt, so_vat, so_value, so_tax_value, item_total) 
-VALUES (:so_id, :item_id, :so_qty,  :so_unit, :so_selling_price, :so_discount, :so_discount_amt, :so_vat, :so_value, :so_tax_value, :item_total)");
-    $row_count = count($_REQUEST['temp_item_id']);
-
-    for ($n = 0; $n < $row_count; $n++) {
         $data = array(
             ':so_id' => $update_id,
-            ':item_id' => $_REQUEST['temp_item_id'][$n],
-            ':so_qty' => $_REQUEST['temp_qty'][$n],
-            ':so_unit' => $_REQUEST['temp_unit'][$n],
-            ':so_selling_price' => $_REQUEST['temp_selling_price'][$n],
-            ':so_discount' => $_REQUEST['temp_discount_per'][$n],
-            ':so_discount_amt' => $_REQUEST['temp_discount_val'][$n],
-            ':so_vat' => $_REQUEST['temp_vat'][$n],
-            ':so_value' => $_REQUEST['temp_quo_price'][$n],
-            ':so_tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
-            ':item_total' => $_REQUEST['temp_net_amt'][$n]
+            ':so_finyr' => $_REQUEST['so_finyr'],
+            ':so_slno' => $_REQUEST['so_slno'],
+            ':so_refno' => $_REQUEST['so_refno'],
+            ':so_ref' => $_REQUEST['so_ref'],
+            ':so_date' => $_REQUEST['so_date'],
+            ':despatch_date' => $_REQUEST['despatch_date'],
+            ':quo_id' => $_REQUEST['quo_id'],
+            ':supp_id' => $_REQUEST['supp_id'],
+            ':branch_id' => $_REQUEST['select_branch_id'],
+            ':item_net_val' => $_REQUEST['sales_order_total'],
+            ':so_remarks' => $_REQUEST['so_remarks'],
+            ':modify_date_time' => $_REQUEST['modify_date_time'],
+            ':modify_by' => $_REQUEST['modify_by']
         );
-        // print_r($data);
         $stmt->execute($data);
-    }
-    $sql = "DELETE FROM tbl_sales_order_pack_dts WHERE so_id = '" . $update_id . "'";
-    $result = $conn->prepare($sql);
-    $result->execute();
+        // print_r($data);die();
+        // $conn->query("UPDATE tbl_quotation SET so_des_gen = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
+        // $conn->query("UPDATE tbl_sales_order SET accounts_status = 1 WHERE quo_id=" . $_REQUEST['txtHid']);
 
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_sales_order_pack_dts (so_id, pack_decp, pack_percent, pack_text, pack_taxable_val, gst_id, pack_vat, pack_value, pack_total)
-		                    VALUES (:so_id, :pack_decp, :pack_percent, :pack_text, :pack_taxable_val, :gst_id, :pack_vat, :pack_value, :pack_total)");
+        $sql = "DELETE FROM tbl_sales_order_details WHERE so_id = '" . $update_id . "'";
+        $result = $conn->prepare($sql);
+        $result->execute();
 
-    if(isset($_REQUEST['pack_id'])){
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_sales_order_details (so_id,  item_id, so_qty, so_unit, so_selling_price, so_discount, so_discount_amt, so_vat, so_value, so_tax_value, item_total) 
+    VALUES (:so_id, :item_id, :so_qty,  :so_unit, :so_selling_price, :so_discount, :so_discount_amt, :so_vat, :so_value, :so_tax_value, :item_total)");
+        $row_count = count($_REQUEST['temp_item_id']);
 
-        $row_count = count($_REQUEST['pack_id']);
-        if ($row_count > 0) {
-            for ($n = 0; $n < $row_count; $n++) {
-                $quo_pack_total = isset($_REQUEST['pack_total'][$n]) ? $_REQUEST['pack_total'][$n] : '';
-                $data = array(
-                    ':so_id' => $update_id,
-                    ':pack_decp' => $_REQUEST['pack_id'][$n],
-                    ':pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
-                    ':pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
-                    ':pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
-                    ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
-                    ':pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
-                    ':pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
-                    ':pack_total' => $_REQUEST['quo_pack_total'][$n]
-                );
-                $stmt->execute($data);
-            }
+        for ($n = 0; $n < $row_count; $n++) {
+            $data = array(
+                ':so_id' => $update_id,
+                ':item_id' => $_REQUEST['temp_item_id'][$n],
+                ':so_qty' => $_REQUEST['temp_qty'][$n],
+                ':so_unit' => $_REQUEST['temp_unit'][$n],
+                ':so_selling_price' => $_REQUEST['temp_selling_price'][$n],
+                ':so_discount' => $_REQUEST['temp_discount_per'][$n],
+                ':so_discount_amt' => $_REQUEST['temp_discount_val'][$n],
+                ':so_vat' => $_REQUEST['temp_vat'][$n],
+                ':so_value' => $_REQUEST['temp_quo_price'][$n],
+                ':so_tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
+                ':item_total' => $_REQUEST['temp_net_amt'][$n]
+            );
+            // print_r($data);
+            $stmt->execute($data);
         }
+        $sql = "DELETE FROM tbl_sales_order_pack_dts WHERE so_id = '" . $update_id . "'";
+        $result = $conn->prepare($sql);
+        $result->execute();
 
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_sales_order_pack_dts (so_id, pack_decp, pack_percent, pack_text, pack_taxable_val, gst_id, pack_vat, pack_value, pack_total)
+    		                    VALUES (:so_id, :pack_decp, :pack_percent, :pack_text, :pack_taxable_val, :gst_id, :pack_vat, :pack_value, :pack_total)");
+
+        if(isset($_REQUEST['pack_id'])){
+
+            $row_count = count($_REQUEST['pack_id']);
+            if ($row_count > 0) {
+                for ($n = 0; $n < $row_count; $n++) {
+                    $quo_pack_total = isset($_REQUEST['pack_total'][$n]) ? $_REQUEST['pack_total'][$n] : '';
+                    $data = array(
+                        ':so_id' => $update_id,
+                        ':pack_decp' => $_REQUEST['pack_id'][$n],
+                        ':pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
+                        ':pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
+                        ':pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
+                        ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
+                        ':pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
+                        ':pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
+                        ':pack_total' => $_REQUEST['quo_pack_total'][$n]
+                    );
+                    $stmt->execute($data);
+                }
+            }
+
+        }
+        // print_r($data);die();
+        db_commit($conn);
+    } catch (Exception $e) {
+        db_rollback($conn);
+        $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+        header("location:lst_sales_order.php");
+        die();
     }
-    // print_r($data);die();
     header("location:lst_sales_order.php");
     die();
 }
 
 if (isset($_POST['ACCOUNTS'])) {
+    if (!csrf_check('gen_so')) {
+        csrf_fail('lst_sales_order.php');
+    }
+    try {
+        db_begin($conn);
     
-    $conn->query("UPDATE tbl_sales_order SET accounts_status = 1 WHERE so_id=" . $_REQUEST['txtHid']);
+        $conn->query("UPDATE tbl_sales_order SET accounts_status = 1 WHERE so_id=" . $_REQUEST['txtHid']);
 
+        db_commit($conn);
+    } catch (Exception $e) {
+        db_rollback($conn);
+        $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+        header("location:lst_sales_order.php");
+        die();
+    }
     header("location:lst_sales_order.php");
     die();
 }
@@ -305,6 +344,7 @@ if (isset($_REQUEST['quo_id'])) {
                 <div class="row">
                     <div class="col-md-12">
                         <form name='thisForm' id="validate" class="form-horizontal" method='post' action="gen_so.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('gen_so'); ?>
                             <input type="hidden" name="quo_id" id="quo_id[]" value="<?php echo $obj->quo_id; ?>">
                             <fieldset>
                                 <div class="card">

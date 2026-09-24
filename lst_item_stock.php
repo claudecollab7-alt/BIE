@@ -1,14 +1,6 @@
 <?php
-/* ===========================================================================
- *  Item Stock List  (Item Masters menu)
- * ---------------------------------------------------------------------------
- *  Every active item with its stock at each branch. Clicking a branch
- *  quantity opens a modal with that item's last 10 tbl_stock_flow movements
- *  at that branch, and a View All button into the full stock flow report.
- *
- *  Branch columns come from mst_branch.branch_stock_field, so adding a branch
- *  needs no change here.
- * ======================================================================== */
+// 2026-09-23 new screen - item stock by branch, click a qty for its last 10 stock flow rows
+// branch columns come from mst_branch.branch_stock_field, a new branch needs no change here
 
 ob_start();
 session_start();
@@ -35,7 +27,7 @@ while ($b = $branch_res->fetch(PDO::FETCH_OBJ)) {
     }
 }
 
-/* Fixed columns before the branch columns start. */
+// columns before the branch columns start
 $fixed_cols = 7;
 ?>
 <!DOCTYPE html>
@@ -193,7 +185,7 @@ $fixed_cols = 7;
         columns.push({ data: 'stock_<?php echo (int)$b->branch_id; ?>' });
         <?php } ?>
 
-        /* # and image are not sortable; every branch column is right aligned. */
+        // # and image not sortable, branch columns right aligned
         var branchTargets = [];
         for (var i = 0; i < branchCount; i++) {
             branchTargets.push(fixedCols + i);
@@ -243,8 +235,7 @@ $fixed_cols = 7;
         });
     });
 
-    /* The quantity links are drawn by DataTables after page load, so bind on
-       the modal itself rather than on each link. */
+    // links are drawn by DataTables after load, so bind on the modal not the link
     $('#modalItemStockFlow').on('show.bs.modal', function(e) {
         var link = $(e.relatedTarget);
         var itemId = link.data('item-id');

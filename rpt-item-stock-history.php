@@ -18,6 +18,8 @@ if ($_REQUEST['to_dt'] == '')
 else
     $rpt_to_dt = $_REQUEST['to_dt'];
 
+// 2026-09-22 reason column + ADJ rows, qty shown signed
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -241,8 +243,7 @@ else
                                         $Sno = 1;
                                         while ($obj = $result->fetch()) {
 
-                                            /* Reset on every row - otherwise an unrecognised trans_type
-                                               silently reuses the previous row's colour and values. */
+                                            // reset each row, else an unknown type reuses the last row's values
                                             $color      = '';
                                             $trans_code = '';
                                             $approve_by = '';
@@ -299,7 +300,7 @@ else
                                                 $approve_by = $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", $adj_by)
                                                             . ' on ' . date('d-M-y @ h:i a', strtotime($adj_dtm)) . "<br>";
 
-                                                //--------- Opening balance / any other type -----//
+                                                //--------- opening / other -----//
 
                                             } else {
                                                 $color = 'style="background-color:#eeeeee"';

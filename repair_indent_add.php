@@ -10,12 +10,18 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('repair_indent')) {
+		csrf_fail('repair_indent_list.php');
+	}
 	try {
+		db_begin($conn);
 		$_REQUEST['sal_repair_date'] = date("Y-m-d", strtotime($_REQUEST['sal_repair_date']));
 
 		$_REQUEST['sal_repair_slno'] = $dbconn->GetMaxValue('tbl_sales_repair', 'sal_repair_slno', 'company_id', $_SESSION['_user_branch']) + 1;
@@ -86,7 +92,9 @@ if (isset($_POST['SAVE'])) {
 		// 	':repair_submit_status' => 1
 		// );
 		// $update_enq->execute($data1);
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -100,8 +108,12 @@ if (isset($_POST['SAVE'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('repair_indent')) {
+		csrf_fail('repair_indent_list.php');
+	}
 	$update_id = $_REQUEST['txtHid'];
 	try {
+		db_begin($conn);
 		$_REQUEST['sal_repair_date'] = date("Y-m-d", strtotime($_REQUEST['sal_repair_date']));
 		$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 		$_REQUEST['modify_by'] = $_SESSION['_user_id'];
@@ -155,7 +167,9 @@ if (isset($_POST['UPDATE'])) {
 			':sal_repair_value' => $sal_repair_value
 		);
 		$update_po->execute($data1);
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -249,6 +263,7 @@ if (isset($_REQUEST['sal_repair_id'])) {
 				<div class="row">
 					<div class="col-md-12">
 						<form name='thisForm' class="form-horizontal" method='post' action="repair_indent_add.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<?php csrf_fields('repair_indent'); ?>
 							<fieldset>
 								<div class="card">
 									<div class="card-header bg-pgheader text-white header-elements-inline">

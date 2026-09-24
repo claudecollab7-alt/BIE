@@ -1,6 +1,5 @@
 <?php
-/* Modal body for lst_item_stock.php: the last 10 tbl_stock_flow movements
-   for one item at one branch, plus a link into the full report. */
+// 2026-09-23 new - modal body for lst_item_stock.php, last 10 stock flow rows for one item/branch
 
 ob_start();
 session_start();
@@ -39,7 +38,7 @@ try {
     die();
 }
 
-/* Total movements on record, so the modal can say how many are not shown. */
+// total on record, so the modal can say how many are not shown
 $cnt = $conn->prepare("SELECT COUNT(*) FROM tbl_stock_flow WHERE item_id = :item_id AND branch_id = :branch_id");
 $cnt->execute(array(':item_id' => $item_id, ':branch_id' => $branch_id));
 $total_flows = (int)$cnt->fetchColumn();
@@ -50,7 +49,7 @@ $stmt = $conn->prepare("SELECT * FROM tbl_stock_flow
 $stmt->execute(array(':item_id' => $item_id, ':branch_id' => $branch_id));
 $rows = $stmt->fetchAll(PDO::FETCH_OBJ);
 
-/* Reference code, who did it and the narration differ per movement type. */
+// ref code, user and narration differ per movement type
 function fnFlowRefAndUser($conn, $dbconn, $obj)
 {
     $ref = '';

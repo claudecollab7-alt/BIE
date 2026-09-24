@@ -20,6 +20,8 @@ if ($_REQUEST['to_dt'] == '')
 else
     $rpt_to_dt = $_REQUEST['to_dt'];
 
+// 2026-09-22 reason column + ADJ rows, qty shown signed
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);

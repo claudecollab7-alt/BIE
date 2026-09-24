@@ -11,12 +11,18 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $si_date = date("Y-m-d");
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('store_indent')) {
+		csrf_fail('store_indent_list.php');
+	}
 	try {
+		db_begin($conn);
 		$_REQUEST['si_date'] = date("Y-m-d", strtotime($_REQUEST['si_date']));
 
 		$_REQUEST['si_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
@@ -83,7 +89,9 @@ if (isset($_POST['SAVE'])) {
 		}
 
 		
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -96,8 +104,12 @@ if (isset($_POST['SAVE'])) {
 }
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('store_indent')) {
+		csrf_fail('store_indent_list.php');
+	}
 	$update_id = $_REQUEST['txtHid'];
 	try {
+		db_begin($conn);
 		$_REQUEST['si_date'] = date("Y-m-d", strtotime($_REQUEST['si_date']));
 		$si_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
 		$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
@@ -151,7 +163,9 @@ if (isset($_POST['UPDATE'])) {
 
 		}
 
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -161,9 +175,13 @@ if (isset($_POST['UPDATE'])) {
 }
 
 if (isset($_POST['FINALIZE'])) {
+	if (!csrf_check('store_indent')) {
+		csrf_fail('store_indent_list.php');
+	}
 	$update_id = $_REQUEST['txtHid'];
 	if ($_REQUEST['txtHid'] != '' && $_REQUEST['txtHid'] > 0) {
 		try {
+			db_begin($conn);
 			$_REQUEST['si_date'] = date("Y-m-d", strtotime($_REQUEST['si_date']));
 			$si_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
 			$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
@@ -221,11 +239,13 @@ if (isset($_POST['FINALIZE'])) {
                 // die();
 				
 			}
+			db_commit($conn);
             $_SESSION['_msg'] = "Store Indent succesfully Sent..!";
 			header("location:store_indent_list.php");
 			die();
 
 		} catch (Exception $e) {
+			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
 		}
@@ -506,6 +526,7 @@ $('#item' + item_id).remove();
                                 </div>
                             </div>
                                 <form name='thisForm' id="validate" class="form-horizontal" method='post' action="store_indent_add.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                                	<?php csrf_fields('store_indent'); ?>
                                     <input type="hidden" name="txtHid" id="txtHid" value="<?php echo $_REQUEST['si_id']; ?>">
                                     <input type="hidden" name="pi_items" id="pi_items" value="-1">
                                     <input type="hidden" name="curr_stock" id="current_stock" value="">
