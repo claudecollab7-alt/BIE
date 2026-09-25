@@ -7,6 +7,9 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-09-24 try/catch added, handlers had none before
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -14,107 +17,119 @@ $dbconn = new dbhandler();
 //-------------------------------------------- SAVE DATABASE -------------------------------//
 
 if (isset($_POST['SAVE'])) {
-
-    $_REQUEST['select_branch_id'] = (isset($_REQUEST['select_branch_id'])) ? ($_REQUEST['select_branch_id']) : '';
-    // try {
-
-    $_REQUEST['pro_date'] = date("Y-m-d", strtotime($_REQUEST['pro_date']));
-    $_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='" . $_SESSION['_user_branch'] . "' AND branch_status", 1);
-    $_REQUEST['pro_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
-    $_REQUEST['pro_slno'] = $dbconn->GetMaxValue('tbl_proforma', 'pro_slno', 'branch_id="' . $_SESSION['_user_branch'] . '" AND pro_finyr="' . $_REQUEST['pro_finyr'] . '" AND 1', 1) + 1;
-
-    $_REQUEST['pro_refno'] = 'PI/' . leadingZeros($_REQUEST['pro_slno'], 4) . '/BIE/' . $_REQUEST['branch'] . '/'  . $_REQUEST['pro_finyr'];
-
-
-    $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-    $_REQUEST['modify_by'] = $_SESSION['_user_id'];
-    if ($_REQUEST['branch_id'] > 0) {
-        $_REQUEST['cus_branch_id'] = $_REQUEST['branch_id'];
-    } else {
-        $_REQUEST['cus_branch_id'] = '0';
+    if (!csrf_check('quo_proforma')) {
+        csrf_fail('lst_quotation.php');
     }
+    try {
+        db_begin($conn);
 
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_proforma (pro_finyr, pro_slno, pro_refno, pro_date, supp_id, cus_branch_id, quo_id, pro_mode_of_trans, pro_vechicle_no, pro_trans_charge,pro_tot_value,pro_bal_value,pro_remarks,  invoice_type, modify_by, modify_date_time, branch_id) VALUES (:pro_finyr, :pro_slno, :pro_refno, :pro_date, :supp_id, :cus_branch_id, :quo_id, :pro_mode_of_trans, :pro_vechicle_no, :pro_trans_charge, :pro_tot_value, :pro_bal_value, :pro_remarks, :invoice_type, :modify_by, :modify_date_time, :branch_id)");
-    $data = array(
-        ':pro_finyr' => $_REQUEST['pro_finyr'],
-        ':pro_slno' => $_REQUEST['pro_slno'],
-        ':pro_refno' => $_REQUEST['pro_refno'],
-        ':pro_date' => $_REQUEST['pro_date'],
-        ':supp_id' => $_REQUEST['supp_id'],
-        ':cus_branch_id' => $_REQUEST['cus_branch_id'],
-        ':quo_id' => $_REQUEST['quo_id'],
-        ':pro_mode_of_trans' => $_REQUEST['pro_mode_of_trans'],
-        ':pro_vechicle_no' => $_REQUEST['pro_vechicle_no'],
-        ':pro_trans_charge' => $_REQUEST['pro_trans_charge'],
-        ':pro_tot_value' => $_REQUEST['pro_tot_value'],
-        ':pro_bal_value' => $_REQUEST['pro_tot_value'],
-        ':pro_remarks' => $_REQUEST['pro_remarks'],
-        ':invoice_type' => 'Q',
-        ':modify_by' => $_REQUEST['modify_by'],
-        ':modify_date_time' => $_REQUEST['modify_date_time'],
-        ':branch_id' => $_SESSION['_user_branch']
-    );
-    // print_r($data);
-    $stmt->execute($data);
-    $last_id = $conn->lastInsertId();
+        $_REQUEST['select_branch_id'] = (isset($_REQUEST['select_branch_id'])) ? ($_REQUEST['select_branch_id']) : '';
+        // try {
 
-    // Individual item ...
+        $_REQUEST['pro_date'] = date("Y-m-d", strtotime($_REQUEST['pro_date']));
+        $_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='" . $_SESSION['_user_branch'] . "' AND branch_status", 1);
+        $_REQUEST['pro_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
+        $_REQUEST['pro_slno'] = $dbconn->GetMaxValue('tbl_proforma', 'pro_slno', 'branch_id="' . $_SESSION['_user_branch'] . '" AND pro_finyr="' . $_REQUEST['pro_finyr'] . '" AND 1', 1) + 1;
 
-    $delete_details =  "DELETE FROM  tbl_proforma_details WHERE pro_id = '" . $last_id . "'";
-    $result = $conn->prepare($delete_details);
-    $result->execute();
+        $_REQUEST['pro_refno'] = 'PI/' . leadingZeros($_REQUEST['pro_slno'], 4) . '/BIE/' . $_REQUEST['branch'] . '/'  . $_REQUEST['pro_finyr'];
 
-    $stmt1 = null;
-    $stmt1 = $conn->prepare("INSERT INTO tbl_proforma_details (pro_id, item_id, pro_qty, pro_unit, unit_price, pro_discount, pro_discount_amt, vat, pro_value, tax_value, net_value) 
-	VALUES (:pro_id, :item_id, :pro_qty, :pro_unit, :unit_price, :pro_discount, :pro_discount_amt, :vat, :pro_value, :tax_value, :net_value)");
 
-    if (isset($_REQUEST['temp_item_id'])) {
-        $row_count = count($_REQUEST['temp_item_id']);
-
-        for ($n = 0; $n < $row_count; $n++) {
-            $data1 = array(
-                ':pro_id' => $last_id,
-                ':item_id' => $_REQUEST['temp_item_id'][$n],
-                ':pro_qty' => $_REQUEST['temp_qty'][$n],
-                ':pro_unit' => $_REQUEST['temp_unit'][$n],
-                ':unit_price' => $_REQUEST['temp_selling_price'][$n],
-                ':pro_discount' => $_REQUEST['temp_discount_per'][$n],
-                ':pro_discount_amt' => $_REQUEST['temp_discount_val'][$n],
-                ':vat' => $_REQUEST['temp_vat'][$n],
-                ':pro_value' => $_REQUEST['temp_quo_price'][$n],
-                ':tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
-                ':net_value' => $_REQUEST['temp_net_amt'][$n]
-            );
-            $stmt1->execute($data1);
+        $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
+        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
+        if ($_REQUEST['branch_id'] > 0) {
+            $_REQUEST['cus_branch_id'] = $_REQUEST['branch_id'];
+        } else {
+            $_REQUEST['cus_branch_id'] = '0';
         }
-    }
 
-    $stmt = null;
-    $stmt = $conn->prepare("INSERT INTO tbl_proforma_pack_details (pro_id, pro_pack_decp, pro_pack_percent, pro_pack_text, pro_pack_taxable_val, gst_id, pro_pack_vat, pro_pack_value, pro_pack_total)
-		                    VALUES (:pro_id, :pro_pack_decp, :pro_pack_percent, :pro_pack_text, :pro_pack_taxable_val, :gst_id, :pro_pack_vat, :pro_pack_value, :pro_pack_total)");
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_proforma (pro_finyr, pro_slno, pro_refno, pro_date, supp_id, cus_branch_id, quo_id, pro_mode_of_trans, pro_vechicle_no, pro_trans_charge,pro_tot_value,pro_bal_value,pro_remarks,  invoice_type, modify_by, modify_date_time, branch_id) VALUES (:pro_finyr, :pro_slno, :pro_refno, :pro_date, :supp_id, :cus_branch_id, :quo_id, :pro_mode_of_trans, :pro_vechicle_no, :pro_trans_charge, :pro_tot_value, :pro_bal_value, :pro_remarks, :invoice_type, :modify_by, :modify_date_time, :branch_id)");
+        $data = array(
+            ':pro_finyr' => $_REQUEST['pro_finyr'],
+            ':pro_slno' => $_REQUEST['pro_slno'],
+            ':pro_refno' => $_REQUEST['pro_refno'],
+            ':pro_date' => $_REQUEST['pro_date'],
+            ':supp_id' => $_REQUEST['supp_id'],
+            ':cus_branch_id' => $_REQUEST['cus_branch_id'],
+            ':quo_id' => $_REQUEST['quo_id'],
+            ':pro_mode_of_trans' => $_REQUEST['pro_mode_of_trans'],
+            ':pro_vechicle_no' => $_REQUEST['pro_vechicle_no'],
+            ':pro_trans_charge' => $_REQUEST['pro_trans_charge'],
+            ':pro_tot_value' => $_REQUEST['pro_tot_value'],
+            ':pro_bal_value' => $_REQUEST['pro_tot_value'],
+            ':pro_remarks' => $_REQUEST['pro_remarks'],
+            ':invoice_type' => 'Q',
+            ':modify_by' => $_REQUEST['modify_by'],
+            ':modify_date_time' => $_REQUEST['modify_date_time'],
+            ':branch_id' => $_SESSION['_user_branch']
+        );
+        // print_r($data);
+        $stmt->execute($data);
+        $last_id = $conn->lastInsertId();
 
-    if (isset($_REQUEST['pack_id'])) {
-        $row_count = (count($_REQUEST['pack_id']));
-        if ($row_count > 0) {
+        // Individual item ...
+
+        $delete_details =  "DELETE FROM  tbl_proforma_details WHERE pro_id = '" . $last_id . "'";
+        $result = $conn->prepare($delete_details);
+        $result->execute();
+
+        $stmt1 = null;
+        $stmt1 = $conn->prepare("INSERT INTO tbl_proforma_details (pro_id, item_id, pro_qty, pro_unit, unit_price, pro_discount, pro_discount_amt, vat, pro_value, tax_value, net_value) 
+    	VALUES (:pro_id, :item_id, :pro_qty, :pro_unit, :unit_price, :pro_discount, :pro_discount_amt, :vat, :pro_value, :tax_value, :net_value)");
+
+        if (isset($_REQUEST['temp_item_id'])) {
+            $row_count = count($_REQUEST['temp_item_id']);
+
             for ($n = 0; $n < $row_count; $n++) {
-                $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
-                $data = array(
+                $data1 = array(
                     ':pro_id' => $last_id,
-                    ':pro_pack_decp' => $_REQUEST['pack_id'][$n],
-                    ':pro_pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
-                    ':pro_pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
-                    ':pro_pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
-                    ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
-                    ':pro_pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
-                    ':pro_pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
-                    ':pro_pack_total' => $_REQUEST['quo_pack_total'][$n]
+                    ':item_id' => $_REQUEST['temp_item_id'][$n],
+                    ':pro_qty' => $_REQUEST['temp_qty'][$n],
+                    ':pro_unit' => $_REQUEST['temp_unit'][$n],
+                    ':unit_price' => $_REQUEST['temp_selling_price'][$n],
+                    ':pro_discount' => $_REQUEST['temp_discount_per'][$n],
+                    ':pro_discount_amt' => $_REQUEST['temp_discount_val'][$n],
+                    ':vat' => $_REQUEST['temp_vat'][$n],
+                    ':pro_value' => $_REQUEST['temp_quo_price'][$n],
+                    ':tax_value' => $_REQUEST['quo_pack_taxable_value'][$n],
+                    ':net_value' => $_REQUEST['temp_net_amt'][$n]
                 );
-                $stmt->execute($data);
+                $stmt1->execute($data1);
             }
         }
-    }
 
+        $stmt = null;
+        $stmt = $conn->prepare("INSERT INTO tbl_proforma_pack_details (pro_id, pro_pack_decp, pro_pack_percent, pro_pack_text, pro_pack_taxable_val, gst_id, pro_pack_vat, pro_pack_value, pro_pack_total)
+    		                    VALUES (:pro_id, :pro_pack_decp, :pro_pack_percent, :pro_pack_text, :pro_pack_taxable_val, :gst_id, :pro_pack_vat, :pro_pack_value, :pro_pack_total)");
+
+        if (isset($_REQUEST['pack_id'])) {
+            $row_count = (count($_REQUEST['pack_id']));
+            if ($row_count > 0) {
+                for ($n = 0; $n < $row_count; $n++) {
+                    $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
+                    $data = array(
+                        ':pro_id' => $last_id,
+                        ':pro_pack_decp' => $_REQUEST['pack_id'][$n],
+                        ':pro_pack_percent' => $_REQUEST['quo_pack_per_fa'][$n],
+                        ':pro_pack_text' => $_REQUEST['quo_pack_per_fa_value'][$n],
+                        ':pro_pack_taxable_val' => $_REQUEST['quo_pack_taxable_val'][$n],
+                        ':gst_id' => $_REQUEST['quo_pack_gst_id'][$n],
+                        ':pro_pack_vat' => $_REQUEST['quo_pack_gst_per'][$n],
+                        ':pro_pack_value' => $_REQUEST['quo_pack_gst_amt'][$n],
+                        ':pro_pack_total' => $_REQUEST['quo_pack_total'][$n]
+                    );
+                    $stmt->execute($data);
+                }
+            }
+        }
+
+        db_commit($conn);
+    } catch (Exception $e) {
+        db_rollback($conn);
+        $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+        header("location:lst_quotation.php");
+        die();
+    }
     $_SESSION['_msg'] = "Proforma succesfully Saved..!";
     header("location:quo_proforma_invoice_print.php?pro_id=".$last_id);
     die();
@@ -196,6 +211,7 @@ if (isset($_REQUEST['pro_id'])) {
                 <div class="row">
                     <div class="col-md-12">
                         <form name='thisForm' id="validate" class="form-horizontal" method='post' action="quo_proforma.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('quo_proforma'); ?>
                             <input type="hidden" name="quo_id" id="quo_id" value="<?php echo $_REQUEST['quo_id']; ?>">
                             <fieldset>
                                 <div class="card">

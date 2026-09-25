@@ -8,6 +8,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -282,7 +284,7 @@ if (isset($_REQUEST['so_id'])) {
                                                     <option value=""></option>
                                                     <?php
                                                     $dbconn = new dbhandler();
-                                                    echo $dbconn->fnFillComboFromTable_Where("cash_id", "cash_name", "tbl_cash_details", "cash_id", " WHERE cash_status = '1'") ?>
+                                                    echo $dbconn->fnFillComboFromTable_Where("cash_id", "cash_name", "tbl_cash_details", "cash_name", " WHERE cash_status = '1'") ?>
                                                 </select>
                                             </div>
                                             <label class="  col-lg-2 col-form-label">Cash Count <span class="text-mandatory"> *</span></label>

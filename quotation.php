@@ -10,6 +10,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -37,8 +39,12 @@ if ($quo_sts == 0) {
 
 $_REQUEST['created_dtm'] = date('Y-m-d H:i:s');
 if (isset($_POST['SAVE']) && $_POST['status'] == 'requote') {
+	if (!csrf_check('quotation')) {
+		csrf_fail('lst_quotation.php');
+	}
 	$_REQUEST['select_branch_id'] = (isset($_REQUEST['select_branch_id'])) ? ($_REQUEST['select_branch_id']) : '';
 	try {
+		db_begin($conn);
 		$quo_slno = $dbconn->GetSingleReconrd('tbl_quotation', 'quo_slno', 'quo_id', $_REQUEST['txtHid']);
 		$quo_version = $dbconn->GetMaxValue('tbl_quotation', 'quo_version', 'quo_finyr="' . $_REQUEST['quo_finyr'] . '" AND quo_slno', $quo_slno) + 1;
 		$requote = $dbconn->requote($quo_version);
@@ -130,7 +136,9 @@ if (isset($_POST['SAVE']) && $_POST['status'] == 'requote') {
 				$stmt->execute($data);
 			}
 		}
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -238,6 +246,9 @@ if (isset($_POST['SAVE']) && $_POST['status'] == 'requote') {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('quotation')) {
+		csrf_fail('lst_quotation.php');
+	}
 	$_REQUEST['select_branch_id'] = (isset($_REQUEST['select_branch_id'])) ? ($_REQUEST['select_branch_id']) : '';
 	$update_id = $_REQUEST['txtHid'];
 
@@ -348,6 +359,9 @@ if (isset($_POST['UPDATE'])) {
 //-------------------Send Approval Details Data-----------------//
 
 if (isset($_POST['FINALIZE'])) {
+	if (!csrf_check('quotation')) {
+		csrf_fail('lst_quotation.php');
+	}
 	$_REQUEST['select_branch_id'] = (isset($_REQUEST['select_branch_id'])) ? ($_REQUEST['select_branch_id']) : '';
 	$update_id = $_REQUEST['txtHid'];
 	$_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='" . $_SESSION['_user_branch'] . "' AND branch_status", 1);
@@ -357,6 +371,7 @@ if (isset($_POST['FINALIZE'])) {
 		$requote = $dbconn->requote($quo_version);
 		$_REQUEST['quo_refno'] = leadingZeros($_REQUEST['quo_no'], 3) . '-' . $requote . '/BIE/' . $_REQUEST['branch'] . '/' . $supp_code . '/Q/' . $_REQUEST['quo_finyr'];
 		try {
+			db_begin($conn);
 			$quo_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
 			$stmt = null;
 			$stmt = $conn->prepare("INSERT INTO tbl_quotation (quo_finyr, quo_refno, quo_slno, quo_date, supp_id,quo_version, ref_phone_no, ref_email, show_all_image, branch_id, quo_value, created_by, created_dtm,terms_con, terms_con_id1, terms_con_id2, terms_con_id3, terms_con_id4, terms_con_id5, terms_con_id6, terms_con_id7, terms_con_id8, quo_verify_status, quo_verify_by, quo_verify_date_time,bie_branch_id) 
@@ -444,7 +459,9 @@ if (isset($_POST['FINALIZE'])) {
 					$stmt->execute($data);
 				}
 			}
+			db_commit($conn);
 		} catch (Exception $e) {
+			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
 		}
@@ -453,6 +470,7 @@ if (isset($_POST['FINALIZE'])) {
 		die();
 	} else if ($_REQUEST['txtHid'] != '' && $_REQUEST['txtHid'] > 0) {
 		try {
+			db_begin($conn);
 			//$quo_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
 			$stmt1 = null;
 			$stmt1 = $conn->prepare("UPDATE tbl_quotation SET quo_date = :quo_date, supp_id = :supp_id ,quo_version = :quo_version, ref_phone_no = :ref_phone_no,ref_email = :ref_email, show_all_image = :show_all_image , branch_id = :branch_id,terms_con = :terms_con, quo_value = :quo_value,terms_con_id1 = :terms_con_id1,terms_con_id2 = :terms_con_id2,terms_con_id3 = :terms_con_id3,terms_con_id4 = :terms_con_id4,terms_con_id5 = :terms_con_id5, terms_con_id6 = :terms_con_id6,terms_con_id7 = :terms_con_id7, terms_con_id8 = :terms_con_id8,created_by = :created_by, quo_verify_status = :quo_verify_status, quo_verify_by = :quo_verify_by, quo_verify_date_time = :quo_verify_date_time, quo_approve_status = :quo_approve_status WHERE quo_id = :quo_id");
@@ -544,7 +562,9 @@ if (isset($_POST['FINALIZE'])) {
 					$stmt->execute($data);
 				}
 			}
+			db_commit($conn);
 		} catch (Exception $e) {
+			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
 		}
@@ -553,6 +573,7 @@ if (isset($_POST['FINALIZE'])) {
 		die();
 	} else {
 		try {
+			db_begin($conn);
 			$_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='" . $_SESSION['_user_branch'] . "' AND branch_status", 1);
 			$_REQUEST['quo_slno']  = leadingZeros($dbconn->GetMaxValue('tbl_quotation', 'quo_slno', 'quo_finyr', $_REQUEST['quo_finyr']) + 1, 3);
 			$_REQUEST['quo_refno'] = leadingZeros($_REQUEST['quo_slno'], 3) . '/BIE/' . $_REQUEST['branch'] . '/' . $supp_code . '/Q/' . $_REQUEST['quo_finyr'];
@@ -643,7 +664,9 @@ if (isset($_POST['FINALIZE'])) {
 					$stmt->execute($data);
 				}
 			}
+			db_commit($conn);
 		} catch (Exception $e) {
+			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
 		}
@@ -769,6 +792,7 @@ if (isset($_REQUEST['quo_id'])) {
 				<div class="row">
 					<div class="col-md-12">
 						<form name='thisForm' class="form-horizontal" method='post' action="quotation.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<?php csrf_fields('quotation'); ?>
 
 							<input type="hidden" name="quo_slno" id="quo_slno" value="<?php echo $quo_no; ?>">
 							<input type="hidden" name="quo_sln" id="quo_sln" value="<?php echo $quo_no1; ?>">

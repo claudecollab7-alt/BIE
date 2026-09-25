@@ -1,40 +1,19 @@
 <?php
-/* ===========================================================================
- *  BIE - Central stock movement helper
- * ---------------------------------------------------------------------------
- *  Every place that adds to or subtracts from tbl_item_stock must go through
- *  fnApplyStockMovement() so that a matching tbl_stock_flow ledger row is
- *  always written. Never UPDATE a *_stock column directly.
- *
- *  Usage:
- *      require_once("inc/common/stock_flow.php");      // from the web root
- *      require_once("../common/stock_flow.php");       // from inc/cis_ajax
- *
- *      fnApplyStockMovement($conn, array(
- *          'item_id'    => 123,
- *          'dir'        => 'I',          // 'I' = increase, 'O' = decrease
- *          'qty'        => 5,
- *          'trans_type' => 'GRN',
- *          'trans_id'   => $grn_id,
- *          'item_price' => 120.50,
- *          'remarks'    => 'GRN receipt'
- *      ));
- * ======================================================================== */
+/* Stock movement helper. All stock changes go through fnApplyStockMovement()
+   so tbl_item_stock and tbl_stock_flow always move together. See docs/CHANGELOG.md */
 
 if (!defined('BIE_STOCK_FLOW_LOADED')) {
 
 define('BIE_STOCK_FLOW_LOADED', 1);
 
-/* Transaction types written to tbl_stock_flow.trans_type */
+// trans_type values
 define('STOCK_TRANS_GRN',  'GRN');   // goods received
 define('STOCK_TRANS_INV',  'INV');   // sales invoice / DC
 define('STOCK_TRANS_ADJ',  'ADJ');   // manual stock adjustment
 define('STOCK_TRANS_OPEN', 'OPEN');  // opening balance / data load
 define('STOCK_TRANS_RET',  'RET');   // purchase return
 
-/**
- * Human readable label for a ledger row type.
- */
+// Label for a ledger row type.
 function fnStockTransLabel($trans_type)
 {
     switch ($trans_type) {
@@ -48,19 +27,14 @@ function fnStockTransLabel($trans_type)
     }
 }
 
-/**
- * Direction of a ledger row. Rows written before trans_dir existed fall back
- * to the direction implied by their trans_type.
- *
- * @return string 'I' (stock in / +) or 'O' (stock out / -)
- */
+// Direction of a ledger row: I = in, O = out. Old rows with no trans_dir fall back to the type.
 function fnStockTransDir($obj)
 {
     $dir = isset($obj->trans_dir) ? trim($obj->trans_dir) : '';
     if ($dir == 'I' || $dir == 'O') {
         return $dir;
     }
-    /* legacy rows */
+    // old rows
     $type = isset($obj->trans_type) ? $obj->trans_type : '';
     if ($type == 'INV' || $type == 'SALE' || $type == 'RET') {
         return 'O';
@@ -68,20 +42,14 @@ function fnStockTransDir($obj)
     return 'I';
 }
 
-/**
- * Signed transaction quantity for display: negative when stock went out.
- */
+// Qty for display, negative when stock went out.
 function fnStockSignedQty($obj)
 {
     $qty = isset($obj->trans_qty) ? (float)$obj->trans_qty : 0;
     return (fnStockTransDir($obj) == 'O') ? ($qty * -1) : $qty;
 }
 
-/**
- * The tbl_item_stock column that holds the quantity for a branch.
- *
- * @throws Exception when the branch has no stock column configured
- */
+// The tbl_item_stock column holding this branch's qty.
 function fnGetBranchStockField($conn, $branch_id)
 {
     $stmt = $conn->prepare("SELECT branch_stock_field FROM mst_branch WHERE branch_id = :branch_id");
@@ -95,13 +63,7 @@ function fnGetBranchStockField($conn, $branch_id)
     return $field;
 }
 
-/**
- * Guard for the column names that get interpolated into the UPDATE statement.
- * The value must look like an identifier AND be a column some branch actually
- * uses, so a tampered mst_branch row cannot turn into arbitrary SQL.
- *
- * @throws Exception when the column is not a known branch stock column
- */
+// Column name is put straight into the SQL, so only allow real branch stock columns.
 function fnAssertBranchStockField($conn, $field)
 {
     if (!preg_match('/^[A-Za-z0-9_]{1,30}$/', (string)$field)) {
@@ -117,10 +79,7 @@ function fnAssertBranchStockField($conn, $field)
     return $field;
 }
 
-/**
- * Make sure the item has a tbl_item_stock row, so the UPDATE below can never
- * silently affect zero rows.
- */
+// Make sure the item has a stock row, so the update never hits zero rows.
 function fnEnsureItemStockRow($conn, $item_id)
 {
     $stmt = $conn->prepare("SELECT stock_id FROM tbl_item_stock WHERE item_id = :item_id");
@@ -135,9 +94,7 @@ function fnEnsureItemStockRow($conn, $item_id)
     return $stock_id;
 }
 
-/**
- * Current branch stock for an item.
- */
+// Current branch stock for an item.
 function fnGetItemBranchStock($conn, $item_id, $stock_field)
 {
     fnAssertBranchStockField($conn, $stock_field);
@@ -149,23 +106,10 @@ function fnGetItemBranchStock($conn, $item_id, $stock_field)
     return ($qty === false || $qty === null) ? 0 : (float)$qty;
 }
 
-/**
- * Apply a stock movement AND write the matching tbl_stock_flow ledger row.
- *
- * The balance is moved with a relative UPDATE (col = col +/- :delta) rather
- * than a read-then-overwrite, so two concurrent movements cannot lose each
- * other. Wrap the call in a transaction when it is part of a larger document
- * save - it joins the caller's transaction if one is already open.
- *
- * @param  PDO   $conn
- * @param  array $mv   item_id, dir ('I'|'O'), qty, trans_type, trans_id,
- *                     and optionally: branch_id, item_price, remarks,
- *                     rcvd_qty, reje_qty, pend_qty, trans_date, modify_by,
- *                     stock_field, stock_status
- * @return array|false array(before_qty, after_qty, stock_field, delta),
- *                     or false when qty is zero (nothing to record)
- * @throws Exception
- */
+// Move stock and write the ledger row. $mv: item_id, dir (I/O), qty, trans_type, trans_id,
+// optional branch_id, item_price, remarks, rcvd_qty, reje_qty, pend_qty, trans_date, modify_by.
+// Relative update (col = col +/- delta) so two saves cannot overwrite each other.
+// Joins the caller's transaction if one is open. Returns false when qty is zero.
 function fnApplyStockMovement($conn, $mv)
 {
     $item_id = isset($mv['item_id']) ? (int)$mv['item_id'] : 0;
@@ -176,7 +120,7 @@ function fnApplyStockMovement($conn, $mv)
     $dir = (isset($mv['dir']) && $mv['dir'] == 'O') ? 'O' : 'I';
     $qty = isset($mv['qty']) ? abs((float)$mv['qty']) : 0;
 
-    /* Nothing moved - do not pollute the ledger with zero rows. */
+    // nothing moved, no ledger row
     if ($qty == 0) {
         return false;
     }
@@ -196,7 +140,7 @@ function fnApplyStockMovement($conn, $mv)
     $delta  = ($dir == 'O') ? ($qty * -1) : $qty;
     $after  = $before + $delta;
 
-    /* Relative update - safe against concurrent movements on the same item. */
+    // relative update, safe against concurrent saves
     $upd = $conn->prepare("UPDATE tbl_item_stock SET " . $stock_field . " = " . $stock_field . " + :delta
                             WHERE item_id = :item_id");
     $upd->execute(array(
@@ -244,12 +188,7 @@ function fnApplyStockMovement($conn, $mv)
     );
 }
 
-/**
- * Move stock to an exact target quantity and log the difference.
- * Used where a screen posts an absolute stock value instead of a delta.
- *
- * @return array|false false when the target already matches current stock
- */
+// Set stock to an exact qty and log the difference. For screens that post an absolute value.
 function fnSetStockToQty($conn, $item_id, $target_qty, $mv = array())
 {
     $branch_id = isset($mv['branch_id']) && $mv['branch_id'] != ''
@@ -280,4 +219,4 @@ function fnSetStockToQty($conn, $item_id, $target_qty, $mv = array())
     return fnApplyStockMovement($conn, $mv);
 }
 
-} /* BIE_STOCK_FLOW_LOADED */
+}

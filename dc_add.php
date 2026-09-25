@@ -8,15 +8,21 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 $_REQUEST['dc_finyr'] = $dbconn->GetSingleReconrd("mst_finyear","finyr","finyr_active",1);
 if (isset($_POST['SAVE']))
 {
+    if (!csrf_check('dc_add')) {
+    	csrf_fail('dc_list.php');
+    }
     
     try
     {
+    	db_begin($conn);
         $_REQUEST['dc_date'] = date("Y-m-d", strtotime($_REQUEST['dc_date']));
 
         $_REQUEST['dc_slno'] = $_REQUEST['pur_no'];//$dbconn->GetMaxValue('tbl_dc','dc_slno','company_id',$_SESSION['company_id'])+1;
@@ -138,9 +144,11 @@ if (isset($_POST['SAVE']))
             $pack_temp_result->execute();
         }
     
+    	db_commit($conn);
     }
     catch (Exception $e)
     {       
+    	db_rollback($conn);
         $str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);         
         $_SESSION['_msg_err'] = $str;           
     }
@@ -154,9 +162,13 @@ if (isset($_POST['SAVE']))
 
 if (isset($_POST['UPDATE']))
 {
+    if (!csrf_check('dc_add')) {
+    	csrf_fail('dc_list.php');
+    }
     $update_id = $_REQUEST['txtHid'];
     try
     {
+    	db_begin($conn);
         $_REQUEST['dc_date'] = date("Y-m-d", strtotime($_REQUEST['dc_date']));
         $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
         $_REQUEST['modify_by'] = $_SESSION['_user_id'];
@@ -253,9 +265,11 @@ if (isset($_POST['UPDATE']))
             $pack_temp_result = $conn->prepare($pack_sql);
             $pack_temp_result->execute();
         }
+    	db_commit($conn);
     }
     catch (Exception $e)
     {       
+    	db_rollback($conn);
         $str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);         
         $_SESSION['_msg_err'] = $str;           
     }
@@ -266,9 +280,13 @@ if (isset($_POST['UPDATE']))
 
 if (isset($_POST['FINALIZE']))
 {
+    if (!csrf_check('dc_add')) {
+    	csrf_fail('dc_list.php');
+    }
     $update_id = $_REQUEST['txtHid'];
     try
     {
+    	db_begin($conn);
         $_REQUEST['dc_date'] = date("Y-m-d", strtotime($_REQUEST['dc_date']));
         $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
         $_REQUEST['modify_by'] = $_SESSION['_user_id'];
@@ -366,9 +384,11 @@ if (isset($_POST['FINALIZE']))
             $pack_temp_result = $conn->prepare($pack_sql);
             $pack_temp_result->execute();
         }
+    	db_commit($conn);
     }
     catch (Exception $e)
     {       
+    	db_rollback($conn);
         $str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);         
         $_SESSION['_msg_err'] = $str;           
     }
@@ -827,6 +847,7 @@ elseif (isset($_REQUEST['so_id']))
                 <div class="row">
                     <div class="col-md-12">
                         <form name='thisForm' id="validate" class="form-horizontal" method='post' action="dc_add.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('dc_add'); ?>
                             <fieldset>
                                 <input type="hidden" name="so_id" id="so_id" value="<?php echo $so_id; ?>">
                                 <input type="hidden" name="supp_id" id="supp_id" value="<?php echo $get->supp_id; ?>">

@@ -11,12 +11,18 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-24 csrf token check + transaction rollback on all post handlers
+
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 $po_pre_date = date("Y-m-d");
 
 if (isset($_POST['SAVE'])) {
+    if (!csrf_check('po_prepare')) {
+    	csrf_fail('po_prepare_list.php');
+    }
 
     try {
+    	db_begin($conn);
         $_REQUEST['po_prepare_date'] = date("Y-m-d", strtotime($_REQUEST['po_prepare_date']));
 
         $_REQUEST['po_prepare_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
@@ -88,7 +94,9 @@ if (isset($_POST['SAVE'])) {
         //print_r($data);
         //die();
         header("location:po_prepare_list.php");
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         echo $_SESSION['_msg_err'] = $str;
     }
@@ -98,7 +106,11 @@ if (isset($_POST['SAVE'])) {
     die();
 }
 if (isset($_POST['UPDATE'])) {
+    if (!csrf_check('po_prepare')) {
+    	csrf_fail('po_prepare_list.php');
+    }
     try {
+    	db_begin($conn);
         $update_id = $_REQUEST['txtHid'];
         $_REQUEST['po_prepare_date'] = date("Y-m-d", strtotime($_REQUEST['po_prepare_date']));
 
@@ -172,7 +184,9 @@ if (isset($_POST['UPDATE'])) {
         //die();
         //die;
 
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         echo $_SESSION['_msg_err'] = $str;
     }
@@ -182,7 +196,11 @@ if (isset($_POST['UPDATE'])) {
 }
 
 if (isset($_POST['send_to_admin'])) {
+    if (!csrf_check('po_prepare')) {
+    	csrf_fail('po_prepare_list.php');
+    }
     try {
+    	db_begin($conn);
         $update_id = $_REQUEST['txtHid'];
         $_REQUEST['po_prepare_date'] = date("Y-m-d", strtotime($_REQUEST['po_prepare_date']));
 
@@ -270,7 +288,9 @@ if (isset($_POST['send_to_admin'])) {
             );
             $stmt1->execute($data1);
         }
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         echo $_SESSION['_msg_err'] = $str;
     }
@@ -662,6 +682,7 @@ if ($_REQUEST['si_id'] != "") {
                                 </div>
                             </div>
                             <form name='thisForm' id="validate" class="form-horizontal" method='post' action="po_prepare.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                            	<?php csrf_fields('po_prepare'); ?>
                                 <input type="hidden" name="txtHid" id="txtHid" value="<?php echo $_REQUEST['si_id']; ?>">
                                 <input type="hidden" name="si_id" id="si_id" value="<?php echo $si_id; ?>">
                                 <input type="hidden" name="si_type" id="si_type" value="<?php echo $si_type; ?>">

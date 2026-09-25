@@ -1,3 +1,4 @@
+	<?php if (function_exists('csrf_meta')) { csrf_meta(); } ?>
 	<link rel="icon" href="favicon.ico" type="image/x-icon" />
 	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
 
@@ -16,6 +17,20 @@
 
 	<!-- Core JS files -->
 	<script src="js/jquery.min.js"></script>
+	<script>
+		// attach csrf token to every ajax post
+		$.ajaxSetup({
+			beforeSend: function (xhr, settings) {
+				var t = $('meta[name="csrf-token"]').attr('content');
+				if (t && settings.type && settings.type.toUpperCase() === 'POST') {
+					xhr.setRequestHeader('X-CSRF-Token', t);
+					if (typeof settings.data === 'string' && settings.data.indexOf('csrf_token=') === -1) {
+						settings.data += (settings.data ? '&' : '') + 'csrf_token=' + encodeURIComponent(t);
+					}
+				}
+			}
+		});
+	</script>
 	<script src="js/bootstrap.bundle.min.js"></script>
 	<script src="js/plugins/loaders/blockui.min.js"></script>
 	<script src="js/plugins/editors/ckeditor/ckeditor.js"></script>

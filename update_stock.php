@@ -6,6 +6,8 @@ isAdmin();
 $conn   = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-09-22 non-zero opening stock now logged to tbl_stock_flow
+
 ini_set('max_execution_time', 120);
 ini_set('memory_limit', '256M');
 ini_set('display_errors', '1');
@@ -77,9 +79,7 @@ for ($item_id = $from_id; $item_id <= $to_id; $item_id++) {
     $ho_discount = $kl_discount = $rjpm_discount = $discount;
     $ho_margin   = $kl_margin   = $rjpm_margin   = $margin;
 
-    /* Opening stock per branch. These seed rows are created empty on purpose:
-       anything non-zero here is a real stock movement and is pushed through
-       fnApplyStockMovement() below so tbl_stock_flow records it. */
+    // opening stock per branch, anything non-zero is logged below
     $opening_stock = array(
         'ho_stock'   => 0,
         'kl_stock'   => 0,
@@ -123,7 +123,7 @@ for ($item_id = $from_id; $item_id <= $to_id; $item_id++) {
 
     $result = $conn->query($sql);
 
-    /* Record any non-zero opening balance in the stock ledger. */
+    // log any non-zero opening balance
     if ($result) {
         foreach ($opening_stock as $stock_col => $open_qty) {
             if ((float)$open_qty == 0) {

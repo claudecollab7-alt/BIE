@@ -24,6 +24,9 @@ if ($_REQUEST['branch_id'] == '')
 else
     $branch = $_REQUEST['branch_id'];
 
+// 2026-09-22 reason column + ADJ rows, qty shown signed
+// 2026-09-23 runs from GET so the stock list View All link works, query now bound
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -189,7 +192,8 @@ else
                                 <hr>
 
                                 <?php
-                                if (isset($_POST['Report'])) {
+                                // $_REQUEST not $_POST so the View All link can open it already run
+                                if (isset($_REQUEST['Report']) && $_REQUEST['item_id'] != '') {
                                     $from_dt = date("Y-m-d", strtotime($_REQUEST['from_dt']));
                                     $to_dt = date("Y-m-d", strtotime($_REQUEST['to_dt']));
 
@@ -251,21 +255,23 @@ else
                                                         // $field_name = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_SESSION['_user_branch']);
 
 
-                                    $SQL = " SELECT * FROM tbl_stock_flow
-											 WHERE stock_status = 0 AND trans_qty > 0 AND trans_date between '" . $from_dt . "' AND '" . $to_dt . "'
-                                             AND item_id ='" . $_REQUEST['item_id'] . "' AND branch_id =" . $_REQUEST['branch_id']." ORDER BY auto_id asc ";
-
-                                    
-
-                                    //   echo $SQL;
-
-                                    $result = $conn->query($SQL);
+                                    // bound, not interpolated - reachable by GET from the stock list modal
+                                    $result = $conn->prepare("SELECT * FROM tbl_stock_flow
+                                             WHERE stock_status = 0 AND trans_qty > 0
+                                               AND trans_date BETWEEN :from_dt AND :to_dt
+                                               AND item_id = :item_id AND branch_id = :branch_id
+                                             ORDER BY auto_id ASC");
+                                    $result->execute(array(
+                                        ':from_dt'   => $from_dt,
+                                        ':to_dt'     => $to_dt,
+                                        ':item_id'   => (int)$_REQUEST['item_id'],
+                                        ':branch_id' => (int)$_REQUEST['branch_id']
+                                    ));
                                     if ($result->rowCount() > 0) {
                                         $Sno = 1;
                                         while ($obj = $result->fetch()) {
 
-                                            /* Reset on every row - otherwise an unrecognised trans_type
-                                               silently reuses the previous row's colour and values. */
+                                            // reset each row, else an unknown type reuses the last row's values
                                             $color      = '';
                                             $trans_code = '';
                                             $approve_by = '';
@@ -322,7 +328,7 @@ else
                                                 $approve_by = $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", $adj_by)
                                                             . ' on ' . date('d-M-y @ h:i a', strtotime($adj_dtm)) . "<br>";
 
-                                                //--------- Opening balance / any other type -----//
+                                                //--------- opening / other -----//
 
                                             } else {
                                                 $color = 'style="background-color:#eeeeee"';
