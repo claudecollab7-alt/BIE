@@ -8,6 +8,40 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-09-25 - Cash denominations: 2000 retired, 1 / 2 / 5 added
+
+The denomination list is data, not code. **Two tables hold the same list** and both were
+updated so the screens stay in step:
+
+| Table | Used by |
+|---|---|
+| `tbl_cash_details` | Sales Receipt (`pay_receipt.php`) |
+| `mst_cash_details` | Invoice (`mng_invoice.php`, `quo_invoice.php`), Credit (`mng_credit.php`) |
+
+**Data** - run `db/cash_denomination_update.sql` once (safe to re-run).
+
+- 2000 set to `cash_status = 0` in both tables.
+- 1.00, 2.00, 5.00 added as `cash_id` 8, 9, 10 in both tables.
+- `db/bie.sql` updated to match, so a fresh install gets the same list.
+
+**Code** - the dropdown was `ORDER BY cash_id`, so the new rows (ids 8-10) would have
+appeared *below* 500. Changed to `ORDER BY cash_name` in `pay_receipt.php`,
+`mng_invoice.php`, `quo_invoice.php` and `mng_credit.php`, giving
+1, 2, 5, 10, 20, 50, 100, 200, 500.
+
+**Points to know**
+
+- 2000 is deactivated, **not deleted**. Old receipts store `cash_id` 7, and the screens that
+  print them (`jquery_modal_cash_dts.php`, `jquery_modal_cash_invoice.php`,
+  `modal_so_cash_details.php`, `fancybox_so_cash_details.php`) look the name up **without**
+  checking `cash_status`, so history still shows 2000 correctly. Deleting the row would
+  blank those out.
+- `jquery_cash_receipt_details.php` does filter on `cash_status = '1'` when adding a row,
+  which is correct - a retired denomination cannot be entered on a new receipt.
+- `dc_invoice.php` saves denomination rows but has no dropdown of its own, so nothing to change there.
+
+---
+
 ## 2026-09-24 - CSRF tokens, duplicate-submit guard, transaction rollback
 
 ### What changed
