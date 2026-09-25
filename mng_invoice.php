@@ -9,6 +9,7 @@ isAdmin();
 
 // 2026-09-22 stock update moved to fnApplyStockMovement(), writes tbl_stock_flow
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -1551,7 +1552,7 @@ if (isset($_REQUEST['inv_id']) && $_REQUEST['inv_id'] != "") {
                                                             <select data-placeholder="Choose a Denomination.." name="cash_id" id="cash_id" class="form-control select-search">
                                                                 <option value="">-- Select Denomination --</option>
                                                                 <?php
-                                                                echo $dbconn->fnFillComboFromTable_Where("cash_id", "cash_name", "mst_cash_details", "cash_id", " WHERE cash_status = '1'") ?>
+                                                                echo $dbconn->fnFillComboFromTable_Where("cash_id", "cash_name", "mst_cash_details", "cash_name", " WHERE cash_status = '1'") ?>
                                                             </select>
                                                             <input type="hidden" name="cash_id_no" id="cash_id_no">
                                                         </div>
