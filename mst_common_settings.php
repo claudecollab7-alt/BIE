@@ -111,7 +111,7 @@ if (isset($_POST['UPDATE'])) {
 
 						<form name='thisForm' class="form-horizontal" method='POST' action="">
 
-							<div class="card" style="width:50%; margin: 0 auto;">
+							<div class="card" style="width:100%; margin: 0 auto;">
 								<div class="card-header bg-pgheader text-white header-elements-inline">
 									<h6 class="card-title">Common Settings</h6>
 									<div class="header-elements">
@@ -125,7 +125,7 @@ if (isset($_POST['UPDATE'])) {
 								<div class="card-body">
 									<div class="form-group row pt-2">
 
-										<label class="col-lg-4 col-form-label">Discount Apply Suppliers</label>
+										<label class="col-lg-2 col-form-label">Any Discount Suppliers</label>
 
 										<div class="col-lg-8">
 											<select name="supp_id[]" id="supp_id" data-placeholder="Choose Suppliers.." class="select" multiple>

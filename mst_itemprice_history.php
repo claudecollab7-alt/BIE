@@ -736,7 +736,7 @@ if ($_REQUEST['item_id'] != "") {
 										<label class="col-lg-2 col-form-label">Current Stock</label>
 										<div class="col-lg-4">
 											<input type="text" class="form-control bg-light" name="branch_stock_field" id="branch_stock_field" maxlength="9" value="" readonly="readonly" tabindex="-1" title="Stock cannot be changed from this screen" />
-											<span class="form-text text-muted">Read only &mdash; use <a href="stock_adjustment.php">Stock Adjustment</a> to change stock.</span>
+											<!-- <span class="form-text text-muted">Read only &mdash; use <a href="stock_adjustment.php">Stock Adjustment</a> to change stock.</span> -->
 										</div>
 
 									</div>
