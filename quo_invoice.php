@@ -9,6 +9,7 @@ $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
+// 2026-09-30 edit view posted quo_value (not a column here) and wiped inv_value, now inv_value
 // 2026-09-24 try/catch added, handlers had none before
 
 // ini_set('display_errors', '1');
@@ -766,7 +767,7 @@ if (isset($_REQUEST['inv_id'])) {
                                                                     <input type="hidden" class="temp_discount_per" name="temp_discount_per[]" value="' . $obj->inv_discount . '" />
                                                                 
                                                                     <td class="text-right">' . $obj->inv_value . '</td>
-                                                                    <input type="hidden" class="temp_quo_price" name="temp_quo_price[]" value="' . $obj->quo_value . '" />
+                                                                    <input type="hidden" class="temp_quo_price" name="temp_quo_price[]" value="' . $obj->inv_value . '" />
                                                                     <input type="hidden" class="temp_discount_val" name="temp_discount_val[]" value="' .  $obj->inv_discount_amt . '">
 
                                                                     <td class="text-right">' . $obj->vat . '</td>

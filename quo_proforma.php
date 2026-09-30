@@ -9,6 +9,7 @@ $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-09-24 try/catch added, handlers had none before
+// 2026-09-30 edit view posted quo_value (not a column here) and wiped pro_value, now pro_value
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -398,7 +399,7 @@ if (isset($_REQUEST['pro_id'])) {
                                                                     <input type="hidden" class="temp_discount_per" name="temp_discount_per[]" value="' . $obj->pro_discount . '" />
                                                                 
                                                                     <td class="text-right">' . $obj->pro_value . '</td>
-                                                                    <input type="hidden" class="temp_quo_price" name="temp_quo_price[]" value="' . $obj->quo_value . '" />
+                                                                    <input type="hidden" class="temp_quo_price" name="temp_quo_price[]" value="' . $obj->pro_value . '" />
                                                                     <input type="hidden" class="temp_discount_val" name="temp_discount_val[]" value="' .  $obj->pro_discount_amt . '">
 
                                                                     <td class="text-right">' . $obj->vat . '</td>
