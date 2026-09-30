@@ -8,6 +8,60 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-09-30 - Invoice Amount zeroed on edit, percentage charges computed 0
+
+**Symptom** - on an invoice opened for edit (`dc_invoice.php?inv_id=...`), the Amount column
+read 0.00 and any percentage-based charge (transport, packing) came out with GST Amount 0,
+even with the HSN picked and GST % showing correctly.
+
+**Cause 1 - the edit view posted a column that does not exist.** The edit branch renders the
+Amount cell from `$obj->inv_value` but filled the hidden field that gets re-posted from
+`$obj->quo_value`. The query is `SELECT * FROM tbl_invoice_details` with no join, and that
+table has no `quo_value` column, so the field rendered empty. Saving wrote `''` into
+`inv_value decimal(12,2)`, which MySQL stores as 0.00. Every other field in that branch reads
+a real column, which is why only the Amount column was wrong.
+
+Same defect in three places, all fixed:
+
+| File | Was | Now |
+|---|---|---|
+| `dc_invoice.php` | `$obj->quo_value` | `$obj->inv_value` |
+| `quo_invoice.php` | `$obj->quo_value` | `$obj->inv_value` |
+| `quo_proforma.php` | `$obj->quo_value` | `$obj->pro_value` |
+
+The create-from-quotation branches in the same files keep `$obj->quo_value` - they read
+`tbl_quotation_details`, which does have that column.
+
+**Cause 2 - the percentage base was read as formatted text.** `get_value()` in
+`dc_invoice.php` sent `$("#quo_total_amt").text()`, the displayed value with its thousands
+separator. PHP casting `"8,125.00"` stops at the comma and yields 8, so a 10% charge computed
+on 8 instead of 8125. Now reads the raw hidden `#txt_quo_total_amt`, which the page already
+carried and which the row recalc was already using. Fixing only cause 1 would have produced a
+GST amount of 0.14 instead of 146.25, so both were needed.
+
+**Data** - run `db/invoice_value_repair.sql`. Any invoice or proforma saved from its edit
+screen before this fix already has `inv_value` / `pro_value` zeroed. `qty`, `unit_price`,
+`vat`, `tax_value` and `net_value` were never affected, so the value is rebuilt as
+`net_value - tax_value`, cross-checked against `qty x unit_price` less the discount. Rows
+where the two disagree by more than a rupee are listed and left alone. Steps 1 and 2 are
+read-only; read them before running step 3, and back the tables up first.
+
+**Points to know**
+
+- The save handlers were left as they are - they were correct once the field feeding them is.
+- The invoice total was never wrong: `net_value` is stored separately, so the bug was silent.
+  Only the Amount column and charges derived from it went to zero.
+- Not changed: `inc/cis_ajax/jquery_quotation_package_cal.php` returns
+  `gst_per ~ package_gst_val ~ package_gst_val` - the second slot should be
+  `$package_taxable_val`, which is computed but never sent. In `dc_invoice.php` the element it
+  feeds does not exist, so it is harmless there. In `quotation.php` it fills
+  `#quo_pack_taxable_value`, which is forwarded to the row-add call, so that page stores the
+  GST amount where the taxable value belongs. Left alone because it changes quotation
+  behaviour and was outside this fix.
+- `quotation.php` has the same formatted-text base as cause 2. Left alone for the same reason.
+
+---
+
 ## 2026-09-25 - Cash denominations: 2000 retired, 1 / 2 / 5 added
 
 The denomination list is data, not code. **Two tables hold the same list** and both were
