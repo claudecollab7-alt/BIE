@@ -11,15 +11,21 @@ $dbconn = new dbhandler();
 // 2026-10-01 group items moved off tbl_item_group_details_temp - rows live in the page, posted back as arrays
 
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL); 
 
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_item_grouping')) {
+		csrf_fail('lst_item_grouping.php');
+	}
 	$_REQUEST['item_group_slno'] = $dbconn->GetMaxValue('tbl_item_group', 'item_group_slno', '1', 1) + 1;
 	$_REQUEST['created_dt'] = date('Y-m-d H:i:s');
 	$_REQUEST['created_by'] = $_SESSION['_user_id'];
 
 	try {
+		db_begin($conn);
 		$stmt = null;
 		$stmt = $conn->prepare("INSERT INTO tbl_item_group (item_group_slno, item_group_index,item_group_name, item_group_code, uom_id, item_group_remarks, company_id, created_dt, created_by) VALUES (:item_group_slno, :item_group_index,:item_group_name, :item_group_code, :uom_id, :item_group_remarks, :company_id, :created_dt, :created_by)");
 		$data = array(
@@ -59,7 +65,9 @@ if (isset($_POST['SAVE'])) {
 			}
 		}
 		$_SESSION['_msg'] = "Group succesfully saved..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
@@ -70,12 +78,16 @@ if (isset($_POST['SAVE'])) {
 }
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_item_grouping')) {
+		csrf_fail('lst_item_grouping.php');
+	}
 
 	$_REQUEST['modify_dt'] = date('Y-m-d H:i:s');
 	$_REQUEST['modify_by'] = $_SESSION['_user_id'];
 
 	$update_id = $_REQUEST['txtHid'];
 	try {
+		db_begin($conn);
 		$stmt = null;
 		$stmt = $conn->prepare("UPDATE tbl_item_group SET item_group_index=:item_group_index,item_group_name = :item_group_name, item_group_code = :item_group_code, uom_id = :uom_id, item_group_remarks = :item_group_remarks, company_id = :company_id, modify_dt = :modify_dt, modify_by = :modify_by
 					WHERE item_group_id = :item_group_id");
@@ -114,7 +126,9 @@ if (isset($_POST['UPDATE'])) {
 			}
 		}
 		$_SESSION['_msg'] = "Group succesfully Updated..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
@@ -433,6 +447,7 @@ if (isset($_REQUEST['group_id'])) {
 					<div class="col-md-12">
 						<!-- This Form UI Starts here --->
 						<form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<?php csrf_fields('mst_item_grouping'); ?>
 							<input type="hidden" name="trade_items" id="trade_items" value="0">
 							<div class="card">
 								<div class="card-header bg-pgheader text-white header-elements-inline">

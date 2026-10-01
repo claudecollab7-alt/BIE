@@ -9,6 +9,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -16,9 +18,13 @@ error_reporting(E_ALL);
 
 if (isset($_POST['SAVE']))
 {		
+	if (!csrf_check('mst_brand')) {
+		csrf_fail('mst_brand.php');
+	}
 	
 	try
 	{
+		db_begin($conn);
 		$is_exist = $dbconn->GetSingleReconrd("mst_brand","brand_id",
 					"(brand_name = '".$_REQUEST['brand_name']."' OR brand_code = '".$_REQUEST['brand_code']."') AND brand_status ",1);
 				
@@ -40,9 +46,11 @@ if (isset($_POST['SAVE']))
 		);
 		$stmt->execute($data);
 		$_SESSION['_msg'] = "Brand Succesfully Saved..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
 	{
+		db_rollback($conn);
 		fnLogError($e);		
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
@@ -55,11 +63,15 @@ if (isset($_POST['SAVE']))
 
 if (isset($_POST['UPDATE']))
 {
+	if (!csrf_check('mst_brand')) {
+		csrf_fail('mst_brand.php');
+	}
 	
 	$update_id = $_REQUEST['txtHid'];		
 	
 	try
 	{
+		db_begin($conn);
 		$mst_exist = $dbconn->GetSingleReconrd("mst_brand","brand_id","brand_id <> ".$update_id." AND 
 					 brand_name ='".$_REQUEST['brand_name']."' AND brand_status", 1);
 	
@@ -86,9 +98,11 @@ if (isset($_POST['UPDATE']))
 		echo $stmt->fullQuery;
 		
 		$_SESSION['_msg'] = "Brand succesfully Updated..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
 	{
+		db_rollback($conn);
 		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
@@ -262,7 +276,8 @@ if (isset($_REQUEST['brand_id']) && $_REQUEST['brand_id'] != "")
 					<!-- /basic datatable -->
 
 					<div class="col-md-6">
-						<form name='brandForm' class="form-horizontal" method='POST' action=""   onSubmit="return fnValidate();" 	>							
+						<form name='brandForm' class="form-horizontal" method='POST' action=""   onSubmit="return fnValidate();" 	>
+							<?php csrf_fields('mst_brand'); ?>							
 							
 							<div class="card">
 								<div class="card-header bg-pgheader text-white header-elements-inline">

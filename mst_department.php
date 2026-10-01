@@ -9,14 +9,20 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_department')) {
+		csrf_fail('mst_department.php');
+	}
 
     try {
+    	db_begin($conn);
         $is_exist = $dbconn->GetSingleReconrd("mst_department","department_id","(department_name = '" . trim($_REQUEST['department_name']) . "') AND rec_del_status ",1 );
 
         if ($is_exist != "") {
@@ -36,7 +42,9 @@ if (isset($_POST['SAVE'])) {
         );
         $stmt->execute($data);
         $_SESSION['_msg'] = "Department Succesfully Saved..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -48,10 +56,14 @@ if (isset($_POST['SAVE'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_department')) {
+		csrf_fail('mst_department.php');
+	}
 
     $update_id = $_REQUEST['txtHid'];
 
     try {
+    	db_begin($conn);
         $mst_exist = $dbconn->GetSingleReconrd("mst_department", "department_id", "department_id <> " . $update_id . " AND 
 					 department_name ='" . trim($_REQUEST['department_name']) . "' AND rec_del_status", 1);
 
@@ -74,7 +86,9 @@ if (isset($_POST['UPDATE'])) {
         $stmt->execute($data);
 
         $_SESSION['_msg'] = "Department succesfully Updated..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -234,6 +248,7 @@ if (isset($_REQUEST['department_id']) && $_REQUEST['department_id'] != "") {
 
                     <div class="col-md-6">
                         <form name='DepartmentForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();">
+                        	<?php csrf_fields('mst_department'); ?>
 
                             <div class="card">
                                 <div class="card-header bg-pgheader text-white header-elements-inline">

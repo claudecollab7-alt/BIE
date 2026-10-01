@@ -8,6 +8,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -15,6 +17,9 @@ $dbconn = new dbhandler();
 //----------------------------------- SAVE ---------------------------------------//
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_district')) {
+		csrf_fail('mst_district.php');
+	}
 
     $mst_exist = $dbconn->GetSingleReconrd("mst_district", "district_id", "district_status = 1 AND district_name='" . $_REQUEST['district_name'] . "' AND state_id", $_REQUEST['state_name']);
 
@@ -25,6 +30,7 @@ if (isset($_POST['SAVE'])) {
     }
 
     try {
+    	db_begin($conn);
         $stmt = null;
         $stmt = $conn->prepare("INSERT INTO mst_district (district_name, state_id, country_id) VALUES (:district_name, :state_id, :country_id)");
         $data = array(
@@ -34,7 +40,9 @@ if (isset($_POST['SAVE'])) {
         );
         $stmt->execute($data);
         $_SESSION['_msg'] = "District succesfully saved..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -45,6 +53,9 @@ if (isset($_POST['SAVE'])) {
 }
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_district')) {
+		csrf_fail('mst_district.php');
+	}
     $dbconn = new dbhandler();
     $update_id = $_REQUEST['txtHid'];
 
@@ -56,6 +67,7 @@ if (isset($_POST['UPDATE'])) {
     }
 
     try {
+    	db_begin($conn);
         $stmt = null;
         $stmt = $conn->prepare("UPDATE  mst_district SET district_name = :district_name, state_id= :state_id, country_id = :country_id
 					WHERE district_id = :district_id");
@@ -69,7 +81,9 @@ if (isset($_POST['UPDATE'])) {
         $stmt->execute($data);
 
         $_SESSION['_msg'] = "District succesfully Updated..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -312,6 +326,7 @@ if (isset($_REQUEST['district_id'])) {
 
                     <div class="col-md-6">
                         <form name='thisForm' id="validate" class="form-horizontal" method='post' action="" onSubmit="return fnValidate();">
+                        	<?php csrf_fields('mst_district'); ?>
                             <div class="card">
                                 <div class="card-header bg-pgheader text-white header-elements-inline">
                                     <h6 class="card-title">New District</h6>

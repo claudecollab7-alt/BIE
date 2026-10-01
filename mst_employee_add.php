@@ -12,6 +12,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('isplay_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -20,8 +22,12 @@ $_REQUEST['created_dtm'] = date('Y-m-d H:i:s');
 
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_employee_add')) {
+		csrf_fail('lst_staff.php');
+	}
 
     try {
+    	db_begin($conn);
 
         $file_pre = str_replace('/', '', $_REQUEST['emp_code']);
 
@@ -255,6 +261,8 @@ if ($_REQUEST['emp_type'] == 1) {
         }
 
 
+        db_commit($conn);
+
         if($_REQUEST['emp_type'] == 1)
 	{
 		header("location:lst_staff.php");	
@@ -269,6 +277,7 @@ if ($_REQUEST['emp_type'] == 1) {
         }
         die();
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -279,7 +288,11 @@ if ($_REQUEST['emp_type'] == 1) {
 }
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_employee_add')) {
+		csrf_fail('lst_staff.php');
+	}
     try {
+    	db_begin($conn);
 
     $file_pre = str_replace('/', '', $_REQUEST['emp_code']);
 
@@ -619,6 +632,8 @@ if(isset($_REQUEST['hidd_asset_id'])){
         $login_detail->execute($login);
     }
     
+    db_commit($conn);
+
     if($_REQUEST['staffhid'] == 1)
 	{
 		header("location:lst_staff.php");	
@@ -634,6 +649,7 @@ if(isset($_REQUEST['hidd_asset_id'])){
     die();
 } catch (Exception $e) {
 	fnLogError($e);
+	db_rollback($conn);
     $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
     $_SESSION['_msg_err'] = $str;
     header("location:lst_employee.php");	
@@ -767,6 +783,7 @@ if ($_REQUEST['emp_id'] != '') {
                 <div class="row">
                     <div class="col-md-12">
                         <form name="thisForm" class="form-horizontal" method='POST' action="mst_employee_add.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('mst_employee_add'); ?>
                             <input type="hidden" name="emp_slno" id="emp_slno" value="<?php echo $emp_slno; ?>">
                             <input type="hidden" name="branch_code" id="branch_code" value="<?php echo $usr_group; ?>">
                             <input type="hidden" name="hide_emp_agreement_order" value="<?php echo $obj->emp_agreement_order; ?>">

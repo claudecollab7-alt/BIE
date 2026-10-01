@@ -9,14 +9,20 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_labour')) {
+		csrf_fail('mst_labour.php');
+	}
 
     try {
+    	db_begin($conn);
         $is_exist = $dbconn->GetSingleReconrd(
             "mst_labour",
             "labour_id",
@@ -41,7 +47,9 @@ if (isset($_POST['SAVE'])) {
         );
         $stmt->execute($data);
         $_SESSION['_msg'] = "Labour Succesfully Saved..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -53,10 +61,14 @@ if (isset($_POST['SAVE'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_labour')) {
+		csrf_fail('mst_labour.php');
+	}
 
     $update_id = $_REQUEST['txtHid'];
 
     try {
+    	db_begin($conn);
         $mst_exist = $dbconn->GetSingleReconrd("mst_labour", "labour_id", "labour_id <> " . $update_id . " AND 
 					 labour_name ='" . $_REQUEST['labour_name'] . "' AND rec_del_status", 1);
 
@@ -81,7 +93,9 @@ if (isset($_POST['UPDATE'])) {
         $stmt->execute($data);
 
         $_SESSION['_msg'] = "Labour succesfully Updated..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -238,6 +252,7 @@ if (isset($_REQUEST['labour_id']) && $_REQUEST['labour_id'] != "") {
 
                     <div class="col-md-6">
                         <form name='DepartmentForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();">
+                        	<?php csrf_fields('mst_labour'); ?>
 
                             <div class="card">
                                 <div class="card-header bg-pgheader text-white header-elements-inline">

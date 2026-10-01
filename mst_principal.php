@@ -9,6 +9,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -16,9 +18,13 @@ error_reporting(E_ALL);
 
 if (isset($_POST['SAVE']))
 {	
+	if (!csrf_check('mst_principal')) {
+		csrf_fail('mst_principal.php');
+	}
 	
 	try
 	{ 
+		db_begin($conn);
 	    $is_exist = $dbconn->GetSingleReconrd("mst_principal","principal_id",
 					"(principal_name = '".$_REQUEST['principal_name']."' OR principal_code = '".$_REQUEST['principal_code']."') AND principal_status ", 1);
 				
@@ -38,9 +44,11 @@ if (isset($_POST['SAVE']))
 		);
 		$stmt->execute($data);
 		$_SESSION['_msg'] = "Principal Succesfully Saved..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
 	{
+		db_rollback($conn);
 		fnLogError($e);		
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
@@ -53,11 +61,15 @@ if (isset($_POST['SAVE']))
 
 if (isset($_POST['UPDATE']))
 {
+	if (!csrf_check('mst_principal')) {
+		csrf_fail('mst_principal.php');
+	}
 	
 	$update_id = $_REQUEST['txtHid'];		
 	
 	try
 	{
+		db_begin($conn);
 		$mst_exist = $dbconn->GetSingleReconrd("mst_principal","principal_id","principal_id <> ".$update_id." AND 
 					 principal_name ='".$_REQUEST['principal_name']."' AND principal_status", 1);
 	
@@ -83,9 +95,11 @@ if (isset($_POST['UPDATE']))
 		echo $stmt->fullQuery;
 		
 		$_SESSION['_msg'] = "Principal succesfully Updated..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
 	{
+		db_rollback($conn);
 		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
@@ -260,7 +274,8 @@ if (isset($_REQUEST['principal_id']) && $_REQUEST['principal_id'] != "")
 					<!-- /basic datatable -->
 
 					<div class="col-md-6">
-						<form name='principalForm' class="form-horizontal" method='POST' action=""   onSubmit="return fnValidate();" 	>							
+						<form name='principalForm' class="form-horizontal" method='POST' action=""   onSubmit="return fnValidate();" 	>
+							<?php csrf_fields('mst_principal'); ?>							
 							
 							<div class="card">
 								<div class="card-header bg-pgheader text-white header-elements-inline">

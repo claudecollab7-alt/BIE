@@ -10,6 +10,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -18,6 +20,9 @@ error_reporting(E_ALL);
 
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_boxtype')) {
+		csrf_fail('mst_boxtype.php');
+	}
 
     $mst_exist = $dbconn->GetSingleReconrd("tbl_dc_package_box", "box_id", "box_status = 1 AND box_name", $_REQUEST['box_name']);
 
@@ -28,6 +33,7 @@ if (isset($_POST['SAVE'])) {
     }
 
     try {
+    	db_begin($conn);
 
         $stmt = null;
 
@@ -36,7 +42,9 @@ if (isset($_POST['SAVE'])) {
 
         $stmt->execute($data);
         $_SESSION['_msg'] = "Box Type succesfully saved..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
 
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
@@ -51,6 +59,9 @@ if (isset($_POST['SAVE'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_boxtype')) {
+		csrf_fail('mst_boxtype.php');
+	}
     $update_id = $_REQUEST['txtHid'];
     $mst_exist = $dbconn->GetSingleReconrd("tbl_dc_package_box", "box_id", "box_id <> " . $update_id . " AND box_status = 1 AND box_name", $_REQUEST['box_name']);
 
@@ -61,6 +72,7 @@ if (isset($_POST['UPDATE'])) {
     }
 
     try {
+    	db_begin($conn);
 
         $stmt = null;
         $stmt = $conn->prepare("UPDATE  tbl_dc_package_box SET box_name = :box_name WHERE box_id = :box_id");
@@ -72,7 +84,9 @@ if (isset($_POST['UPDATE'])) {
         $stmt->execute($data);
 
         $_SESSION['_msg'] = "Box Type succesfully Updated..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
 
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
@@ -268,6 +282,7 @@ if (isset($_REQUEST['box_id'])) {
 
                     <div class="col-md-6">
                         <form name='thisForm' id="validate" class="form-horizontal" method='post' action="" onSubmit="return fnValidate();">
+                        	<?php csrf_fields('mst_boxtype'); ?>
 
                             <div class="card">
                                 <div class="card-header bg-pgheader text-white header-elements-inline">

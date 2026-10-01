@@ -14,13 +14,19 @@ ini_set('max_execution_time', '0'); // for infinite time of execution
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
     ini_set('display_errors', '1');
     ini_set('display_startup_errors', '1');
     error_reporting(E_ALL);
 
 if (isset($_POST['IMPORT'])) {
+	if (!csrf_check('import_attendance')) {
+		csrf_fail('attendance_new.php');
+	}
 
     try {
+    	db_begin($conn);
 
         $file_pre = date("m-Y");
 
@@ -465,7 +471,9 @@ if (isset($_POST['IMPORT'])) {
             }
         }
         $_SESSION['_msg'] = "Attendance imported successfully";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         echo $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -520,6 +528,7 @@ if (isset($_POST['IMPORT'])) {
                     <div class="col-md-12">
 
                         <form name="thisform" class="form-horizontal" method='POST' action="import_attendance.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('import_attendance'); ?>
                             <fieldset>
                                 <div class="card">
                                     <div class="card-header bg-pgheader text-white header-elements-inline">

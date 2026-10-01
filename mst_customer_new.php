@@ -11,13 +11,19 @@ $dbconn = new dbhandler();
 
 // 2026-10-01 branch rows moved off mst_customer_branch_temp - rows live in the page, posted back as arrays
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_customer_new')) {
+		csrf_fail('lst_customers.php');
+	}
 	//die;
 	try {
+		db_begin($conn);
 		$ledger_type = $dbconn->GetSingleReconrd("mst_accounts_group", "group_type", "group_id", $_REQUEST['group_id']);
 
 		$credit_ledger = $conn->prepare("INSERT INTO mst_ledger (group_id, ledger_name, ledger_type, open_bal, open_bal_type) VALUES (:group_id, :ledger_name, :ledger_type, :open_bal, :open_bal_type)");
@@ -126,7 +132,9 @@ if (isset($_POST['SAVE'])) {
 			}
 		}
 		$_SESSION['_msg'] = "Customer succesfully saved..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
@@ -138,6 +146,9 @@ if (isset($_POST['SAVE'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_customer_new')) {
+		csrf_fail('lst_customers.php');
+	}
 	
 	$update_id = $_REQUEST['txtHid'];
 	$mst_exist = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_id", "supp_id <> " . $update_id . " AND supp_status = 1 AND supp_code", $_REQUEST['supp_code']);
@@ -148,6 +159,7 @@ if (isset($_POST['UPDATE'])) {
 		die();
 	}
 	try {
+		db_begin($conn);
 		$ledger_id = $dbconn->GetSingleReconrd("mst_supplier_new", "ledger_id", "supp_id", $update_id);
 		$ledger_type = $dbconn->GetSingleReconrd("mst_accounts_group", "group_type", "group_id", $_REQUEST['group_id']);
 		$update_ledger = $conn->prepare("UPDATE  mst_ledger SET group_id = :group_id, ledger_name = :ledger_name, ledger_type = :ledger_type, open_bal = :open_bal, open_bal_type = :open_bal_type WHERE ledger_id = :ledger_id");
@@ -246,7 +258,9 @@ if (isset($_POST['UPDATE'])) {
 			}
 		}
 		$_SESSION['_msg'] = "Customer succesfully Updated..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		echo $_SESSION['_msg_err'] = $str;
@@ -814,6 +828,7 @@ if (isset($_REQUEST['supp_id'])) {
 					<div class="col-md-12">
 						<!-- This Form UI Starts here --->
 						<form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();">
+							<?php csrf_fields('mst_customer_new'); ?>
 							<input type="hidden" name="ledger_id" value="<?php echo $obj->ledger_id; ?>">
 							<input type="hidden" name="supp_type" value="<?php echo $obj->supp_type; ?>">
 							<input type="hidden" name="supp_id" id="supp_id" value="">

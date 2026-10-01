@@ -8,6 +8,86 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-01 - Error log, double-submit lock, csrf and rollback everywhere
+
+### Error log
+
+`inc/common/error_log.php` (new). `fnLogError($e)` writes one line per error to
+`logs/error_YYYY-MM.log`:
+
+```
+2026-10-01 10:41:38 | grn_add.php:412 | grn_add.php | user 7 Storekeeper | SQLSTATE[23000]: Duplicate entry...
+```
+
+Date, the file and line that threw, the page, the user, the message. One file per month.
+Takes an exception or a plain string, plus an optional context note. It never throws - a
+failed write must not break the page.
+
+Added as the first statement of **136 catch blocks across 69 files**, so an error is
+recorded even where the handler only set a session message or swallowed it. Several
+handlers echoed the raw SQL error to the screen; the log now captures it properly.
+
+`logs/` is created on first write with an `.htaccess` denying web access, and
+`logs/.gitignore` keeps the files out of the repository.
+
+Loaded from `inc/common/dbconnect.php`, not only `userclass.php`, so `fnLogError()` also
+exists in the ajax endpoints - they include dbconnect directly and never load userclass.
+`dbhandler.php` and `functions.php` require it too. Two places are deliberately not
+logged: `error_log.php`'s own internal catch, which would recurse, and a commented-out
+block in `inc/cis_ajax/Untitled-1.php`.
+
+### Double-submit lock
+
+`inc/common/css-js.php` - one handler covering every form, no page needed changing.
+
+Once validation has let a submit through, the form is flagged and its buttons disabled. A
+second submit while the flag is set is dropped. An alert from `fnValidate()` leaves the
+buttons usable so the field can be fixed and retried.
+
+Two details that matter:
+
+- Buttons are disabled on a **zero timeout**, after the browser has read the form.
+  Disabling them inside the submit event drops the clicked button's name from the post,
+  and every handler here keys off `isset($_POST['SAVE'])`.
+- **37 screens end `fnValidate()` with `document.thisForm.submit()`**, which does not fire
+  the submit event, so a plain submit handler would miss them.
+  `HTMLFormElement.prototype.submit` is wrapped to lock those too. Those screens also had
+  a latent double submit: `fnValidate()` calls `submit()` and then returns `undefined`, so
+  the native submission went ahead as well. The lock closes that.
+
+The back button restores a cached page with its buttons disabled, so `pageshow` re-enables
+them.
+
+### CSRF, form tokens and rollback on the rest of the forms
+
+Extended from the 16 main document forms to **all 56 forms that write to the database** -
+every `mst_*` master, the payroll and attendance screens, `mng_credit.php`,
+`pay_receipt.php`, `grn_pay_receipt.php`, `user_actions.php`, `mst_users_rights.php`,
+`supp_items.php`, `spare_mapping.php` and the three approval modals.
+
+Each gets a `csrf_check()` guard on every POST handler, `csrf_fields()` in the form, and
+`db_begin` / `db_commit` / `db_rollback` around every try.
+
+**Points to know**
+
+- `mst_employee_add.php` needed hand work. Its UPDATE handler has a `}` at column zero
+  inside the handler, which hid the end of the block from the bulk pass, and its SAVE
+  handler ends with a three-way redirect by employee type - the commit had to go above the
+  whole chain or only one of the three types would have committed.
+- The three approval modals (`modal_grn_reject_dets.php`, `modal_so_det.php`,
+  `modal_so_reject_dets.php`) close their handler with an indented brace, so they were
+  also done by hand. They had no try/catch at all before.
+- `checkattendance.php`, `emp_advance_return_payment.php` and `grn_pay_receipt.php`
+  redirect to a URL with a query string; the failure redirect was pointed at a real listing
+  page instead of a truncated one.
+- **Not covered: `index.php`, the login page.** It is the highest-value csrf target, but
+  breaking it locks everyone out of the application, so it is left alone pending a decision.
+- Report filter forms that only read (the attendance reports, `admin_multi_logins.php`,
+  `myprofile.php`, `mst_users_add.php`) are not covered either - a single-use token on a
+  filter form gets in the way and there is nothing to double-enter.
+
+---
+
 ## 2026-10-01 - Temp tables replaced by page rows
 
 All four `*_temp` tables are gone. Form rows now live in the page as hidden array

@@ -5,6 +5,8 @@ session_start();
 require_once("inc/common/userclass.php");
 require_once("inc/common/css-js.php");
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -25,6 +27,9 @@ if (isset($_REQUEST['sal_period']) && $_REQUEST['sal_period'] == 2) {
 
 $_REQUEST['created_dtm'] = date('Y-m-d H:i:s');
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_salary_package_add')) {
+		csrf_fail('lst_salary_package.php');
+	}
 
      $mst_exist = $dbconn->GetSingleReconrd("mst_salary_setting","sal_package_name","rec_del_status = 1 AND sal_period = $_REQUEST[sal_period]  AND sal_package_name",$_REQUEST['sal_package_name']);
 			
@@ -35,6 +40,7 @@ if (isset($_POST['SAVE'])) {
     }
 
     try {
+    	db_begin($conn);
         $stmt = null;
         $stmt = $conn->prepare("INSERT INTO mst_salary_setting (sal_package_name, sal_type, sal_period, sal_basic, sal_da, sal_hra,sal_convey, sal_pf, sal_cca, created_by,created_dtm) VALUES (:sal_package_name, :sal_type, :sal_period, :sal_basic, :sal_da, :sal_hra, :sal_convey,:sal_pf, :sal_cca, :created_by,:created_dtm)");
 
@@ -54,7 +60,9 @@ if (isset($_POST['SAVE'])) {
         // print_r($data);die();
         $stmt->execute($data);
         $_SESSION['_msg'] = "Salary Package succesfully saved..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -65,6 +73,9 @@ if (isset($_POST['SAVE'])) {
 }
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_salary_package_add')) {
+		csrf_fail('lst_salary_package.php');
+	}
     $update_id = $_REQUEST['txtHid'];
 
      $mst_exist = $dbconn->GetSingleReconrd("mst_salary_setting", "sal_id", "sal_id <> " . $update_id . " AND rec_del_status = 1  AND sal_period = $_REQUEST[sal_period] AND sal_package_name",$_REQUEST['sal_package_name']);
@@ -76,6 +87,7 @@ if (isset($_POST['UPDATE'])) {
     }
 
     try {
+    	db_begin($conn);
         $stmt = null;
 
         $stmt = $conn->prepare("UPDATE  mst_salary_setting SET sal_package_name = :sal_package_name, sal_type= :sal_type, sal_period=:sal_period, sal_basic= :sal_basic, sal_da=:sal_da, sal_hra=:sal_hra, sal_convey = :sal_convey, sal_pf= :sal_pf, modify_by = :modify_by, modify_dtm = :modify_dtm
@@ -99,7 +111,9 @@ if (isset($_POST['UPDATE'])) {
         // echo $stmt->fullQuery;
 
         $_SESSION['_msg'] = "Salary Package succesfully Updated..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -180,6 +194,7 @@ if (isset($_REQUEST['sal_id'])) {
                     <div class="col-md-12">
 
                         <form name="thisform" class="form-horizontal" method='POST' action="mst_salary_package_add.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('mst_salary_package_add'); ?>
                             <fieldset>
                                 <div class="card">
                                     <div class="card-header bg-pgheader text-white header-elements-inline">

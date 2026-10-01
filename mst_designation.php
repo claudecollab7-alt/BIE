@@ -9,14 +9,20 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_designation')) {
+		csrf_fail('mst_designation.php');
+	}
 
     try {
+    	db_begin($conn);
 
         $is_exist = $dbconn->GetSingleReconrd(
             "mst_designation","designation_id","(designation_name = '" . $_REQUEST['designation'] . "') AND (department_id = '" . $_REQUEST['department_id'] . "') AND rec_del_status ",
@@ -41,7 +47,9 @@ if (isset($_POST['SAVE'])) {
 
         $stmt->execute($data);
         $_SESSION['_msg'] = "Designation Succesfully Saved..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -53,10 +61,14 @@ if (isset($_POST['SAVE'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_designation')) {
+		csrf_fail('mst_designation.php');
+	}
 
     $update_id = $_REQUEST['txtHid'];
 
     try {
+    	db_begin($conn);
         $mst_exist = $dbconn->GetSingleReconrd("mst_designation","designation_id","designation_id <> " . $update_id . "(designation_name = '" . $_REQUEST['designation'] . "') AND (department_id = '" . $_REQUEST['department_id'] . "') AND rec_del_status ",1);
 
         if ($mst_exist != "") {
@@ -80,7 +92,9 @@ if (isset($_POST['UPDATE'])) {
         $stmt->execute($data);
 
         $_SESSION['_msg'] = "Designation succesfully Updated..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -237,6 +251,7 @@ if (isset($_REQUEST['designation_id']) && $_REQUEST['designation_id'] != "") {
                     <div class="col-md-6">
                         <form name='designationForm' class="form-horizontal" method='POST' action=""
                             onSubmit="return fnValidate();">
+                        	<?php csrf_fields('mst_designation'); ?>
 
                             <div class="card">
                                 <div class="card-header bg-pgheader text-white header-elements-inline">

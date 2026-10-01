@@ -9,6 +9,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -16,9 +18,13 @@ $dbconn= new dbhandler();
 
 if (isset($_POST['SAVE']))
 {		
+	if (!csrf_check('mst_branch')) {
+		csrf_fail('mst_branch.php');
+	}
 	
 	try
 	{
+		db_begin($conn);
 		$is_exist = $dbconn->GetSingleReconrd("mst_branch","branch_id",
 					"(branch_name = '".$_REQUEST['branch_name']."' OR branch_code = '".$_REQUEST['branch_code']."') AND branch_status ",1);
 				
@@ -42,9 +48,11 @@ if (isset($_POST['SAVE']))
 		);
 		$stmt->execute($data);
 		$_SESSION['_msg'] = "Branch Succesfully Saved..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
 	{
+		db_rollback($conn);
 		fnLogError($e);		
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
@@ -57,11 +65,15 @@ if (isset($_POST['SAVE']))
 
 if (isset($_POST['UPDATE']))
 {
+	if (!csrf_check('mst_branch')) {
+		csrf_fail('mst_branch.php');
+	}
 	
 	$update_id = $_REQUEST['txtHid'];		
 	
 	try
 	{
+		db_begin($conn);
 		$mst_exist = $dbconn->GetSingleReconrd("mst_branch","branch_id","branch_id <> ".$update_id." AND 
 					 branch_name ='".$_REQUEST['branch_name']."' AND branch_status", 1);
 	
@@ -90,9 +102,11 @@ if (isset($_POST['UPDATE']))
 		$stmt->execute($data);
 		
 		$_SESSION['_msg'] = "Branch succesfully Updated..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
 	{
+		db_rollback($conn);
 		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
@@ -269,7 +283,8 @@ if (isset($_REQUEST['branch_id']) && $_REQUEST['branch_id'] != "")
 					<!-- /basic datatable -->
 
 					<div class="col-md-6">
-						<form name='BranchForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();">							
+						<form name='BranchForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();">
+							<?php csrf_fields('mst_branch'); ?>							
 							
 							<div class="card">
 								<div class="card-header bg-pgheader text-white header-elements-inline">

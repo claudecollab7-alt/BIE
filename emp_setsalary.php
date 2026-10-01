@@ -5,6 +5,8 @@ session_start();
 require_once("inc/common/userclass.php");
 require_once("inc/common/css-js.php");
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -16,10 +18,14 @@ $dbconn = new dbhandler();
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('emp_setsalary')) {
+		csrf_fail('employee_salary.php');
+	}
 
     $update_id = $_REQUEST['txtHid'];
     //	print_r($_REQUEST);exit;
     try {
+    	db_begin($conn);
         $stmt = null;
         $stmt = $conn->prepare("UPDATE  tbl_emp_salary SET em_current = :em_current
 				WHERE emp_id = :emp_id");
@@ -63,7 +69,9 @@ if (isset($_POST['UPDATE'])) {
         $stmt3->execute($data3);
 
         $_SESSION['_msg'] = "Employee Salary details has been succesfully Updated..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -135,6 +143,7 @@ if ($_REQUEST['emp_id'] != '') {
                     <div class="col-md-12">
 
                         <form name="thisForm" class="form-horizontal" method='POST' action="emp_setsalary.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('emp_setsalary'); ?>
                             <fieldset>
                                 <div class="card">
                                     <div class="card-header bg-pgheader text-white header-elements-inline">

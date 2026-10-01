@@ -12,14 +12,20 @@ $dbconn = new dbhandler();
 // if (!isset($_REQUEST['branch_id']) || $_REQUEST['branch_id'] == '') {
 //     $_REQUEST['branch_id'] = 2	;
 // }
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 //  ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('branch_wise_item_update')) {
+		csrf_fail('lst_item_details.php');
+	}
 	$update_id = $_REQUEST['txtHid'];
 	try {
+		db_begin($conn);
 		$result = $conn->query("SELECT * FROM tbl_item_details WHERE item_id = " . $_REQUEST['item_id']);
 		if ($result->rowCount() > 0) {
 			$obj = $result->fetch(PDO::FETCH_OBJ);
@@ -52,7 +58,9 @@ if (isset($_POST['UPDATE'])) {
 
 
 		$_SESSION['_msg'] = "Item Branches successfully updated..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
 		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
@@ -218,6 +226,7 @@ if ($_REQUEST['item_id'] != "") {
 
 						<!-- Basic datatable -->
 						<form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<?php csrf_fields('branch_wise_item_update'); ?>
 							<input type="hidden" name="item_id" id="item_id" value="<?php echo $_REQUEST['item_id']; ?>">
 
 							<div class="card" style="width:50%; margin: 0 auto;">

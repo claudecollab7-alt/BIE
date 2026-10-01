@@ -5,6 +5,8 @@ session_start();
 require_once("inc/common/userclass.php");
 require_once("inc/common/css-js.php");
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -16,6 +18,9 @@ $dbconn = new dbhandler();
 
 $_REQUEST['created_dtm'] = date('Y-m-d H:i:s');
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_month_master_add')) {
+		csrf_fail('mst_month_master.php');
+	}
     $mst_exist = $dbconn->GetSingleReconrd("tbl_month_master", "auto_id", "month_master_status = 1 AND month='" . $_REQUEST['month'] . "' AND year='" . $_REQUEST['year'] . "' AND 1", 1);
 
     if ($mst_exist != "") {
@@ -25,6 +30,7 @@ if (isset($_POST['SAVE'])) {
     }
 
     try {
+    	db_begin($conn);
         $stmt = null;
         $stmt = $conn->prepare("INSERT INTO tbl_month_master (month, year, total_days, working_days, holidays,function_holidays,created_by,created_dtm) VALUES (:month, :year, :total_days, :working_days, :holidays, :function_holidays,:created_by,:created_dtm)");
         $data = array(
@@ -40,7 +46,9 @@ if (isset($_POST['SAVE'])) {
         // print_r($data);die();
         $stmt->execute($data);
         $_SESSION['_msg'] = "Month succesfully saved..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -51,6 +59,9 @@ if (isset($_POST['SAVE'])) {
 }
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_month_master_add')) {
+		csrf_fail('mst_month_master.php');
+	}
     $update_id = $_REQUEST['txtHid'];
     $mst_exist = $dbconn->GetSingleReconrd("tbl_month_master", "auto_id", "auto_id <> " . $update_id . " AND month_master_status = 1 AND month='" . $_REQUEST['month'] . "' AND year='" . $_REQUEST['year'] . "' AND 1", 1);
 
@@ -61,6 +72,7 @@ if (isset($_POST['UPDATE'])) {
     }
 
     try {
+    	db_begin($conn);
         $stmt = null;
         $stmt = $conn->prepare("UPDATE  tbl_month_master SET month = :month, year= :year,total_days=:total_days, working_days=:working_days, holidays=:holidays, function_holidays = :function_holidays, modify_by = :modify_by, modify_dtm = :modify_dtm
 					WHERE auto_id = :auto_id");
@@ -80,7 +92,9 @@ if (isset($_POST['UPDATE'])) {
         // echo $stmt->fullQuery;
 
         $_SESSION['_msg'] = "Month succesfully Updated..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
     	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -147,6 +161,7 @@ if (isset($_REQUEST['auto_id'])) {
                     <div class="col-md-12">
 
                         <form name="thisform" class="form-horizontal" method='POST' action="mst_month_master_add.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('mst_month_master_add'); ?>
                             <fieldset>
                                 <div class="card">
                                     <div class="card-header bg-pgheader text-white header-elements-inline">
