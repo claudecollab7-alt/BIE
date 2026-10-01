@@ -9,6 +9,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-01 item rows moved off tbl_dc_details_temp - built in php, posted back as arrays
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -60,40 +61,28 @@ if (isset($_POST['SAVE']))
             $result_details_delete = $conn->prepare($delete_details_sql);
             $result_details_delete->execute();
         
-        $result = $conn->query("SELECT * FROM tbl_dc_details_temp WHERE session_id = '".$_SESSION['session_id']."' ORDER BY temp_dc_id");
-            
-        if ($result->rowCount()>0)
-        {
-            $stmt = null;               
+        // item rows come from the form, not a temp table
+        if (isset($_REQUEST['dc_item_id']) && is_array($_REQUEST['dc_item_id'])) {
+            $stmt = null;
             $stmt = $conn->prepare("INSERT INTO tbl_dc_details (dc_id, dc_item_id, dc_qty, dc_dispatch_qty, bal_qty, dc_unit, box_id, no_of_box, dc_remarks) VALUES (:dc_id, :dc_item_id, :dc_qty, :dc_dispatch_qty, :bal_qty, :dc_unit, :box_id, :no_of_box, :dc_remarks)");
 
-            while ($obj = $result->fetchAll(PDO::FETCH_ASSOC)) 
-            {
-                foreach ($obj as $row => $value) 
-                {
-                    //print_r($_REQUEST['dc_remarks'][$row]);exit;
-                    $data = array(              
-                        ':dc_id' => $last_id,
-                        ':dc_item_id' => $value['temp_dc_item_id'],
-                        ':dc_qty' => $value['temp_dc_qty'],
-                        ':dc_dispatch_qty' => $_REQUEST['dc_dispatch_qty'][$row],
-                        ':bal_qty' => $_REQUEST['bal_qty'][$row],
-                        ':dc_unit' => $value['temp_dc_unit'],
-                        ':box_id' => $_REQUEST['box_id'][$row],
-                        ':no_of_box' => $_REQUEST['no_of_box'][$row],
-                        ':dc_remarks' => $_REQUEST['dc_remarks'][$row]
-                    );
-                    $stmt->execute($data);
+            for ($d = 0; $d < count($_REQUEST['dc_item_id']); $d++) {
+                if ((int)$_REQUEST['dc_item_id'][$d] <= 0) {
+                    continue;
                 }
+                $stmt->execute(array(
+                    ':dc_id'           => $last_id,
+                    ':dc_item_id'      => $_REQUEST['dc_item_id'][$d],
+                    ':dc_qty'          => $_REQUEST['dc_qty_h'][$d],
+                    ':dc_dispatch_qty' => $_REQUEST['dc_dispatch_qty'][$d],
+                    ':bal_qty'         => $_REQUEST['bal_qty'][$d],
+                    ':dc_unit'         => $_REQUEST['dc_unit_h'][$d],
+                    ':box_id'          => $_REQUEST['box_id'][$d],
+                    ':no_of_box'       => $_REQUEST['no_of_box'][$d],
+                    ':dc_remarks'      => $_REQUEST['dc_remarks'][$d]
+                ));
             }
-        
-            $sql_temp_delete =  "DELETE FROM tbl_dc_details_temp 
-                    WHERE session_id = '".$_SESSION['session_id']."'";
-            $result_temp_delete = $conn->prepare($sql_temp_delete);
-            $result_temp_delete->execute();
         }
-
-        
 
         if($_REQUEST['so_id']>0)
         {
@@ -195,38 +184,28 @@ if (isset($_POST['UPDATE']))
         $result_details = $conn->prepare($sqldelete_details);
         $result_details->execute();
 
-        $result = $conn->query("SELECT * FROM tbl_dc_details_temp WHERE session_id = '".$_SESSION['session_id']."' ORDER BY temp_dc_id");
-            
-        if ($result->rowCount()>0)
-        {
-            $quo_value = 0;
-            $stmt = null;               
+        // item rows come from the form, not a temp table
+        if (isset($_REQUEST['dc_item_id']) && is_array($_REQUEST['dc_item_id'])) {
+            $stmt = null;
             $stmt = $conn->prepare("INSERT INTO tbl_dc_details (dc_id, dc_item_id, dc_qty, dc_dispatch_qty, bal_qty, dc_unit, box_id, no_of_box, dc_remarks) VALUES (:dc_id, :dc_item_id, :dc_qty, :dc_dispatch_qty, :bal_qty, :dc_unit, :box_id, :no_of_box, :dc_remarks)");
 
-            while ($obj = $result->fetchAll(PDO::FETCH_ASSOC)) 
-            {
-                foreach ($obj as $row => $value) {
-                    $data = array(              
-                        ':dc_id' => $update_id,
-                        ':dc_item_id' => $value['temp_dc_item_id'],
-                        ':dc_qty' => $value['temp_dc_qty'],
-                        ':dc_dispatch_qty' => $_REQUEST['dc_dispatch_qty'][$row],
-                        ':bal_qty' => $_REQUEST['bal_qty'][$row],
-                        ':dc_unit' => $value['temp_dc_unit'],
-                        ':box_id' => $_REQUEST['box_id'][$row],
-                        ':no_of_box' => $_REQUEST['no_of_box'][$row],
-                        ':dc_remarks' => $_REQUEST['dc_remarks'][$row]
-                    );
-                    $stmt->execute($data);
-                    
+            for ($d = 0; $d < count($_REQUEST['dc_item_id']); $d++) {
+                if ((int)$_REQUEST['dc_item_id'][$d] <= 0) {
+                    continue;
                 }
+                $stmt->execute(array(
+                    ':dc_id'           => $update_id,
+                    ':dc_item_id'      => $_REQUEST['dc_item_id'][$d],
+                    ':dc_qty'          => $_REQUEST['dc_qty_h'][$d],
+                    ':dc_dispatch_qty' => $_REQUEST['dc_dispatch_qty'][$d],
+                    ':bal_qty'         => $_REQUEST['bal_qty'][$d],
+                    ':dc_unit'         => $_REQUEST['dc_unit_h'][$d],
+                    ':box_id'          => $_REQUEST['box_id'][$d],
+                    ':no_of_box'       => $_REQUEST['no_of_box'][$d],
+                    ':dc_remarks'      => $_REQUEST['dc_remarks'][$d]
+                ));
             }
-        
-            $sql =  "DELETE FROM tbl_dc_details_temp WHERE session_id = '".$_SESSION['session_id']."'";
-            $result = $conn->prepare($sql);
-            $result->execute();
         }
-
 
         //Packing box details
         $pack_delete =  "DELETE FROM tbl_package_box_details WHERE dc_id = '".$update_id."'";
@@ -314,38 +293,28 @@ if (isset($_POST['FINALIZE']))
             $result_details_delete = $conn->prepare($sql_details_delete);
             $result_details_delete->execute();
 
-        $result_temp = $conn->query("SELECT * FROM tbl_dc_details_temp WHERE session_id = '".$_SESSION['session_id']."' ");
-            
-        if ($result_temp->rowCount()>0)
-        {
-            $quo_value = 0;
-            $stmt = null;               
+        // item rows come from the form, not a temp table
+        if (isset($_REQUEST['dc_item_id']) && is_array($_REQUEST['dc_item_id'])) {
+            $stmt = null;
             $stmt = $conn->prepare("INSERT INTO tbl_dc_details (dc_id, dc_item_id, dc_qty, dc_dispatch_qty, bal_qty, dc_unit, box_id, no_of_box, dc_remarks) VALUES (:dc_id, :dc_item_id, :dc_qty, :dc_dispatch_qty, :bal_qty, :dc_unit, :box_id, :no_of_box, :dc_remarks)");
 
-            while ($obj = $result_temp->fetchAll(PDO::FETCH_ASSOC)) 
-            {
-                foreach ($obj as $row => $value) {
-                    $data = array(              
-                        ':dc_id' => $update_id,
-                        ':dc_item_id' => $value['temp_dc_item_id'],
-                        ':dc_qty' => $value['temp_dc_qty'],
-                        ':dc_dispatch_qty' => $_REQUEST['dc_dispatch_qty'][$row],
-                        ':bal_qty' => $_REQUEST['bal_qty'][$row],
-                        ':dc_unit' => $value['temp_dc_unit'],
-                        ':box_id' => $_REQUEST['box_id'][$row],
-                        ':no_of_box' => $_REQUEST['no_of_box'][$row],
-                        ':dc_remarks' => $_REQUEST['dc_remarks'][$row]
-                    );
-                    $stmt->execute($data);
-                    
+            for ($d = 0; $d < count($_REQUEST['dc_item_id']); $d++) {
+                if ((int)$_REQUEST['dc_item_id'][$d] <= 0) {
+                    continue;
                 }
+                $stmt->execute(array(
+                    ':dc_id'           => $update_id,
+                    ':dc_item_id'      => $_REQUEST['dc_item_id'][$d],
+                    ':dc_qty'          => $_REQUEST['dc_qty_h'][$d],
+                    ':dc_dispatch_qty' => $_REQUEST['dc_dispatch_qty'][$d],
+                    ':bal_qty'         => $_REQUEST['bal_qty'][$d],
+                    ':dc_unit'         => $_REQUEST['dc_unit_h'][$d],
+                    ':box_id'          => $_REQUEST['box_id'][$d],
+                    ':no_of_box'       => $_REQUEST['no_of_box'][$d],
+                    ':dc_remarks'      => $_REQUEST['dc_remarks'][$d]
+                ));
             }
-        
-            $sql_temp_delete =  "DELETE FROM tbl_dc_details_temp WHERE session_id = '".$_SESSION['session_id']."'";
-            $result_temp_delete = $conn->prepare($sql_temp_delete);
-            $result_temp_delete->execute();
         }
-
 
         //Packing box details
         $pack_delete =  "DELETE FROM tbl_package_box_details WHERE dc_id = '".$update_id."'";
@@ -399,10 +368,7 @@ if (isset($_POST['FINALIZE']))
 
 
 $dc_date = date('d-m-Y');
-$sql2 =  "DELETE FROM tbl_dc_details_temp";
-            $result2 = $conn->prepare($sql2);
-            $result2->execute();
-            
+$dc_rows = array();   // item rows for the table, filled from the SO or the saved DC
         $pack_box_no1 = '';
         $pack_box_no2 = '';
         $pack_box_no3 = '';
@@ -554,51 +520,23 @@ if (isset($_REQUEST['dc_id']))
             }
         }
     
-        $sql =  "DELETE FROM tbl_dc_details_temp 
-                    WHERE session_id = '".$_SESSION['session_id']."'";
-            $result = $conn->prepare($sql);
-            $result->execute();
-        $result1 = $conn->query("SELECT * FROM tbl_dc as a
+        // rows for the table come straight from tbl_dc_details, no temp table
+        $result1 = $conn->prepare("SELECT b.* FROM tbl_dc as a
                         LEFT JOIN tbl_dc_details as b ON a.dc_id = b.dc_id
-                        WHERE a.dc_status = 1 AND b.dc_id =".$_REQUEST['dc_id']);   
-        if ($result1->rowCount()>0)
-        {
-            $stmt = null;               
-            $stmt = $conn->prepare("INSERT INTO tbl_dc_details_temp (temp_dc_details_id, temp_dc_item_id, temp_dc_qty, temp_dc_dispatch_qty, temp_bal_qty, temp_dc_unit, temp_box_id, temp_no_of_box, temp_dc_remarks, session_id, temp_date) VALUES (:temp_dc_details_id, :temp_dc_item_id, :temp_dc_qty, :temp_dc_dispatch_qty, :temp_bal_qty, :temp_dc_unit, :temp_box_id, :temp_no_of_box, :temp_dc_remarks, :session_id, :temp_date)");
-            while($obj = $result1->fetchAll(PDO::FETCH_ASSOC))
-            {
-                foreach ($obj as $key => $value) 
-                {
-                    $data = array(
-                        ':temp_dc_details_id' => $value['dc_details_id'],
-                        ':temp_dc_item_id' => $value['dc_item_id'],
-                        ':temp_dc_qty' => $value['dc_qty'],
-                        ':temp_dc_dispatch_qty' => $value['dc_dispatch_qty'],
-                        ':temp_bal_qty' => $value['bal_qty'],
-                        ':temp_dc_unit' => $value['dc_unit'],
-                        ':temp_box_id' => $value['box_id'],
-                        ':temp_no_of_box' => $value['no_of_box'],
-                        ':temp_dc_remarks' => $value['dc_remarks'],
-                        ':session_id' => $_SESSION['session_id'],
-                        ':temp_date' => date('Y-m-d')
-                    );
-                    $stmt->execute($data);
-                    
-                    //$pack_box_no1 = $dbconn->GetSingleReconrd("tbl_package_box_details","COUNT(DISTINCT pack_box_no)","box_id = 1 AND dc_id",$_REQUEST['dc_id']);
-                    //Sample
-                   
-                    
-                }
-            }
-            $result = $conn->query("SELECT * FROM tbl_dc_package_box"); 
-            if ($result->rowCount()>0)
-            {
-                //$get = $result->fetch(PDO::FETCH_OBJ);    
-                while ($obj = $result->fetch())
-                {
-                     
-                }
-            }
+                        WHERE a.dc_status = 1 AND b.dc_id = :dc_id");
+        $result1->execute(array(':dc_id' => $_REQUEST['dc_id']));
+
+        while ($value = $result1->fetch(PDO::FETCH_ASSOC)) {
+            $dc_rows[] = array(
+                'dc_item_id'       => $value['dc_item_id'],
+                'dc_qty'           => $value['dc_qty'],
+                'dc_dispatch_qty'  => $value['dc_dispatch_qty'],
+                'bal_qty'          => $value['bal_qty'],
+                'dc_unit'          => $value['dc_unit'],
+                'box_id'           => $value['box_id'],
+                'no_of_box'        => $value['no_of_box'],
+                'dc_remarks'       => $value['dc_remarks']
+            );
         }
 
         $temp_sql =  "DELETE FROM tbl_package_box_details_temp WHERE temp_dc_id = '".$_REQUEST['dc_id']."'";
@@ -727,58 +665,39 @@ elseif (isset($_REQUEST['so_id']))
         }
     }
 
-    $sql =  "DELETE FROM tbl_dc_details_temp";
-    $result = $conn->prepare($sql);
-    $result->execute();
-    $result1 = $conn->query("SELECT * FROM tbl_sales_order as a LEFT JOIN tbl_sales_order_details as b ON a.so_id = b.so_id WHERE b.so_id =".$_REQUEST['so_id']);   
-    if ($result1->rowCount()>0)
-    {
-        $stmt = null;               
-        $stmt = $conn->prepare("INSERT INTO tbl_dc_details_temp (temp_dc_item_id, temp_dc_qty, temp_dc_dispatch_qty, temp_bal_qty, temp_dc_unit, session_id, temp_date) VALUES (:temp_dc_item_id, :temp_dc_qty, :temp_dc_dispatch_qty, :temp_bal_qty, :temp_dc_unit, :session_id, :temp_date)");
-        while($obj = $result1->fetchAll(PDO::FETCH_ASSOC))
-        {
-            foreach ($obj as $key => $value) 
-            {
-                $field_name = $dbconn->GetSingleReconrd("mst_branch","branch_stock_field","branch_id",$_SESSION['_user_branch']);
+    // rows for the table come straight from the sales order, no temp table
+    $result1 = $conn->prepare("SELECT b.* FROM tbl_sales_order as a
+                    LEFT JOIN tbl_sales_order_details as b ON a.so_id = b.so_id
+                    WHERE b.so_id = :so_id");
+    $result1->execute(array(':so_id' => $_REQUEST['so_id']));
 
-                $avl_qty = $dbconn->GetSingleReconrd("tbl_item_stock","$field_name","item_id",$value['item_id']);
-                
-                
-                if($_REQUEST['status'] == 'partial')
-                {
-                    $already_dispatch_qty = $conn->query("SELECT SUM(dc_dispatch_qty) as total_dispatch_qty FROM `tbl_dc_details` WHERE dc_id IN (SELECT dc_id FROM tbl_dc WHERE so_id='".$_REQUEST['so_id']."' AND dc_approve_status='1') AND dc_item_id='".$value['item_id']."'");
-                    if ($already_dispatch_qty->rowCount()>0)
-                    {
-                        $obj1 = $already_dispatch_qty->fetch(PDO::FETCH_OBJ);
+    $field_name = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_SESSION['_user_branch']);
 
-                        $dc_dispatch_qty = $value['so_qty'] - $obj1->total_dispatch_qty;
-                    }
-                }
-                else
-                {
-                    if($avl_qty >= $value['so_qty'])
-                    {
-                        $dc_dispatch_qty = $value['so_qty'];
-                    }
-                    else
-                    {
-                        $dc_dispatch_qty = 0;
-                        
-                    }
-                }
+    while ($value = $result1->fetch(PDO::FETCH_ASSOC)) {
+        $avl_qty = $dbconn->GetSingleReconrd("tbl_item_stock", "$field_name", "item_id", $value['item_id']);
+        $dc_dispatch_qty = 0;
 
-                $data = array(
-                    ':temp_dc_item_id' => $value['item_id'],
-                    ':temp_dc_qty' => $value['so_qty'],
-                    ':temp_dc_dispatch_qty' => $dc_dispatch_qty,
-                    ':temp_bal_qty' => 0,
-                    ':temp_dc_unit' => $value['so_unit'],
-                    ':session_id' => $_SESSION['session_id'],
-                    ':temp_date' => date('Y-m-d')
-                );
-                $stmt->execute($data);
-            }
+        if ($_REQUEST['status'] == 'partial') {
+            $already = $conn->prepare("SELECT SUM(dc_dispatch_qty) as total_dispatch_qty FROM tbl_dc_details
+                                        WHERE dc_id IN (SELECT dc_id FROM tbl_dc WHERE so_id = :so_id AND dc_approve_status = '1')
+                                          AND dc_item_id = :item_id");
+            $already->execute(array(':so_id' => $_REQUEST['so_id'], ':item_id' => $value['item_id']));
+            $obj1 = $already->fetch(PDO::FETCH_OBJ);
+            $dc_dispatch_qty = $value['so_qty'] - $obj1->total_dispatch_qty;
+        } elseif ($avl_qty >= $value['so_qty']) {
+            $dc_dispatch_qty = $value['so_qty'];
         }
+
+        $dc_rows[] = array(
+            'dc_item_id'      => $value['item_id'],
+            'dc_qty'          => $value['so_qty'],
+            'dc_dispatch_qty' => $dc_dispatch_qty,
+            'bal_qty'         => 0,
+            'dc_unit'         => $value['so_unit'],
+            'box_id'          => 0,
+            'no_of_box'       => '',
+            'dc_remarks'      => ''
+        );
     }
 
     $result = $conn->query("SELECT * FROM tbl_sales_order WHERE so_id = ".$_REQUEST['so_id']);   
@@ -927,16 +846,16 @@ elseif (isset($_REQUEST['so_id']))
 
                                                         <?php
 
-                                                            $get_dc_dets =  $conn->query("SELECT * FROM tbl_dc_details_temp");
-                                                            if ($get_dc_dets->rowCount() > 0) 
+                                                            if (count($dc_rows) > 0)
                                                             {
                                                                 $iSno=1;
-                                                                while ($obj = $get_dc_dets->fetch(PDO::FETCH_OBJ)) 
+                                                                foreach ($dc_rows as $dc_row)
                                                                 {
+                                                                    $obj = (object)$dc_row;
                                                                     $_SESSION['token'] = md5(session_id() . time().$iSno);
                                                                     if($so_id>0)
                                                                     {
-                                                                        $already_dispatch_qty = $conn->query("SELECT SUM(dc_dispatch_qty) as total_dispatch_qty FROM `tbl_dc_details` WHERE dc_id IN (SELECT dc_id FROM tbl_dc WHERE so_id='".$so_id."' AND dc_approve_status='1') AND dc_item_id='".$obj->temp_dc_item_id."'");
+                                                                        $already_dispatch_qty = $conn->query("SELECT SUM(dc_dispatch_qty) as total_dispatch_qty FROM `tbl_dc_details` WHERE dc_id IN (SELECT dc_id FROM tbl_dc WHERE so_id='".$so_id."' AND dc_approve_status='1') AND dc_item_id='".$obj->dc_item_id."'");
                                                                     }
                                                                     else
                                                                     {
@@ -948,34 +867,34 @@ elseif (isset($_REQUEST['so_id']))
                                                                         $obj1 = $already_dispatch_qty->fetch(PDO::FETCH_OBJ);
                                                                     }
 
-                                                                    $temp_item_code = $dbconn->GetSingleReconrd("tbl_item_details","item_code","item_status = '1' AND item_id",$obj->temp_dc_item_id);
-                                                                    $temp_item_name = $dbconn->GetSingleReconrd("tbl_item_details","item_desciption","item_status = '1' AND item_id",$obj->temp_dc_item_id);
-                                                                    $item_type = $dbconn->GetSingleReconrd("tbl_item_details","item_type","item_status = '1' AND item_id",$obj->temp_dc_item_id);
+                                                                    $temp_item_code = $dbconn->GetSingleReconrd("tbl_item_details","item_code","item_status = '1' AND item_id",$obj->dc_item_id);
+                                                                    $temp_item_name = $dbconn->GetSingleReconrd("tbl_item_details","item_desciption","item_status = '1' AND item_id",$obj->dc_item_id);
+                                                                    $item_type = $dbconn->GetSingleReconrd("tbl_item_details","item_type","item_status = '1' AND item_id",$obj->dc_item_id);
 
                                                                     $field_name = $dbconn->GetSingleReconrd("mst_branch","branch_stock_field","branch_id",$_SESSION['_user_branch']);
 
-                                                                    $temp_avl_qty = $dbconn->GetSingleReconrd("tbl_item_stock","$field_name","item_id",$obj->temp_dc_item_id);
+                                                                    $temp_avl_qty = $dbconn->GetSingleReconrd("tbl_item_stock","$field_name","item_id",$obj->dc_item_id);
 
-                                                                    //$temp_avl_qty = $dbconn->GetSingleReconrd("tbl_item_details","item_curr_stock","item_status = '1' AND item_id",$obj->temp_dc_item_id);
+                                                                    //$temp_avl_qty = $dbconn->GetSingleReconrd("tbl_item_details","item_curr_stock","item_status = '1' AND item_id",$obj->dc_item_id);
                                                                     
-                                                                   // $pack_box_no = $dbconn->GetSingleReconrd("tbl_package_box_details","pack_box_no"," item_id",$obj->temp_dc_item_id); 
-                                                                    if($obj->temp_dc_qty == $obj1->total_dispatch_qty)
+                                                                   // $pack_box_no = $dbconn->GetSingleReconrd("tbl_package_box_details","pack_box_no"," item_id",$obj->dc_item_id); 
+                                                                    if($obj->dc_qty == $obj1->total_dispatch_qty)
                                                                     {
                                                                         echo '<tr>
                                                                             <td>'.$iSno.'</td>
                                                                             <td style = "text-align:left;">'.$temp_item_name.' - <b>'.$temp_item_code.'</b></td>
 
-                                                                            <td style = "text-align:center;">'.$obj->temp_dc_unit.'</td>
+                                                                            <td style = "text-align:center;">'.$obj->dc_unit.'</td>
 
                                                                             <td style = "text-align:center;">'.$temp_avl_qty.'<input type="hidden" name="temp_avl_qty" class="temp_avl_qty" value="'.$temp_avl_qty.'"></td>
 
-                                                                            <td style = "text-align:center;">'.$obj->temp_dc_qty.'<input type="hidden" name="hide_dc_qty" class="hide_dc_qty" value="'.$obj->temp_dc_qty.'"></td>
+                                                                            <td style = "text-align:center;">'.$obj->dc_qty.'<input type="hidden" name="hide_dc_qty" class="hide_dc_qty" value="'.$obj->dc_qty.'"></td>
 
                                                                             <td style = "text-align:center;">'.$obj1->total_dispatch_qty.'<input type="hidden" name="hide_tot_dispatch_qty" class="hide_tot_dispatch_qty" value="'.$obj1->total_dispatch_qty.'"></td>
 
-                                                                            <td><input type="text" name="dc_dispatch_qty[]" id="dc_dispatch_qty" readonly style="width:75px;" tabindex="-1" class="form-control validate[required] dc_dispatch_qty" value="'.$obj->temp_dc_dispatch_qty.'"><input type="hidden" name="hide_dispatch_qty" class="hide_dispatch_qty" value="'.$obj->temp_dc_dispatch_qty.'"></td>
+                                                                            <td><input type="text" name="dc_dispatch_qty[]" id="dc_dispatch_qty" readonly style="width:75px;" tabindex="-1" class="form-control validate[required] dc_dispatch_qty" value="'.$obj->dc_dispatch_qty.'"><input type="hidden" name="hide_dispatch_qty" class="hide_dispatch_qty" value="'.$obj->dc_dispatch_qty.'"></td>
 
-                                                                            <td><input type="text" readonly name="bal_qty[]" tabindex="-1" id="bal_qty" class="form-control bal_qty" style="width:75px;" value="'.$obj->temp_bal_qty.'"></td>
+                                                                            <td><input type="text" readonly name="bal_qty[]" tabindex="-1" id="bal_qty" class="form-control bal_qty" style="width:75px;" value="'.$obj->bal_qty.'"></td>
 
                                                                             <td>
                                                                                 <select name="box_id[]" 
@@ -988,9 +907,9 @@ elseif (isset($_REQUEST['so_id']))
                                                                                 </select>
                                                                             </td>
 
-                                                                            <td><div class="input-append"><input type="text" readonly tabindex="-1" style="width:85px;" name="no_of_box[]" class="form-control no_of_box"  id= "no_of_box_'.$iSno.'" onkeypress="return isNumberKey_With_Dot(event)" value="'.$obj->temp_no_of_box.'" ></div></td>
+                                                                            <td><div class="input-append"><input type="text" readonly tabindex="-1" style="width:85px;" name="no_of_box[]" class="form-control no_of_box"  id= "no_of_box_'.$iSno.'" onkeypress="return isNumberKey_With_Dot(event)" value="'.$obj->no_of_box.'" ></div></td>
 
-                                                                            <td><input type="text" readonly tabindex="-1" class="form-control" name="dc_remarks[]" id="dc_remarks" value="'.$obj->temp_dc_remarks.'"></td>
+                                                                            <td><input type="text" readonly tabindex="-1" class="form-control" name="dc_remarks[]" id="dc_remarks" value="'.$obj->dc_remarks.'"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.$obj->dc_qty.'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"></td>
                                                                         </tr>';
                                                                     }
                                                                     else
@@ -999,18 +918,18 @@ elseif (isset($_REQUEST['so_id']))
                                                                         echo '<tr>
                                                                         <td>'.$iSno.'</td>
                                                                         <td style = "text-align:left;">'.$temp_item_name.' - <b>'.$temp_item_code.'</b></td>
-                                                                        <td style = "text-align:center;">'.$obj->temp_dc_unit.'</td>
+                                                                        <td style = "text-align:center;">'.$obj->dc_unit.'</td>
 
                                                                         <td style = "text-align:center;">'.$temp_avl_qty.'<input type="hidden" name="temp_avl_qty" class="temp_avl_qty" value="'.$temp_avl_qty.'"></td>
 
                                                                         
-                                                                        <td style = "text-align:center;">'.$obj->temp_dc_qty.'<input type="hidden" name="hide_dc_qty" class="hide_dc_qty" value="'.$obj->temp_dc_qty.'"></td>
+                                                                        <td style = "text-align:center;">'.$obj->dc_qty.'<input type="hidden" name="hide_dc_qty" class="hide_dc_qty" value="'.$obj->dc_qty.'"></td>
 
                                                                         <td style = "text-align:center;">'.$obj1->total_dispatch_qty.'<input type="hidden" name="hide_tot_dispatch_qty" class="hide_tot_dispatch_qty" value="'.$obj1->total_dispatch_qty.'"></td>
 
-                                                                        <td><input type="text" name="dc_dispatch_qty[]" id="dc_dispatch_qty" onKeyPress="return isNumberKey(event)" style="width:75px;" class="form-control validate[required] dc_dispatch_qty" value="'.$obj->temp_dc_dispatch_qty.'"><input type="hidden" name="hide_dispatch_qty" class="hide_dispatch_qty" value="'.$obj->temp_dc_dispatch_qty.'"></td>
+                                                                        <td><input type="text" name="dc_dispatch_qty[]" id="dc_dispatch_qty" onKeyPress="return isNumberKey(event)" style="width:75px;" class="form-control validate[required] dc_dispatch_qty" value="'.$obj->dc_dispatch_qty.'"><input type="hidden" name="hide_dispatch_qty" class="hide_dispatch_qty" value="'.$obj->dc_dispatch_qty.'"></td>
 
-                                                                        <td><input type="text" readonly name="bal_qty[]" tabindex="-1" id="bal_qty" class="form-control bal_qty" style="width:75px;" value="'.$obj->temp_bal_qty.'"></td>
+                                                                        <td><input type="text" readonly name="bal_qty[]" tabindex="-1" id="bal_qty" class="form-control bal_qty" style="width:75px;" value="'.$obj->bal_qty.'"></td>
 
 
                                                                         <td>
@@ -1022,18 +941,18 @@ elseif (isset($_REQUEST['so_id']))
                                                                                 <option value="0">Select Box Type</option>';
                                                                                     echo $dbconn->fnFillComboFromTable_Where("box_id","box_name","tbl_dc_package_box","box_id"," WHERE box_status = '1'");
                                                                             echo '</select>
-                                                                            <script>document.thisForm.box_id_'.$iSno.'.value="'.$obj->temp_box_id.'";
+                                                                            <script>document.thisForm.box_id_'.$iSno.'.value="'.$obj->box_id.'";
                                                                             </script>';
                                                                         echo '</td>    
 
-                                                                        <td><div class="input-append"><input type="text" name="no_of_box[]" onKeyPress="return isNumberKey(event)" style="width:85px;" maxlength="3" class="no_of_box" id= "no_of_box_'.$iSno.'" onkeypress="return isNumberKey_With_Dot(event)" value="'.$obj->temp_no_of_box.'" > <a  data-toggle="modal" data-target="#modalDCPack" href="" data-id="'.$obj->temp_dc_id.'" data-popup="tooltip" title="" class="btn btn-success fancybox">Box</a> 
+                                                                        <td><div class="input-append"><input type="text" name="no_of_box[]" onKeyPress="return isNumberKey(event)" style="width:85px;" maxlength="3" class="no_of_box" id= "no_of_box_'.$iSno.'" onkeypress="return isNumberKey_With_Dot(event)" value="'.$obj->no_of_box.'" > <a  data-toggle="modal" data-target="#modalDCPack" href="" data-id="'.$obj->temp_dc_id.'" data-popup="tooltip" title="" class="btn btn-success fancybox">Box</a> 
                                                                         
                                                                        
 
 
-                                                                       <td><input type="text"  class="form-control" tabindex="-1" name="dc_remarks[]" id="dc_remarks" value="' . $obj->temp_dc_remarks . '"></td>
+                                                                       <td><input type="text"  class="form-control" tabindex="-1" name="dc_remarks[]" id="dc_remarks" value="' . $obj->dc_remarks . '"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.$obj->dc_qty.'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"></td>
 
-                                                                       <input type="hidden" name="hide_item_id" class="hide_item_id" value="'.$obj->temp_dc_item_id.'">
+                                                                       <input type="hidden" name="hide_item_id" class="hide_item_id" value="'.$obj->dc_item_id.'">
                                                                        <input type="hidden" name="item_type" class="item_type" id="item_type" value="'.$item_type.'">
 
                                                                        <input type="hidden" name="hide_token" class="hide_token" value="'.$_SESSION['token'].'">
