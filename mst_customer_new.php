@@ -9,6 +9,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 branch rows moved off mst_customer_branch_temp - rows live in the page, posted back as arrays
+
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 
@@ -99,34 +101,29 @@ if (isset($_POST['SAVE'])) {
 		$result = $conn->prepare($delete_details);
 		$result->execute();
 
-		$result = $conn->query("SELECT * FROM mst_customer_branch_temp WHERE session_id = '" . $_SESSION['session_id'] . "' ORDER BY temp_branch_id");
-
-		if ($result->rowCount() > 0) {
+		// branch rows come from the form, not a temp table
+		if (isset($_REQUEST['br_name']) && is_array($_REQUEST['br_name'])) {
 			$stmt = null;
-			$stmt = $conn->prepare("INSERT INTO mst_customer_branch (supp_id,  branch_name, prefix, branch_contact_person, branch_contact_no, branch_add1, branch_add2, state_id, district_id, city_id, branch_pincode) VALUES (:supp_id, :branch_name, :prefix, :branch_contact_person, :branch_contact_no, :branch_add1, :branch_add2, :state_id, :district_id, :city_id, :branch_pincode)");
+			$stmt = $conn->prepare("INSERT INTO mst_customer_branch (supp_id, branch_name, prefix, branch_contact_person, branch_contact_no, branch_add1, branch_add2, state_id, district_id, city_id, branch_pincode) VALUES (:supp_id, :branch_name, :prefix, :branch_contact_person, :branch_contact_no, :branch_add1, :branch_add2, :state_id, :district_id, :city_id, :branch_pincode)");
 
-			while ($obj = $result->fetchAll(PDO::FETCH_ASSOC)) {
-				foreach ($obj as $row => $value) {
-					$data = array(
-						':supp_id' => $last_id,
-						':branch_name' => $value['temp_branch_name'],
-						':prefix' => $value['temp_prefix'],
-						':branch_contact_person' => $value['temp_branch_contact_person'],
-						':branch_contact_no' => $value['temp_branch_contact_no'],
-						':branch_add1' => $value['temp_branch_add1'],
-						':branch_add2' => $value['temp_branch_add2'],
-						':state_id' => $value['temp_state_id'],
-						':district_id' => $value['temp_district_id'],
-						':city_id' => $value['temp_city_id'],
-						':branch_pincode' => $value['temp_branch_pincode'],
-					);
-					$stmt->execute($data);
+			for ($b = 0; $b < count($_REQUEST['br_name']); $b++) {
+				if (trim($_REQUEST['br_name'][$b]) == '') {
+					continue;
 				}
+				$stmt->execute(array(
+					':supp_id'               => $last_id,
+					':branch_name'           => $_REQUEST['br_name'][$b],
+					':prefix'                => $_REQUEST['br_prefix'][$b],
+					':branch_contact_person' => $_REQUEST['br_contact_person'][$b],
+					':branch_contact_no'     => $_REQUEST['br_contact_no'][$b],
+					':branch_add1'           => $_REQUEST['br_add1'][$b],
+					':branch_add2'           => $_REQUEST['br_add2'][$b],
+					':state_id'              => $_REQUEST['br_state_id'][$b],
+					':district_id'           => $_REQUEST['br_district_id'][$b],
+					':city_id'               => $_REQUEST['br_city_id'][$b],
+					':branch_pincode'        => $_REQUEST['br_pincode'][$b]
+				));
 			}
-
-			$sql =  "DELETE FROM mst_customer_branch_temp WHERE session_id = '" . $_SESSION['session_id'] . "'";
-			$result = $conn->prepare($sql);
-			$result->execute();
 		}
 		$_SESSION['_msg'] = "Customer succesfully saved..!";
 	} catch (Exception $e) {
@@ -223,34 +220,29 @@ if (isset($_POST['UPDATE'])) {
 		$result = $conn->prepare($delete_details);
 		$result->execute();
 
-		$result = $conn->query("SELECT * FROM mst_customer_branch_temp WHERE session_id = '" . $_SESSION['session_id'] . "' ORDER BY temp_branch_id");
-
-		if ($result->rowCount() > 0) {
+		// branch rows come from the form, not a temp table
+		if (isset($_REQUEST['br_name']) && is_array($_REQUEST['br_name'])) {
 			$stmt = null;
-			$stmt = $conn->prepare("INSERT INTO mst_customer_branch (supp_id,  branch_name, prefix, branch_contact_person, branch_contact_no, branch_add1, branch_add2, state_id, district_id, city_id, branch_pincode) VALUES (:supp_id, :branch_name, :prefix, :branch_contact_person, :branch_contact_no, :branch_add1, :branch_add2, :state_id, :district_id, :city_id, :branch_pincode)");
+			$stmt = $conn->prepare("INSERT INTO mst_customer_branch (supp_id, branch_name, prefix, branch_contact_person, branch_contact_no, branch_add1, branch_add2, state_id, district_id, city_id, branch_pincode) VALUES (:supp_id, :branch_name, :prefix, :branch_contact_person, :branch_contact_no, :branch_add1, :branch_add2, :state_id, :district_id, :city_id, :branch_pincode)");
 
-			while ($obj = $result->fetchAll(PDO::FETCH_ASSOC)) {
-				foreach ($obj as $row => $value) {
-					$data = array(
-						':supp_id' => $update_id,
-						':branch_name' => $value['temp_branch_name'],
-						':prefix' => $value['temp_prefix'],
-						':branch_contact_person' => $value['temp_branch_contact_person'],
-						':branch_contact_no' => $value['temp_branch_contact_no'],
-						':branch_add1' => $value['temp_branch_add1'],
-						':branch_add2' => $value['temp_branch_add2'],
-						':state_id' => $value['temp_state_id'],
-						':district_id' => $value['temp_district_id'],
-						':city_id' => $value['temp_city_id'],
-						':branch_pincode' => $value['temp_branch_pincode'],
-					);
-					$stmt->execute($data);
+			for ($b = 0; $b < count($_REQUEST['br_name']); $b++) {
+				if (trim($_REQUEST['br_name'][$b]) == '') {
+					continue;
 				}
+				$stmt->execute(array(
+					':supp_id'               => $update_id,
+					':branch_name'           => $_REQUEST['br_name'][$b],
+					':prefix'                => $_REQUEST['br_prefix'][$b],
+					':branch_contact_person' => $_REQUEST['br_contact_person'][$b],
+					':branch_contact_no'     => $_REQUEST['br_contact_no'][$b],
+					':branch_add1'           => $_REQUEST['br_add1'][$b],
+					':branch_add2'           => $_REQUEST['br_add2'][$b],
+					':state_id'              => $_REQUEST['br_state_id'][$b],
+					':district_id'           => $_REQUEST['br_district_id'][$b],
+					':city_id'               => $_REQUEST['br_city_id'][$b],
+					':branch_pincode'        => $_REQUEST['br_pincode'][$b]
+				));
 			}
-
-			$sql =  "DELETE FROM mst_customer_branch_temp WHERE session_id = '" . $_SESSION['session_id'] . "'";
-			$result = $conn->prepare($sql);
-			$result->execute();
 		}
 		$_SESSION['_msg'] = "Customer succesfully Updated..!";
 	} catch (Exception $e) {
@@ -266,52 +258,7 @@ $supp_name = "";
 $supp_id = $dbconn->GetSingleReconrd("mst_supplier_new", "max(supp_id)", "1", "1") + 1;
 $prefix = "Mr.";
 
-$sql1 =  "DELETE FROM mst_customer_branch_temp";
-$result1 = $conn->prepare($sql1);
-$result1->execute();
-
 if (isset($_REQUEST['supp_id'])) {
-	try {
-		/* ------------ SAVE mst_customer_branch  -----------*/
-		$sql =  "DELETE FROM mst_customer_branch_temp";
-		$result = $conn->prepare($sql);
-		$result->execute();
-
-
-		$result = $conn->query("SELECT * FROM mst_customer_branch WHERE supp_id = '" . $_REQUEST['supp_id'] . "' ORDER BY branch_id");
-
-		if ($result->rowCount() > 0) {
-			$stmt = null;
-			$stmt = $conn->prepare("INSERT INTO mst_customer_branch_temp (supp_id, temp_branch_name, temp_prefix, temp_branch_contact_person, temp_branch_contact_no, temp_branch_add1, temp_branch_add2, temp_state_id, temp_district_id, temp_city_id, temp_branch_pincode, session_id, temp_date) VALUES (:supp_id, :temp_branch_name, :temp_prefix, :temp_branch_contact_person, :temp_branch_contact_no, :temp_branch_add1, :temp_branch_add2, :temp_state_id, :temp_district_id, :temp_city_id, :temp_branch_pincode, :session_id, :temp_date)");
-
-			while ($obj = $result->fetchAll(PDO::FETCH_ASSOC)) {
-				foreach ($obj as $row => $value) {
-					$data = array(
-						':supp_id' => $value['supp_id'],
-						':temp_branch_name' => $value['branch_name'],
-						':temp_prefix' => $value['prefix'],
-						':temp_branch_contact_person' => $value['branch_contact_person'],
-						':temp_branch_contact_no' => $value['branch_contact_no'],
-						':temp_branch_add1' => $value['branch_add1'],
-						':temp_branch_add2' => $value['branch_add2'],
-						':temp_state_id' => $value['state_id'],
-						':temp_district_id' => $value['district_id'],
-						':temp_city_id' => $value['city_id'],
-						':temp_branch_pincode' => $value['branch_pincode'],
-						':session_id' => $_SESSION['session_id'],
-						':temp_date' => date('Y-m-d'),
-					);
-					$stmt->execute($data);
-				}
-			}
-		}
-	} catch (Exception $e) {
-		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
-		$_SESSION['_msg_err'] = $str;
-		header("location:lst_customers.php");
-		die();
-	}
-
 	$get_val = $conn->query("SELECT * FROM mst_supplier_new WHERE supp_status = '1' AND supp_id = " . $_REQUEST['supp_id']);
 	if ($get_val->rowCount() > 0) {
 		$obj = $get_val->fetch(PDO::FETCH_OBJ);
@@ -636,108 +583,109 @@ if (isset($_REQUEST['supp_id'])) {
 				return false;
 			}
 			//alert(item_id);
-			var branch_name = $("#branch_name").val();
-			var prefix = $("#prefix").val();
-			var branch_contact_person = $("#branch_contact_person").val();
-			var branch_contact_no = $("#branch_contact_no").val();
-			var branch_add1 = $("#branch_add1").val();
-			var branch_add2 = $("#branch_add2").val();
-			var supp_id = $("#supp_id").val();
-			var state_id = $("#branch_state_id").val();
-			var district_id = $("#branch_district_id").val();
-			var city_id = $("#branch_city_id").val();
-			var branch_pincode = $("#branch_pincode").val();
-			var session_id_no = $("#session_id_no").val();
+			var row = {
+				"branch_name": $("#branch_name").val(),
+				"prefix": $("#prefix").val(),
+				"supp_id": $("#supp_id").val(),
+				"branch_contact_person": $("#branch_contact_person").val(),
+				"branch_contact_no": $("#branch_contact_no").val(),
+				"branch_add1": $("#branch_add1").val(),
+				"branch_add2": $("#branch_add2").val(),
+				"state_id": $("#branch_state_id").val(),
+				"district_id": $("#branch_district_id").val(),
+				"city_id": $("#branch_city_id").val(),
+				"branch_pincode": $("#branch_pincode").val(),
+				"mode": "row",
+				"sno": $("#branchTable tbody tr").length + 1
+			};
 
+			// same branch twice - replace it instead of adding a duplicate
+			var dup = null;
+			$("#branchTable tbody tr.branch-row").each(function() {
+				if ($(this).find(".br_name").val() === row.branch_name &&
+					$(this).find(".br_contact_no").val() === row.branch_contact_no &&
+					!$(this).hasClass("br-editing")) {
+					dup = $(this);
+				}
+			});
 
 			$.ajax({
 				type: "POST",
 				url: "inc/cis_ajax/jquery_cutomer_branch_details.php",
-				data: {
-					"branch_name": branch_name,
-					"prefix": prefix,
-					"supp_id": supp_id,
-					"branch_contact_person": branch_contact_person,
-					"branch_contact_no": branch_contact_no,
-					"branch_add1": branch_add1,
-					"branch_add2": branch_add2,
-					"state_id": state_id,
-					"district_id": district_id,
-					"city_id": city_id,
-					"branch_pincode": branch_pincode,
-					"session_id_no": session_id_no,
-					'mode': 'save',
-					'rec_type': 'ind'
-				}
+				data: row
 			}).done(function(msg) {
-				//alert(msg);
-				$('#show_table').html(msg);
-				var n = msg.indexOf("tbody");
-				$('#branch_details').val(n);
-				$('#branch_name').val('');
-				$("#prefix").select2('val', '');
-				$('#branch_contact_person').val('');
-				$('#branch_contact_no').val('');
-				$('#branch_add1').val('');
-				$('#branch_add2').val('');
-				$("#branch_state_id").select2('val', '');
-				$("#branch_district_id").select2('val', '');
-				$("#branch_city_id").select2('val', '');
-				$('#branch_pincode').val('');
+				var editing = $("#branchTable tbody tr.br-editing");
+				if (editing.length) {
+					editing.replaceWith(msg);          // put the edited row back where it was
+				} else if (dup) {
+					dup.replaceWith(msg);
+				} else {
+					$("#branchTable tbody").append(msg);
+				}
+				fnBranchReindex();
+				fnBranchClearForm();
 			});
 		});
 
 	});
 
-
-	function edit_item(temp_branch_id) {
-		$.ajax({
-			type: "POST",
-			url: "inc/cis_ajax/jquery_cutomer_branch_details.php",
-			data: {
-				temp_branch_id: temp_branch_id,
-				mode: 'edit_inv'
-			}
-		}).done(function(msg) {
-
-			string = msg.split("~");
-			$("#supp_id").val($.trim(string[1]));
-			$("#branch_name").val($.trim(string[2]));
-			$("#prefix").val($.trim(string[3])).change();
-			$("#branch_contact_person").val($.trim(string[4]));
-			$("#branch_contact_no").val($.trim(string[5]));
-			$("#branch_add1").val($.trim(string[6]));
-			$("#branch_add2").val($.trim(string[7]));
-
-			$("#branch_state_id").val($.trim(string[8])).change();
-
-			setTimeout(function() {
-				$("#branch_district_id").val($.trim(string[9])).change();
-			}, 1500);
-			setTimeout(function() {
-				$("#branch_city_id").val($.trim(string[10])).change();
-			}, 2000);
-			$("#branch_pincode").val($.trim(string[11]));
+	// renumber the # column and keep the row count in sync
+	function fnBranchReindex() {
+		var n = 0;
+		$("#branchTable tbody tr.branch-row").each(function() {
+			n++;
+			$(this).find(".br-sno").text(n);
 		});
-
+		$("#branch_details").val(n);
 	}
 
-	function remove_item(temp_branch_id) {
-
-		$.ajax({
-			type: "POST",
-			url: "inc/cis_ajax/jquery_cutomer_branch_details.php",
-			data: {
-				temp_branch_id: temp_branch_id,
-				mode: 'delete'
-			}
-		}).done(function(msg) {
-
-			$('#show_table').html(msg);
-			var n = msg.indexOf("tbody");
-			$('#branch_details').val(n);
-		});
+	function fnBranchClearForm() {
+		$("#branchTable tbody tr").removeClass("br-editing table-warning");
+		$("#add_branch").val("ADD");
+		$("#branch_name").val("");
+		$("#prefix").select2("val", "");
+		$("#branch_contact_person").val("");
+		$("#branch_contact_no").val("");
+		$("#branch_add1").val("");
+		$("#branch_add2").val("");
+		$("#branch_state_id").select2("val", "");
+		$("#branch_district_id").select2("val", "");
+		$("#branch_city_id").select2("val", "");
+		$("#branch_pincode").val("");
 	}
+
+	// edit - load the row back into the form, the row is replaced on ADD
+	$(document).on("click", "#branchTable .br-edit", function() {
+		var tr = $(this).closest("tr");
+
+		$("#branch_name").val(tr.find(".br_name").val());
+		$("#prefix").val(tr.find(".br_prefix").val()).change();
+		$("#branch_contact_person").val(tr.find(".br_contact_person").val());
+		$("#branch_contact_no").val(tr.find(".br_contact_no").val());
+		$("#branch_add1").val(tr.find(".br_add1").val());
+		$("#branch_add2").val(tr.find(".br_add2").val());
+		$("#branch_pincode").val(tr.find(".br_pincode").val());
+
+		// district and city lists are loaded by the state/district change handlers
+		var dist = tr.find(".br_district_id").val();
+		var city = tr.find(".br_city_id").val();
+		$("#branch_state_id").val(tr.find(".br_state_id").val()).change();
+		setTimeout(function() { $("#branch_district_id").val(dist).change(); }, 1500);
+		setTimeout(function() { $("#branch_city_id").val(city).change(); }, 2000);
+
+		$("#branchTable tbody tr").removeClass("br-editing table-warning");
+		tr.addClass("br-editing table-warning");
+		$("#add_branch").val("UPDATE");
+		$("#branch_name").focus();
+	});
+
+	$(document).on("click", "#branchTable .br-remove", function() {
+		$(this).closest("tr").remove();
+		fnBranchReindex();
+		fnBranchClearForm();
+	});
+
+	$(function() { fnBranchReindex(); });
 
 	function fnValidate() {
 		
@@ -1131,7 +1079,7 @@ if (isset($_REQUEST['supp_id'])) {
 
 									<div class="control-group">
 										<div id="show_table" class="text-center">
-											<table class="table table-bordered">
+											<table class="table table-bordered" id="branchTable">
 												<thead>
 													<tr>
 														<th width="5px">#</th>
@@ -1140,12 +1088,33 @@ if (isset($_REQUEST['supp_id'])) {
 														<th width="10%">Actions</th>
 													</tr>
 												</thead>
+												<tbody>
+												<?php
+												// existing branches render straight from mst_customer_branch
+												if (isset($_REQUEST['supp_id']) && $_REQUEST['supp_id'] != '') {
+													$br_res = $conn->prepare("SELECT * FROM mst_customer_branch WHERE supp_id = :supp_id ORDER BY branch_id");
+													$br_res->execute(array(':supp_id' => $_REQUEST['supp_id']));
+													$br_sno = 1;
+													while ($br = $br_res->fetch(PDO::FETCH_ASSOC)) {
+														echo fnBranchRow($dbconn, array(
+															'branch_name'           => $br['branch_name'],
+															'prefix'                => $br['prefix'],
+															'branch_contact_person' => $br['branch_contact_person'],
+															'branch_contact_no'     => $br['branch_contact_no'],
+															'branch_add1'           => $br['branch_add1'],
+															'branch_add2'           => $br['branch_add2'],
+															'state_id'              => $br['state_id'],
+															'district_id'           => $br['district_id'],
+															'city_id'               => $br['city_id'],
+															'branch_pincode'        => $br['branch_pincode']
+														), $br_sno++);
+													}
+												}
+												?>
+												</tbody>
 											</table>
 										</div>
 									</div>
-									<script type="text/javascript">
-										remove_item(0);
-									</script>
 									<hr>
 
 									<!--<div id="show table" class="span12">
