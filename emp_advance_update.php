@@ -5,6 +5,8 @@ session_start();
 require_once("inc/common/userclass.php");
 require_once("inc/common/css-js.php");
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -16,10 +18,14 @@ $dbconn = new dbhandler();
 
 
 if (isset($_POST['SAVE'])){
+	if (!csrf_check('emp_advance_update')) {
+		csrf_fail('employee_advance.php');
+	}
   		
 	$update_id = $_REQUEST['txtHid'];
 	try
 	{
+		db_begin($conn);
 		
 		$advance_amount = $dbconn->GetSingleReconrd("tbl_emp_advance","SUM(advance_amount)","is_current=1 AND advance_status != 3 AND emp_id",$update_id);
 
@@ -94,9 +100,12 @@ if (isset($_POST['SAVE'])){
 		/* Account update */		
 					
 		$_SESSION['_msg'] = "Employee Advance details has been succesfully Updated..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
-	{		
+	{
+		db_rollback($conn);
+		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
 	}
@@ -167,6 +176,7 @@ if ($_REQUEST['emp_id'] != '') {
                     <div class="col-md-12">
 
                         <form name="thisForm" class="form-horizontal" method='POST' action="emp_advance_update.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('emp_advance_update'); ?>
                             <fieldset>
                                 <div class="card">
                                     <div class="card-header bg-pgheader text-white header-elements-inline">

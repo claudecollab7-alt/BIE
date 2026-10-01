@@ -92,6 +92,7 @@ if (isset($_POST['SAVE'])) {
 		);
 		$update_enq->execute($data1);
 	} catch (Exception $e) {
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -167,6 +168,7 @@ if (isset($_POST['UPDATE'])) {
 		);
 		$update_po->execute($data1);
 	} catch (Exception $e) {
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -214,6 +216,7 @@ if (isset($_REQUEST['sal_repair_id'])) {
 			}
 		}
 	} catch (Exception $e) {
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}

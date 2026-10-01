@@ -96,6 +96,7 @@ if (isset($_POST['SAVE'])) {
         header("location:po_prepare_list.php");
     	db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
     	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         echo $_SESSION['_msg_err'] = $str;
@@ -186,6 +187,7 @@ if (isset($_POST['UPDATE'])) {
 
     	db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
     	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         echo $_SESSION['_msg_err'] = $str;
@@ -290,6 +292,7 @@ if (isset($_POST['send_to_admin'])) {
         }
     	db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
     	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         echo $_SESSION['_msg_err'] = $str;

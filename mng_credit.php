@@ -9,6 +9,8 @@ isAdmin();
 
 // 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $conn = new dbconnect();
@@ -21,11 +23,15 @@ $inv_date = date("Y-m-d");
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mng_credit')) {
+		csrf_fail('invoice_list.php');
+	}
     //echo "<pre>";print_r($_POST);
 
     $update_id = $_REQUEST['txtHid'];
     // echo "<pre>";print_r($update_id);exit;
     try {
+    	db_begin($conn);
         $_REQUEST['inv_date'] = date("Y-m-d", strtotime($_REQUEST['inv_date']));
         $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
         $_REQUEST['modify_by'] = $_SESSION['_user_id'];
@@ -87,7 +93,10 @@ if (isset($_POST['UPDATE'])) {
         }
 
         /* details */
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
+    	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
     }
@@ -471,6 +480,7 @@ if (isset($_REQUEST['inv_id']) && $_REQUEST['inv_id'] != "") {
 
                             </div>
                             <form name='thisForm' class="form-horizontal" method='POST' action="">
+                            	<?php csrf_fields('mng_credit'); ?>
                                 <input type="hidden" name="inv_items" id="inv_items" value="-1">
                                 <input type="hidden" name="gst" id="gst" value="">
                                 <input type="hidden" name="item_hsn" id="item_hsn" value="">

@@ -8,8 +8,14 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_common_settings')) {
+		csrf_fail('mst_common_settings.php');
+	}
 	try {
+		db_begin($conn);
 
 		$supp_ids = array();
 		if (isset($_REQUEST['supp_id'])) {
@@ -32,7 +38,10 @@ if (isset($_POST['UPDATE'])) {
 		}
 
 		$_SESSION['_msg'] = "Common Settings successfully updated..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -110,6 +119,7 @@ if (isset($_POST['UPDATE'])) {
 						<!-- This Form UI Starts here --->
 
 						<form name='thisForm' class="form-horizontal" method='POST' action="">
+							<?php csrf_fields('mst_common_settings'); ?>
 
 							<div class="card" style="width:50%; margin: 0 auto;">
 								<div class="card-header bg-pgheader text-white header-elements-inline">

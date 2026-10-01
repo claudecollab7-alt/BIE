@@ -43,6 +43,7 @@ try {
         'curr_stock'  => (float)$curr_stock
     ));
 } catch (Exception $e) {
+	fnLogError($e);
     echo json_encode(array('ok' => false, 'msg' => $e->getMessage()));
 }
 die();

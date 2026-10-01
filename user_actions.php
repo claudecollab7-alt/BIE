@@ -13,11 +13,16 @@ $user_addnew = $dbconn->GetSingleReconrd("tbl_user_actions","addnew","sm_id = ".
 $user_alt = $dbconn->GetSingleReconrd("tbl_user_actions","alt","sm_id = ".$sm_id." AND inst_id",$_SESSION['_user_id']);
 $user_del = $dbconn->GetSingleReconrd("tbl_user_actions","del","sm_id = ".$sm_id." AND inst_id",$_SESSION['_user_id']);
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 if(isset($_POST['UPDATE'])){
+	if (!csrf_check('user_actions')) {
+		csrf_fail('mst_users.php');
+	}
 	
 		$sql =  "DELETE FROM tbl_user_actions WHERE inst_id = ".$_REQUEST["inst_id"];
 		$conn->query($sql);
@@ -138,7 +143,8 @@ if(isset($_POST['UPDATE'])){
 
 						<div class="card-body">
 							<form name='thisForm' class="form-horizontal" method='POST' action=""   onSubmit="return fnValidate();" 	
-									enctype="multipart/form-data"> 
+									enctype="multipart/form-data">
+								<?php csrf_fields('user_actions'); ?> 
 									
 								<div class="row">
 									<div class="col-md-12">

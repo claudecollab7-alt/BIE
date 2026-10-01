@@ -9,6 +9,8 @@ require_once("inc/common/userclass.php");
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -16,8 +18,12 @@ $dbconn= new dbhandler();
 
 if(isset($_POST['UPDATE']))
 {		
+	if (!csrf_check('mst_users_rights')) {
+		csrf_fail('mst_user.php');
+	}
 	try 
 	{		
+		db_begin($conn);
 		// echo "<pre>";
 		// print_r($_POST);
 		// echo "<pre>";
@@ -68,7 +74,10 @@ if(isset($_POST['UPDATE']))
 		//exit;
 		
 		$_SESSION['_msg'] = "User rights has been successfully updated..!";
+		db_commit($conn);
 	}catch(Exception $e){
+		db_rollback($conn);
+		fnLogError($e);
 		echo $_SESSION['_msg_err'] = $e;
 	}
 	header("location:mst_user.php");
@@ -143,7 +152,8 @@ if ($_REQUEST['id'] != ""){
 				<div class="row">
 				<div class="col-md-12">	
 					
-					<form name='thisForm' class="form-horizontal" method='POST' action=""   onSubmit="return fnValidate();"> 
+					<form name='thisForm' class="form-horizontal" method='POST' action=""   onSubmit="return fnValidate();">
+						<?php csrf_fields('mst_users_rights'); ?> 
 					<input type="hidden" name="usr_id" value="<?php echo $_REQUEST['usr_id']; ?>">
 						<div class="card">						
 							<div class="card-header bg-pgheader text-white header-elements-inline">						

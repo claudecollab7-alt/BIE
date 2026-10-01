@@ -1,4 +1,5 @@
 <?php
+require_once(dirname(__FILE__) . '/error_log.php');
 
 /**
  * Class to handle all db operations
@@ -35,11 +36,13 @@ class dbhandler
 
 		catch(PDOException  $e)
 		{
+			fnLogError($e);
 			echo "Error Connecting Host :" .$e->getMessage();
 		}
 
 		catch(Exception  $e)
 		{
+			fnLogError($e);
 			echo $e->getMessage();
 		}
 	}
@@ -126,6 +129,7 @@ class dbhandler
 	   }
 	    catch(Exception  $e)
 		{
+			fnLogError($e);
 			echo $e->getMessage();
 		}
 	}
@@ -152,6 +156,7 @@ class dbhandler
 	   }
 	    catch(Exception  $e)
 		{
+			fnLogError($e);
 			echo $e->getMessage();
 		}
 	}
@@ -272,6 +277,7 @@ class dbhandler
 		catch(Exception $e)
 
 		{
+			fnLogError($e);
 
 			return $e->getMessage();
 

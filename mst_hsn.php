@@ -9,6 +9,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -17,9 +19,13 @@ error_reporting(E_ALL);
 
 if (isset($_POST['SAVE']))
 {		
+	if (!csrf_check('mst_hsn')) {
+		csrf_fail('mst_hsn.php');
+	}
 	
 	try
 	{
+		db_begin($conn);
 		$is_exist = $dbconn->GetSingleReconrd("mst_hsn","hsn_id",
 					  "('".$_REQUEST['hsn_code']."' AND '".$_REQUEST['hsn_description']."' AND '".$_REQUEST['cgst']."' AND '".$_REQUEST['sgst']."' AND '".$_REQUEST['igst']."') AND hsn_status ",1);
 				
@@ -44,9 +50,12 @@ if (isset($_POST['SAVE']))
 		);
 		$stmt->execute($data);
 		$_SESSION['_msg'] = "hsn Succesfully Saved..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
-	{		
+	{
+		db_rollback($conn);
+		fnLogError($e);		
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 					
 		$_SESSION['_msg_err'] = $str;			
@@ -59,6 +68,9 @@ if (isset($_POST['SAVE']))
 
 if (isset($_POST['UPDATE']))
 {
+	if (!csrf_check('mst_hsn')) {
+		csrf_fail('mst_hsn.php');
+	}
 
 	
 	$update_id = $_REQUEST['txtHid'];	
@@ -66,6 +78,7 @@ if (isset($_POST['UPDATE']))
 	
 	try
 	{
+		db_begin($conn);
 		$mst_exist = $dbconn->GetSingleReconrd("mst_hsn","hsn_id","hsn_id <> ".$update_id." AND 
 					  hsn_code ='".$_REQUEST['hsn_code']."' AND hsn_description ='".$_REQUEST['hsn_description']."' AND cgst ='".$_REQUEST['cgst']."' AND sgst ='".$_REQUEST['sgst']."' AND igst ='".$_REQUEST['igst']."' AND hsn_status", 1);
 	
@@ -95,9 +108,12 @@ if (isset($_POST['UPDATE']))
 		echo $stmt->fullQuery;
 		
 		$_SESSION['_msg'] = "hsn succesfully Updated..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
-	{		
+	{
+		db_rollback($conn);
+		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
 	}
@@ -371,7 +387,8 @@ function fnValidate()
 					<!-- /basic datatable -->
 
 					<div class="col-md-6">
-						<form type='hsnForm' class="form-horizontal" method='POST' action=""   onSubmit="return fnValidate();" 	>							
+						<form type='hsnForm' class="form-horizontal" method='POST' action=""   onSubmit="return fnValidate();" 	>
+							<?php csrf_fields('mst_hsn'); ?>							
 							
 							<div class="card">
 								<div class="card-header bg-pgheader text-white header-elements-inline">

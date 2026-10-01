@@ -8,6 +8,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -16,7 +18,11 @@ $dtm = date('Y-m-d H:i:s');
 $by  = $_SESSION['_user_id'];
 
 if (isset($_POST['SAVE']) || isset($_POST['UPDATE'])) {
+	if (!csrf_check('spare_mapping')) {
+		csrf_fail('spare_mapping_list.php');
+	}
 	try {
+		db_begin($conn);
 		$item_id = $_REQUEST['item_id'];
 
 		$delete_details = "DELETE FROM tbl_spare_mapping WHERE item_id = '" . $item_id . "'";
@@ -48,7 +54,10 @@ if (isset($_POST['SAVE']) || isset($_POST['UPDATE'])) {
 			$_SESSION['_msg'] = "Spare Mapping Successfully Saved..!";
 		else
 			$_SESSION['_msg'] = "Spare Mapping Successfully Updated..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -113,6 +122,7 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 
 					<div class="col-md-12">
 						<form name="spareForm" method="POST" action="" onsubmit="return fnValidate();">
+							<?php csrf_fields('spare_mapping'); ?>
 
 							<div class="card">
 								<div class="card-header bg-pgheader text-white header-elements-inline">

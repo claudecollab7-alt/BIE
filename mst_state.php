@@ -8,6 +8,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -15,6 +17,9 @@ $dbconn = new dbhandler();
 //----------------------------------- SAVE ---------------------------------------//
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_state')) {
+		csrf_fail('mst_state.php');
+	}
 
     $mst_exist = $dbconn->GetSingleReconrd("mst_state", "state_id", "state_status = 1 AND state_name", $_REQUEST['state_name']);
     if ($mst_exist != "") {
@@ -41,6 +46,7 @@ if (isset($_POST['SAVE'])) {
 
 
     try {
+    	db_begin($conn);
         $stmt = null;
         $stmt = $conn->prepare("INSERT INTO mst_state (country_id, state_name, state_shname, state_code) VALUES (:country_id, :state_name, :state_shname, :state_code)");
         $data = array(
@@ -51,7 +57,10 @@ if (isset($_POST['SAVE'])) {
         );
         $stmt->execute($data);
         $_SESSION['_msg'] = "State succesfully saved..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
+    	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
     }
@@ -62,6 +71,9 @@ if (isset($_POST['SAVE'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_state')) {
+		csrf_fail('mst_state.php');
+	}
     $dbconn = new dbhandler();
     $update_id = $_REQUEST['txtHid'];
 
@@ -90,6 +102,7 @@ if (isset($_POST['UPDATE'])) {
     }
 
     try {
+    	db_begin($conn);
         $stmt = null;
         $stmt = $conn->prepare("UPDATE mst_state SET country_id = :country_id, state_name = :state_name, state_shname= :state_shname, state_code = :state_code
 					WHERE state_id = :state_id");
@@ -105,7 +118,10 @@ if (isset($_POST['UPDATE'])) {
         // echo $stmt->fullQuery;
 
         $_SESSION['_msg'] = "State succesfully Updated..!";
+    	db_commit($conn);
     } catch (Exception $e) {
+    	db_rollback($conn);
+    	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
     }
@@ -340,6 +356,7 @@ if (isset($_REQUEST['state_id'])) {
 
                     <div class="col-md-6">
                         <form name='thisForm' id="validate" class="form-horizontal" method='post' action="" onSubmit="return fnValidate();">
+                        	<?php csrf_fields('mst_state'); ?>
 
                             <div class="card">
                                 <div class="card-header bg-pgheader text-white header-elements-inline">

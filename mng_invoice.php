@@ -150,6 +150,7 @@ if (isset($_POST['Draft'])) {
         /* details */
     	db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
     	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -289,6 +290,7 @@ if (isset($_POST['UPDATE'])) {
         /* details */
     	db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
     	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -465,6 +467,7 @@ if (isset($_POST['FINALIZE'])) {
         /* ITEM DETAILS */
     	db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
     	db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;

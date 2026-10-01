@@ -11,36 +11,52 @@ require_once("inc/common/dbhandler.php");
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
 if (isset($_POST['CONFIRM']))
 {
-	$so_date = $dbconn->GetSingleReconrd("tbl_grn","grn_date","grn_id",$_REQUEST['grn_id']);
-	// $_REQUEST['so_credit_due_date'] = date('Y-m-d', strtotime($so_date. ' + '.$_REQUEST['so_credit_days'].' days')); 
-	$stmt = null;				
-	$stmt = $conn->prepare("UPDATE tbl_grn SET grn_cancel_by = :grn_cancel_by, grn_cancel_date_time = :grn_cancel_date_time, grn_cancel_reason = :grn_cancel_reason, grn_status = :grn_status, 
-	grn_approve_status = :grn_approve_status, grn_cancel_status = :grn_cancel_status WHERE grn_id = :grn_id");
-	$data = array(
-		'grn_id'=>$_REQUEST['grn_id'],
-		':grn_cancel_by' => '1',
-		':grn_cancel_date_time' => date('Y-m-d H:i:s'),
-		':grn_cancel_reason' => $_REQUEST['grn_cancel_reason'],
-		':grn_status' => '3',
-		':grn_approve_status' => '0',
-		':grn_cancel_status' => '1'
-	
-	);
-   
-	$stmt->execute($data);
-    // .
-
-// print_r($data);die();
-	header("location:grn_list.php");	
-	die();
-	
+	if (!csrf_check('modal_grn_reject_dets')) {
+		csrf_fail('grn_list.php');
 	}
+
+	try {
+		db_begin($conn);
+		$so_date = $dbconn->GetSingleReconrd("tbl_grn","grn_date","grn_id",$_REQUEST['grn_id']);
+		// $_REQUEST['so_credit_due_date'] = date('Y-m-d', strtotime($so_date. ' + '.$_REQUEST['so_credit_days'].' days')); 
+		$stmt = null;				
+		$stmt = $conn->prepare("UPDATE tbl_grn SET grn_cancel_by = :grn_cancel_by, grn_cancel_date_time = :grn_cancel_date_time, grn_cancel_reason = :grn_cancel_reason, grn_status = :grn_status, 
+		grn_approve_status = :grn_approve_status, grn_cancel_status = :grn_cancel_status WHERE grn_id = :grn_id");
+		$data = array(
+			'grn_id'=>$_REQUEST['grn_id'],
+			':grn_cancel_by' => '1',
+			':grn_cancel_date_time' => date('Y-m-d H:i:s'),
+			':grn_cancel_reason' => $_REQUEST['grn_cancel_reason'],
+			':grn_status' => '3',
+			':grn_approve_status' => '0',
+			':grn_cancel_status' => '1'
+	
+		);
+   
+		$stmt->execute($data);
+	    // .
+
+	// print_r($data);die();
+		db_commit($conn);
+		header("location:grn_list.php");	
+		die();
+	
+	} catch (Exception $e) {
+		fnLogError($e);
+		db_rollback($conn);
+		$_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+	}
+	header("location:grn_list.php");
+	die();
+}
 ?>
 <!-- Basic modal -->
 
@@ -54,6 +70,7 @@ if (isset($_POST['CONFIRM']))
 					<button type="button" class="close" data-dismiss="modal">&times;</button>
 				</div>
             <form action="modal_grn_reject_dets.php" method="POST">
+            	<?php csrf_fields('modal_grn_reject_dets'); ?>
                 <div class="modal-body py-0" id="m_sales_rej_code">				
                     <div class="col-md-6 pt-5 pb-5 text-center">
                         <span id="spinner-light" class="text-loading">

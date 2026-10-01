@@ -12,6 +12,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 //ini_set('display_errors', '1');
 //ini_set('display_startup_errors', '1');
 //error_reporting(E_ALL);
@@ -34,6 +36,9 @@ $emp_det = $dbconn->GetSingleReconrd("mst_employee", "CONCAT(emp_code,'~',emp_na
 $emp = explode('~', $emp_det);
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('checkattendance')) {
+		csrf_fail('attendance_new.php');
+	}
 
     $work_date = $dbconn->GetSingleReconrd("tbl_attendance", "work_date", "attn_id", $_REQUEST['attn_id']);
 
@@ -97,6 +102,9 @@ if (isset($_POST['UPDATE'])) {
 }
 
 if (isset($_POST['ADD'])) {
+	if (!csrf_check('checkattendance')) {
+		csrf_fail('attendance_new.php');
+	}
 
     $work_date = $_REQUEST['attn_date'];
 
@@ -217,6 +225,7 @@ if (isset($_POST['ADD'])) {
                     <div class="col-md-12">
 
                         <form name="thisForm" class="form-horizontal" method='POST' action="checkattendance.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('checkattendance'); ?>
                             <fieldset>
                                 <div class="card">
                                     <div class="card-header bg-pgheader text-white header-elements-inline">

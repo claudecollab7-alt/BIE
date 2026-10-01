@@ -34,6 +34,7 @@ try {
     $stock_field = fnGetBranchStockField($conn, $branch_id);
     $curr_stock  = fnGetItemBranchStock($conn, $item_id, $stock_field);
 } catch (Exception $e) {
+	fnLogError($e);
     echo '<div class="alert alert-danger m-3">' . htmlspecialchars($e->getMessage()) . '</div>';
     die();
 }

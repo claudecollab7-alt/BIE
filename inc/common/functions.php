@@ -1,4 +1,5 @@
 <?php
+require_once(dirname(__FILE__) . '/error_log.php');
 ob_start();
 date_default_timezone_set('Asia/Calcutta');
 

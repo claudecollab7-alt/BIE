@@ -9,11 +9,16 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 if (isset($_POST['submit'])) {
+	if (!csrf_check('supp_items')) {
+		csrf_fail('lst_supplier.php');
+	}
     $item_id = $_POST['select_item'];
     foreach ($item_id as $key => $value) {
         $stmt = null;
@@ -244,6 +249,7 @@ if (isset($_POST['submit'])) {
                             </div>
                             <div class="card-body">
                                 <form name='thisForm' id="validate" class="form-horizontal" method='post' action="supp_items.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                                	<?php csrf_fields('supp_items'); ?>
                                     <input type="hidden" name="hide_supp_id" id="hide_supp_id" value="<?php echo $_REQUEST['supp_id']; ?>">
                                     <fieldset>
                                         <div class="row-fluid well">

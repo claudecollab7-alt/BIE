@@ -8,6 +8,143 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-01 - Error log, double-submit lock, csrf and rollback everywhere
+
+### Error log
+
+`inc/common/error_log.php` (new). `fnLogError($e)` writes one line per error to
+`logs/error_YYYY-MM.log`:
+
+```
+2026-10-01 10:41:38 | grn_add.php:412 | grn_add.php | user 7 Storekeeper | SQLSTATE[23000]: Duplicate entry...
+```
+
+Date, the file and line that threw, the page, the user, the message. One file per month.
+Takes an exception or a plain string, plus an optional context note. It never throws - a
+failed write must not break the page.
+
+Added as the first statement of **136 catch blocks across 69 files**, so an error is
+recorded even where the handler only set a session message or swallowed it. Several
+handlers echoed the raw SQL error to the screen; the log now captures it properly.
+
+`logs/` is created on first write with an `.htaccess` denying web access, and
+`logs/.gitignore` keeps the files out of the repository.
+
+Loaded from `inc/common/dbconnect.php`, not only `userclass.php`, so `fnLogError()` also
+exists in the ajax endpoints - they include dbconnect directly and never load userclass.
+`dbhandler.php` and `functions.php` require it too. Two places are deliberately not
+logged: `error_log.php`'s own internal catch, which would recurse, and a commented-out
+block in `inc/cis_ajax/Untitled-1.php`.
+
+### Double-submit lock
+
+`inc/common/css-js.php` - one handler covering every form, no page needed changing.
+
+Once validation has let a submit through, the form is flagged and its buttons disabled. A
+second submit while the flag is set is dropped. An alert from `fnValidate()` leaves the
+buttons usable so the field can be fixed and retried.
+
+Two details that matter:
+
+- Buttons are disabled on a **zero timeout**, after the browser has read the form.
+  Disabling them inside the submit event drops the clicked button's name from the post,
+  and every handler here keys off `isset($_POST['SAVE'])`.
+- **37 screens end `fnValidate()` with `document.thisForm.submit()`**, which does not fire
+  the submit event, so a plain submit handler would miss them.
+  `HTMLFormElement.prototype.submit` is wrapped to lock those too. Those screens also had
+  a latent double submit: `fnValidate()` calls `submit()` and then returns `undefined`, so
+  the native submission went ahead as well. The lock closes that.
+
+The back button restores a cached page with its buttons disabled, so `pageshow` re-enables
+them.
+
+### CSRF, form tokens and rollback on the rest of the forms
+
+Extended from the 16 main document forms to **all 56 forms that write to the database** -
+every `mst_*` master, the payroll and attendance screens, `mng_credit.php`,
+`pay_receipt.php`, `grn_pay_receipt.php`, `user_actions.php`, `mst_users_rights.php`,
+`supp_items.php`, `spare_mapping.php` and the three approval modals.
+
+Each gets a `csrf_check()` guard on every POST handler, `csrf_fields()` in the form, and
+`db_begin` / `db_commit` / `db_rollback` around every try.
+
+**Points to know**
+
+- `mst_employee_add.php` needed hand work. Its UPDATE handler has a `}` at column zero
+  inside the handler, which hid the end of the block from the bulk pass, and its SAVE
+  handler ends with a three-way redirect by employee type - the commit had to go above the
+  whole chain or only one of the three types would have committed.
+- The three approval modals (`modal_grn_reject_dets.php`, `modal_so_det.php`,
+  `modal_so_reject_dets.php`) close their handler with an indented brace, so they were
+  also done by hand. They had no try/catch at all before.
+- `checkattendance.php`, `emp_advance_return_payment.php` and `grn_pay_receipt.php`
+  redirect to a URL with a query string; the failure redirect was pointed at a real listing
+  page instead of a truncated one.
+- **Not covered: `index.php`, the login page.** It is the highest-value csrf target, but
+  breaking it locks everyone out of the application, so it is left alone pending a decision.
+- Report filter forms that only read (the attendance reports, `admin_multi_logins.php`,
+  `myprofile.php`, `mst_users_add.php`) are not covered either - a single-use token on a
+  filter form gets in the way and there is nothing to double-enter.
+
+---
+
+## 2026-10-01 - Temp tables replaced by page rows
+
+All four `*_temp` tables are gone. Form rows now live in the page as hidden array
+inputs and post back with the form, following the GRN pattern from the other project.
+Ajax endpoints only render markup; they write nothing.
+
+| Temp table | Screens | Replaced by |
+|---|---|---|
+| `mst_customer_branch_temp` | `mst_customer_new.php` | `fnBranchRow()` + `br_*[]` arrays |
+| `tbl_item_group_details_temp` | `mst_item_grouping.php` | `fnItemGroupRow()` + `ig_*[]` arrays |
+| `tbl_dc_details_temp` | `dc_add.php` | `$dc_rows` array + `dc_item_id[]`, `dc_qty_h[]`, `dc_unit_h[]` |
+| `tbl_package_box_details_temp` | `dc_add.php`, modal | CSV hidden fields on the item row |
+
+**New** - `inc/common/form_rows.php` holds the shared row renderers, loaded from
+`inc/common/userclass.php`. The page and the ajax endpoint render through the same
+function, so a saved row and a just-added row cannot drift apart.
+
+**Removed** - `add_packing_box.php`. The packing modal no longer writes to the
+database, so the file had no callers left.
+
+### Bugs this removed
+
+Every temp table was shared across users, with no filter on the statements that
+mattered:
+
+- `DELETE FROM ..._temp` with **no WHERE** ran on page load in `mst_customer_new.php`
+  (twice), `mst_item_grouping.php` and `dc_add.php`. Opening any of those screens wiped
+  every other user's in-progress rows.
+- The listing `SELECT`s had no filter either, so users saw each other's half-entered
+  branches, group items and DC lines.
+- Abandoned rows accumulated with nothing to clean them up.
+- `trade_items` was read by `fnValidate()` in `mst_item_grouping.php` but never existed
+  as a form field, so the "Please add Items to Group" guard threw a TypeError and never
+  fired. The field now exists and holds the row count.
+- A read-only user (type S) got no qty or position inputs on the group screen, so a save
+  from there wrote blanks. Those values now post as hidden fields.
+- The DC save handlers mixed temp values with posted arrays and matched them by array
+  position, so the temp row order had to line up with the form row order.
+- `jquery_modal_dc_pack_dets.php` counted poly bags into `$boxtype3`, overwriting the
+  gunny bag count. Box types are now counted once, in javascript, from the rows on screen.
+- `add_packing_box.php` counted box types across the whole sales order while the modal
+  counted them per DC. Now consistently per DC.
+
+### Behaviour changes to test
+
+- **Customer branches** - Edit marks the row and ADD replaces it in place. The old code
+  matched on name plus contact number, so editing a branch name silently created a duplicate.
+- **Item groups** - pulling in an existing group adds the typed quantity to whatever the
+  row already shows. The old code set an already-listed item to that group's own quantity
+  plus the typed one, ignoring what was on screen, while a new item got only the typed one.
+- **DC packing** - the modal's SAVE no longer round-trips to the server; it writes back
+  into the row and recounts the box types in the browser.
+
+**Data** - run `db/drop_temp_tables.sql` once the three screens are confirmed working.
+
+---
+
 ## 2026-09-30 - Invoice Amount zeroed on edit, percentage charges computed 0
 
 **Symptom** - on an invoice opened for edit (`dc_invoice.php?inv_id=...`), the Amount column

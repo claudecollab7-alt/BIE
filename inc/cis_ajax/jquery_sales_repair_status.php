@@ -25,7 +25,8 @@ if ($sal_repair_id && $mode == 'verify')
 		$stmt->execute($data);
 	}
 	catch (Exception $e)
-	{		
+	{
+		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
 	}	
@@ -90,7 +91,8 @@ if ($sal_repair_id && $mode == 'approve')
 
 	}
 	catch (Exception $e)
-	{		
+	{
+		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
 	}	

@@ -11,31 +11,47 @@ require_once("inc/common/dbhandler.php");
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 if (isset($_POST['CONFIRM']))
 {
-	$so_date = $dbconn->GetSingleReconrd("tbl_sales_order","so_date","so_id",$_REQUEST['so_id']);
-	$_REQUEST['so_credit_due_date'] = date('Y-m-d', strtotime($so_date. ' + '.$_REQUEST['so_credit_days'].' days')); 
-	$stmt = null;				
-	$stmt = $conn->prepare("UPDATE tbl_sales_order SET so_credit_approval_remarks = :so_credit_approval_remarks, so_credit_days = :so_credit_days, so_credit_due_date = :so_credit_due_date, so_approve_status = :so_approve_status, so_approve_by = :so_approve_by, pay_status = :pay_status ,so_approve_date_time = :so_approve_date_time WHERE so_id = :so_id");
-	$data = array(
-		'so_id'=>$_REQUEST['so_id'],
-		':so_credit_days' => $_REQUEST['so_credit_days'],
-		':so_credit_due_date' => $_REQUEST['so_credit_due_date'],
-		':so_credit_approval_remarks' => $_REQUEST['so_credit_approval_remarks'],
-		':so_approve_status' => '3',
-		':so_approve_by' =>'1',
-		':pay_status' =>'4',
-		':so_approve_date_time' => date('Y-m-d H:i:s')
-	);
-	$stmt->execute($data);
-	header("location:lst_sales_receipt.php");	
-	die();
-	// print_r($data);die();
+	if (!csrf_check('modal_so_det')) {
+		csrf_fail('lst_sales_receipt.php');
 	}
+
+	try {
+		db_begin($conn);
+		$so_date = $dbconn->GetSingleReconrd("tbl_sales_order","so_date","so_id",$_REQUEST['so_id']);
+		$_REQUEST['so_credit_due_date'] = date('Y-m-d', strtotime($so_date. ' + '.$_REQUEST['so_credit_days'].' days')); 
+		$stmt = null;				
+		$stmt = $conn->prepare("UPDATE tbl_sales_order SET so_credit_approval_remarks = :so_credit_approval_remarks, so_credit_days = :so_credit_days, so_credit_due_date = :so_credit_due_date, so_approve_status = :so_approve_status, so_approve_by = :so_approve_by, pay_status = :pay_status ,so_approve_date_time = :so_approve_date_time WHERE so_id = :so_id");
+		$data = array(
+			'so_id'=>$_REQUEST['so_id'],
+			':so_credit_days' => $_REQUEST['so_credit_days'],
+			':so_credit_due_date' => $_REQUEST['so_credit_due_date'],
+			':so_credit_approval_remarks' => $_REQUEST['so_credit_approval_remarks'],
+			':so_approve_status' => '3',
+			':so_approve_by' =>'1',
+			':pay_status' =>'4',
+			':so_approve_date_time' => date('Y-m-d H:i:s')
+		);
+		$stmt->execute($data);
+		db_commit($conn);
+		header("location:lst_sales_receipt.php");	
+		die();
+		// print_r($data);die();
+	} catch (Exception $e) {
+		fnLogError($e);
+		db_rollback($conn);
+		$_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+	}
+	header("location:lst_sales_receipt.php");
+	die();
+}
 ?>
 
 <div id="modalSoDets" class="modal fade" tabindex="-1">
@@ -49,6 +65,7 @@ if (isset($_POST['CONFIRM']))
 				<button type="button" class="close" data-dismiss="modal">&times;</button>
 			</div>
 			<form action="modal_so_det.php" method="POST">
+				<?php csrf_fields('modal_so_det'); ?>
 			<div class="modal-body py-0" id="m_sales_id">
 				<div class="col-md-6 pt-5 pb-5 text-center">
 					<span id="spinner-light" class="text-loading">

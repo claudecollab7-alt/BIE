@@ -9,6 +9,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 /*
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -16,8 +18,12 @@ error_reporting(E_ALL);*/
 
 if(isset($_POST['SAVE']))
 {
+	if (!csrf_check('mst_product_add')) {
+		csrf_fail('mst_product.php');
+	}
 	try
 	{
+		db_begin($conn);
 		
 		$_REQUEST['created_by'] = $_SESSION['_user_id'];
 		$_REQUEST['created_dtm'] = date('Y-m-d H:i:s');
@@ -87,9 +93,12 @@ if(isset($_POST['SAVE']))
 		$prod_insert->execute($data);
 		$last_id = $conn->lastInsertId();
 		$_SESSION['_msg'] = "New Product succesfully Saved..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
-	{		
+	{
+		db_rollback($conn);
+		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;	
 		
@@ -101,9 +110,13 @@ if(isset($_POST['SAVE']))
 
 if (isset($_POST['UPDATE']))
 {
+	if (!csrf_check('mst_product_add')) {
+		csrf_fail('mst_product.php');
+	}
 	$update_id = $_REQUEST['txtHid'];
 	try
 	{		
+		db_begin($conn);
 		if(!isset($_REQUEST['prod_diminishing'])){
 			$_REQUEST['prod_diminishing'] = 0;
 		}
@@ -173,9 +186,12 @@ if (isset($_POST['UPDATE']))
 		$prod_update->execute($data);		
 		
 		$_SESSION['_msg']=  "Product Details Successfully Updated..!";
+		db_commit($conn);
 	}
 	catch (Exception $e)
-	{		
+	{
+		db_rollback($conn);
+		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
 	}
@@ -259,7 +275,8 @@ $sales_rate_per = $dbconn->GetSingleReconrd("mst_product_settings","value","auto
 				<div class="row">
 				<div class="col-md-12">	
 					<!-- This Form UI Starts here --->
-					<form name='prodForm' class="form-horizontal" method='POST' action="" enctype="multipart/form-data"   onSubmit="return fnValidate();"> 
+					<form name='prodForm' class="form-horizontal" method='POST' action="" enctype="multipart/form-data"   onSubmit="return fnValidate();">
+						<?php csrf_fields('mst_product_add'); ?> 
 					<div class="card">
 						<div class="card-header bg-pgheader text-white header-elements-inline">					
 							<h6 class="card-title">Product Details</h6>		

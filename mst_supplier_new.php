@@ -7,13 +7,19 @@ require_once("inc/common/userclass.php");
 isAdmin();
 
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('mst_supplier_new')) {
+		csrf_fail('lst_supplier.php');
+	}
 	try {
+		db_begin($conn);
 
 		$ledger_type = $dbconn->GetSingleReconrd("mst_accounts_group", "group_type", "group_id", $_REQUEST['group_id']);
 
@@ -74,7 +80,10 @@ if (isset($_POST['SAVE'])) {
 		$stmt->execute($data);
 		$last_id = $conn->lastInsertId();
 		$_SESSION['_msg'] = "Supplier succesfully saved..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -85,6 +94,9 @@ if (isset($_POST['SAVE'])) {
 
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('mst_supplier_new')) {
+		csrf_fail('lst_supplier.php');
+	}
 	$update_id = $_REQUEST['txtHid'];
 	$_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
 
@@ -96,6 +108,7 @@ if (isset($_POST['UPDATE'])) {
 		die();
 	}
 	try {
+		db_begin($conn);
 		$ledger_id = $dbconn->GetSingleReconrd("mst_supplier_new", "ledger_id", "supp_id", $update_id);
 		$ledger_type = $dbconn->GetSingleReconrd("mst_accounts_group", "group_type", "group_id", $_REQUEST['group_id']);
 		$update_ledger = $conn->prepare("UPDATE  mst_ledger SET group_id = :group_id, ledger_name = :ledger_name, ledger_type = :ledger_type, open_bal = :open_bal, open_bal_type = :open_bal_type WHERE ledger_id = :ledger_id");
@@ -162,7 +175,10 @@ if (isset($_POST['UPDATE'])) {
 
 
 		$_SESSION['_msg'] = "Supplier succesfully Updated..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -412,6 +428,7 @@ if (isset($_REQUEST['supp_id'])) {
 
 							</div>
 							<form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();">
+								<?php csrf_fields('mst_supplier_new'); ?>
 								<input type="hidden" name="ledger_id" value="<?php echo $obj->ledger_id; ?>">
 								<input type="hidden" name="supp_type" value="<?php echo $obj->supp_type; ?>">
 								<fieldset>

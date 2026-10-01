@@ -136,6 +136,7 @@ try {
 		$_SESSION['_msg'] = "Salary issued successfully..!";
 	}
 }catch(Exception $e){
+	fnLogError($e);
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		 $_SESSION['_msg_err'] = $str;		
 }

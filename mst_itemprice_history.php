@@ -80,6 +80,7 @@ if (isset($_POST['SAVE'])) {
 		}
 		db_commit($conn);
 	} catch (Exception $e) {
+		fnLogError($e);
 		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		echo $_SESSION['_msg_err'] = $str;
@@ -257,6 +258,7 @@ if (isset($_POST['SAVE1'])) {
 		}
 		db_commit($conn);
 	} catch (Exception $e) {
+		fnLogError($e);
 		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		echo $_SESSION['_msg_err'] = $str;
@@ -324,7 +326,8 @@ if(isset($_POST['UPDATE']))
 		}
 			db_commit($conn);
 		catch (Exception $e)
-		{		
+		{
+			fnLogError($e);		
 			db_rollback($conn);
 			$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 			$_SESSION['_msg_err'] = $str;			
