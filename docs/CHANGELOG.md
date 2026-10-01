@@ -8,6 +8,63 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-01 - Temp tables replaced by page rows
+
+All four `*_temp` tables are gone. Form rows now live in the page as hidden array
+inputs and post back with the form, following the GRN pattern from the other project.
+Ajax endpoints only render markup; they write nothing.
+
+| Temp table | Screens | Replaced by |
+|---|---|---|
+| `mst_customer_branch_temp` | `mst_customer_new.php` | `fnBranchRow()` + `br_*[]` arrays |
+| `tbl_item_group_details_temp` | `mst_item_grouping.php` | `fnItemGroupRow()` + `ig_*[]` arrays |
+| `tbl_dc_details_temp` | `dc_add.php` | `$dc_rows` array + `dc_item_id[]`, `dc_qty_h[]`, `dc_unit_h[]` |
+| `tbl_package_box_details_temp` | `dc_add.php`, modal | CSV hidden fields on the item row |
+
+**New** - `inc/common/form_rows.php` holds the shared row renderers, loaded from
+`inc/common/userclass.php`. The page and the ajax endpoint render through the same
+function, so a saved row and a just-added row cannot drift apart.
+
+**Removed** - `add_packing_box.php`. The packing modal no longer writes to the
+database, so the file had no callers left.
+
+### Bugs this removed
+
+Every temp table was shared across users, with no filter on the statements that
+mattered:
+
+- `DELETE FROM ..._temp` with **no WHERE** ran on page load in `mst_customer_new.php`
+  (twice), `mst_item_grouping.php` and `dc_add.php`. Opening any of those screens wiped
+  every other user's in-progress rows.
+- The listing `SELECT`s had no filter either, so users saw each other's half-entered
+  branches, group items and DC lines.
+- Abandoned rows accumulated with nothing to clean them up.
+- `trade_items` was read by `fnValidate()` in `mst_item_grouping.php` but never existed
+  as a form field, so the "Please add Items to Group" guard threw a TypeError and never
+  fired. The field now exists and holds the row count.
+- A read-only user (type S) got no qty or position inputs on the group screen, so a save
+  from there wrote blanks. Those values now post as hidden fields.
+- The DC save handlers mixed temp values with posted arrays and matched them by array
+  position, so the temp row order had to line up with the form row order.
+- `jquery_modal_dc_pack_dets.php` counted poly bags into `$boxtype3`, overwriting the
+  gunny bag count. Box types are now counted once, in javascript, from the rows on screen.
+- `add_packing_box.php` counted box types across the whole sales order while the modal
+  counted them per DC. Now consistently per DC.
+
+### Behaviour changes to test
+
+- **Customer branches** - Edit marks the row and ADD replaces it in place. The old code
+  matched on name plus contact number, so editing a branch name silently created a duplicate.
+- **Item groups** - pulling in an existing group adds the typed quantity to whatever the
+  row already shows. The old code set an already-listed item to that group's own quantity
+  plus the typed one, ignoring what was on screen, while a new item got only the typed one.
+- **DC packing** - the modal's SAVE no longer round-trips to the server; it writes back
+  into the row and recounts the box types in the browser.
+
+**Data** - run `db/drop_temp_tables.sql` once the three screens are confirmed working.
+
+---
+
 ## 2026-09-30 - Invoice Amount zeroed on edit, percentage charges computed 0
 
 **Symptom** - on an invoice opened for edit (`dc_invoice.php?inv_id=...`), the Amount column
