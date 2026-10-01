@@ -71,7 +71,8 @@ if (isset($_POST['UPDATE']))
 		$_SESSION['_msg']=  "Profile Details Successfully Updated..!";
 	}
 	catch (Exception $e)
-	{		
+	{
+		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
 	}

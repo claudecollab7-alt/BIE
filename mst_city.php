@@ -38,6 +38,7 @@ if (isset($_POST['SAVE'])) {
 
         $_SESSION['_msg'] = "City succesfully saved..!";
     } catch (Exception $e) {
+    	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
     }
@@ -71,6 +72,7 @@ if (isset($_POST['UPDATE'])) {
         $stmt->execute($data);
         $_SESSION['_msg'] = "City succesfully Updated..!";
     } catch (Exception $e) {
+    	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
     }

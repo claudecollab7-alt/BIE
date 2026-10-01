@@ -37,6 +37,7 @@ if (isset($_POST['SAVE'])) {
         $stmt->execute($data);
         $_SESSION['_msg'] = "Box Type succesfully saved..!";
     } catch (Exception $e) {
+    	fnLogError($e);
 
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -72,6 +73,7 @@ if (isset($_POST['UPDATE'])) {
 
         $_SESSION['_msg'] = "Box Type succesfully Updated..!";
     } catch (Exception $e) {
+    	fnLogError($e);
 
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;

@@ -146,6 +146,7 @@ for ($item_id = $from_id; $item_id <= $to_id; $item_id++) {
                     'remarks'     => 'Opening stock loaded by ' . basename(__FILE__)
                 ));
             } catch (Exception $e) {
+            	fnLogError($e);
                 echo "<p style='color:red;'>Stock ledger failed for item_id {$item_id} / {$stock_col}: "
                    . htmlspecialchars($e->getMessage()) . "</p>";
             }

@@ -127,6 +127,7 @@ if (isset($_POST['SAVE'])) {
 		}
 		$_SESSION['_msg'] = "Customer succesfully saved..!";
 	} catch (Exception $e) {
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -246,6 +247,7 @@ if (isset($_POST['UPDATE'])) {
 		}
 		$_SESSION['_msg'] = "Customer succesfully Updated..!";
 	} catch (Exception $e) {
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		echo $_SESSION['_msg_err'] = $str;
 	}

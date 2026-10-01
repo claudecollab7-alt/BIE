@@ -44,7 +44,8 @@ if (isset($_POST['SAVE']))
 		$_SESSION['_msg'] = "Branch Succesfully Saved..!";
 	}
 	catch (Exception $e)
-	{		
+	{
+		fnLogError($e);		
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
 	}
@@ -91,7 +92,8 @@ if (isset($_POST['UPDATE']))
 		$_SESSION['_msg'] = "Branch succesfully Updated..!";
 	}
 	catch (Exception $e)
-	{		
+	{
+		fnLogError($e);		
 		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 		$_SESSION['_msg_err'] = $str;			
 	}

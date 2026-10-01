@@ -166,6 +166,7 @@ if (isset($_POST['SAVE'])) {
 
         db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
         db_rollback($conn);
         $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         header("location:invoice_list.php");
@@ -304,6 +305,7 @@ if (isset($_POST['UPDATE']))
         // print_r($data);die();
         db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
         db_rollback($conn);
         $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         header("location:invoice_list.php");
@@ -488,6 +490,7 @@ if (isset($_POST['FINALIZE']))
         // print_r($data);die();
         db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
         db_rollback($conn);
         $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         header("location:invoice_list.php");

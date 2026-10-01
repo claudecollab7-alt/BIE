@@ -269,6 +269,7 @@ if ($_REQUEST['emp_type'] == 1) {
         }
         die();
     } catch (Exception $e) {
+    	fnLogError($e);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
         header("location:lst_employee.php");	
@@ -632,6 +633,7 @@ if(isset($_REQUEST['hidd_asset_id'])){
 	}
     die();
 } catch (Exception $e) {
+	fnLogError($e);
     $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
     $_SESSION['_msg_err'] = $str;
     header("location:lst_employee.php");	

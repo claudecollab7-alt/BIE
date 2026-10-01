@@ -30,7 +30,8 @@ if (isset($_REQUEST['so_id']))
 
 		}
 		catch (Exception $e)
-		{		
+		{
+			fnLogError($e);		
 			$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 			$_SESSION['_msg_err'] = $str;			
 		}	
@@ -55,7 +56,8 @@ if (isset($_REQUEST['so_id']))
 
 		}
 		catch (Exception $e)
-		{		
+		{
+			fnLogError($e);		
 			$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
 			$_SESSION['_msg_err'] = $str;			
 		}	

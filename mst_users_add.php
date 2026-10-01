@@ -93,6 +93,7 @@ if (isset($_POST['UPDATE'])){
 		
 		echo $_SESSION['_msg'] = "User details has been successfully updated..!";
 		}catch(Exception $e){
+			fnLogError($e);
 			echo $_SESSION['_msg_err'] = $e;
 		}
 	

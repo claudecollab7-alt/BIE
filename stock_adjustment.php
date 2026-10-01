@@ -121,6 +121,7 @@ if (isset($_POST['SAVE'])) {
                           . " (" . $before_qty . " &rarr; " . $after_qty . ")";
 
     } catch (Exception $e) {
+    	fnLogError($e);
         db_rollback($conn);
         $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         $_SESSION['_msg_err'] = $str;
@@ -134,6 +135,7 @@ $branch_stock_field = '';
 try {
     $branch_stock_field = fnGetBranchStockField($conn, $_SESSION['_user_branch']);
 } catch (Exception $e) {
+	fnLogError($e);
     $_SESSION['_msg_err'] = $e->getMessage();
 }
 ?>

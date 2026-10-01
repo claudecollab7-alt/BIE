@@ -20,6 +20,7 @@
 		}
 		catch(Exception $e)
 		{
+			fnLogError($e);
 			$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			echo $str;
 		}

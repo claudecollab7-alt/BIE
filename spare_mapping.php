@@ -49,6 +49,7 @@ if (isset($_POST['SAVE']) || isset($_POST['UPDATE'])) {
 		else
 			$_SESSION['_msg'] = "Spare Mapping Successfully Updated..!";
 	} catch (Exception $e) {
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}

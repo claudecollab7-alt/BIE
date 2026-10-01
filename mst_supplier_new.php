@@ -75,6 +75,7 @@ if (isset($_POST['SAVE'])) {
 		$last_id = $conn->lastInsertId();
 		$_SESSION['_msg'] = "Supplier succesfully saved..!";
 	} catch (Exception $e) {
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -163,6 +164,7 @@ if (isset($_POST['UPDATE'])) {
 
 		$_SESSION['_msg'] = "Supplier succesfully Updated..!";
 	} catch (Exception $e) {
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}

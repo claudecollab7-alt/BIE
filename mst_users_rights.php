@@ -69,6 +69,7 @@ if(isset($_POST['UPDATE']))
 		
 		$_SESSION['_msg'] = "User rights has been successfully updated..!";
 	}catch(Exception $e){
+		fnLogError($e);
 		echo $_SESSION['_msg_err'] = $e;
 	}
 	header("location:mst_user.php");

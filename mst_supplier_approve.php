@@ -35,7 +35,8 @@ if(isset($_POST['APPROVE']))
         $_SESSION['_msg'] = "Supplier succesfully Approved..!";
     }
     catch (Exception $e)
-    {       
+    {
+    	fnLogError($e);       
         $str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);         
         $_SESSION['_msg_err'] = $str;           
     }
