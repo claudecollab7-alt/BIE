@@ -8,6 +8,72 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-01 - Login pages: query bound, csrf, session id regenerated
+
+### `index.php`
+
+The login query was built by string concatenation straight from `$_REQUEST`:
+
+```php
+$sql = "SELECT * FROM tbl_user WHERE usr_status = 1 AND usr_access=1
+        AND usr_logname = '".$_REQUEST['txt_username']."'
+        AND usr_logpwd LIKE BINARY '".StandardHash($_REQUEST['txt_userpwd'])."' ";
+```
+
+The username went in raw, so the password half of the `WHERE` could be commented out or
+`OR`-ed away. All three of these logged in as the first active user before the fix:
+
+| Username typed | Password |
+|---|---|
+| `admin@bie.com' -- ` | anything |
+| `' OR '1'='1` | anything |
+| `' UNION SELECT * FROM tbl_user WHERE usr_id=1 -- ` | anything |
+
+Now a prepared statement with both values bound. Nothing else about who may log in changed:
+same `usr_status = 1 AND usr_access = 1`, same `LIKE BINARY` hash compare, username trimmed.
+
+Also on this page:
+
+- `csrf_check('login')` on the post. A stale or replayed login post is bounced back to the
+  form with a message instead of being run again.
+- `session_regenerate_id(true)` on success, and the csrf / form tokens are dropped, so a
+  session id fixed before login cannot be used after it.
+- Failed logins are written to the error log with the username that was tried.
+- The username field no longer ships `value="admin@bie.com"` prefilled.
+- `autocomplete="username"` / `"current-password"` so password managers behave.
+
+Messages on this page use `$_SESSION['_msg']` - that is the only key the login card renders.
+
+### `admin_multi_logins.php`
+
+Second login path, admin only. Same concatenated query, and it also did this:
+
+```php
+echo $sql = "SELECT * FROM tbl_user WHERE ... AND usr_logpwd = '".trim($_REQUEST['txt_userpwd'])."' ";
+```
+
+The query, with the password in it, was printed to the page. Removed. Query bound,
+`csrf_check('admin_multi_logins')`, session id regenerated and tokens rotated on success.
+
+**Left alone on purpose:** this page compares the typed password against `usr_logpwd`
+without `StandardHash()`, while `index.php` hashes first. So the feature only succeeds if
+somebody types the stored hash. Looks wrong, but changing it changes who can use the
+screen, so it is a decision for the team, not a side effect of this fix.
+
+### Not touched
+
+Report filter forms. They only read, and they work.
+
+### Checks
+
+`test_login.php` (16) - real credentials still work, the five attack strings all fail
+against the bound query and succeed against the old one, `tbl_user` survives an injected
+`DROP`. `test_loginflow.php` (13) - first visit, retry after a wrong password, back-button
+resubmit rejected, two tabs both work, tokens cleared at login, bare and forged posts
+rejected.
+
+---
+
 ## 2026-10-01 - Error log, double-submit lock, csrf and rollback everywhere
 
 ### Error log
