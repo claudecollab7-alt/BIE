@@ -58,4 +58,52 @@ function fnBranchRow($dbconn, $p, $sno)
 	</tr>';
 }
 
+// One row of the item group table. Position and qty stay editable and post
+// back as arrays; a read-only user (type S) still posts them as hidden values.
+function fnItemGroupRow($dbconn, $item_id, $qty, $position, $sno)
+{
+	$item_id  = (int)$item_id;
+	$qty      = trim($qty);
+	$position = trim($position);
+
+	$decp = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status = '1' AND item_id ", $item_id);
+	$code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_status = '1' AND item_id ", $item_id);
+
+	$h = function ($v) { return htmlspecialchars($v, ENT_QUOTES); };
+	$readonly = (isset($_SESSION['_user_type']) && $_SESSION['_user_type'] == 'S');
+
+	$row = '<tr class="ig-row" data-item-id="' . $item_id . '">
+		<td class="ig-sno">' . (int)$sno . '</td>';
+
+	if (!$readonly) {
+		$row .= '<td>
+			<input type="hidden" class="ig_item_id" name="ig_item_id[]" value="' . $item_id . '" />
+			<input type="text" class="ig_position" name="ig_position[]" value="' . $h($position) . '"
+				onkeypress="return isNumberKey(event)" maxlength="2" />
+		</td>';
+	} else {
+		$row .= '<input type="hidden" class="ig_item_id" name="ig_item_id[]" value="' . $item_id . '" />
+			<input type="hidden" class="ig_position" name="ig_position[]" value="' . $h($position) . '" />';
+	}
+
+	$row .= '<td>' . htmlspecialchars($decp) . ' - ' . htmlspecialchars($code) . '</td>';
+
+	if (!$readonly) {
+		$row .= '<td>
+			<input type="text" class="ig_qty" name="ig_qty[]" value="' . $h($qty) . '"
+				onkeypress="return isNumberKey_With_Dot(event)" maxlength="3" />
+		</td>';
+	} else {
+		$row .= '<td align="center">' . htmlspecialchars($qty) . '
+			<input type="hidden" class="ig_qty" name="ig_qty[]" value="' . $h($qty) . '" /></td>';
+	}
+
+	$row .= '<td align="center">
+			<a href="javascript:;" class="ig-remove" title="Remove"><i class="icon-bin bg-delete mr-2"></i></a>
+		</td>
+	</tr>';
+
+	return $row;
+}
+
 }

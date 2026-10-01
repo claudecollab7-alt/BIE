@@ -8,6 +8,8 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-01 group items moved off tbl_item_group_details_temp - rows live in the page, posted back as arrays
+
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL); 
 
@@ -39,27 +41,22 @@ if (isset($_POST['SAVE'])) {
 		$result = $conn->prepare($delete_details);
 		$result->execute();
 
-		$result = $conn->query("SELECT * FROM tbl_item_group_details_temp WHERE session_id = '" . $_SESSION['session_id'] . "'");
-
-		if ($result->rowCount() > 0) {
+		// group items come from the form, not a temp table
+		if (isset($_REQUEST['ig_item_id']) && is_array($_REQUEST['ig_item_id'])) {
 			$stmt = null;
 			$stmt = $conn->prepare("INSERT INTO tbl_item_group_details (item_group_id, item_id, item_qty, item_position) VALUES (:item_group_id, :item_id, :item_qty, :item_position)");
 
-			while ($obj = $result->fetchAll(PDO::FETCH_ASSOC)) {
-				foreach ($obj as $row => $value) {
-					$data = array(
-						':item_group_id' => $last_id,
-						':item_id' => $value['temp_item_id'],
-						':item_qty' => $value['temp_item_qty'],
-						':item_position' => $value['temp_item_position']
-					);
-					$stmt->execute($data);
+			for ($g = 0; $g < count($_REQUEST['ig_item_id']); $g++) {
+				if ((int)$_REQUEST['ig_item_id'][$g] <= 0) {
+					continue;
 				}
+				$stmt->execute(array(
+					':item_group_id' => $last_id,
+					':item_id'       => $_REQUEST['ig_item_id'][$g],
+					':item_qty'      => $_REQUEST['ig_qty'][$g],
+					':item_position' => $_REQUEST['ig_position'][$g]
+				));
 			}
-
-			$sql =  "DELETE FROM tbl_item_group_details_temp WHERE session_id = '" . $_SESSION['session_id'] . "'";
-			$result = $conn->prepare($sql);
-			$result->execute();
 		}
 		$_SESSION['_msg'] = "Group succesfully saved..!";
 	} catch (Exception $e) {
@@ -98,30 +95,23 @@ if (isset($_POST['UPDATE'])) {
 		$sql =  "DELETE FROM tbl_item_group_details WHERE item_group_id = '" . $update_id . "'";
 		$result = $conn->prepare($sql);
 		$result->execute();
-		$result = $conn->query("SELECT * FROM tbl_item_group_details_temp WHERE session_id = '" . $_SESSION['session_id'] . "'");
-
-		if ($result->rowCount() > 0) {
+		// group items come from the form, not a temp table
+		if (isset($_REQUEST['ig_item_id']) && is_array($_REQUEST['ig_item_id'])) {
 			$stmt = null;
 			$stmt = $conn->prepare("INSERT INTO tbl_item_group_details (item_group_id, item_id, item_qty, item_position) VALUES (:item_group_id, :item_id, :item_qty, :item_position)");
 
-			while ($obj = $result->fetchAll(PDO::FETCH_ASSOC)) {
-				foreach ($obj as $row => $value) {
-					$data = array(
-						':item_group_id' => $update_id,
-						':item_id' => $value['temp_item_id'],
-						':item_qty' => $value['temp_item_qty'],
-						':item_position' => $value['temp_item_position']
-					);
-					$stmt->execute($data);
+			for ($g = 0; $g < count($_REQUEST['ig_item_id']); $g++) {
+				if ((int)$_REQUEST['ig_item_id'][$g] <= 0) {
+					continue;
 				}
+				$stmt->execute(array(
+					':item_group_id' => $update_id,
+					':item_id'       => $_REQUEST['ig_item_id'][$g],
+					':item_qty'      => $_REQUEST['ig_qty'][$g],
+					':item_position' => $_REQUEST['ig_position'][$g]
+				));
 			}
-
-			$sql =  "DELETE FROM tbl_item_group_details_temp WHERE session_id = '" . $_SESSION['session_id'] . "'";
-			$result = $conn->prepare($sql);
-			$result->execute();
 		}
-
-
 		$_SESSION['_msg'] = "Group succesfully Updated..!";
 	} catch (Exception $e) {
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
@@ -135,41 +125,7 @@ if (isset($_POST['UPDATE'])) {
 
 $enq_date = date('d-m-Y');
 $prefix = "Mr.";
-$sql1 =  "DELETE FROM tbl_item_group_details_temp";
-$result1 = $conn->prepare($sql1);
-$result1->execute();
-
 if (isset($_REQUEST['group_id'])) {
-	try {
-		$sql =  "DELETE FROM tbl_item_group_details_temp WHERE session_id = '" . $_SESSION['session_id'] . "'";
-		$result = $conn->prepare($sql);
-		$result->execute();
-
-		/*$result1 = $conn->query("SELECT * FROM tbl_item_group as a LEFT JOIN tbl_item_group_details as b 
-					ON a.item_group_id = b.item_group_id WHERE a.status = 1 AND b.item_group_id =".$_REQUEST['group_id']);	*/
-
-		$result1 = $conn->query("SELECT * FROM tbl_item_group_details  WHERE item_group_id =" . $_REQUEST['group_id']);
-		if ($result1->rowCount() > 0) {
-			$stmt = null;
-			$stmt = $conn->prepare("INSERT INTO tbl_item_group_details_temp (temp_item_id, temp_item_qty, temp_item_position, session_id, temp_date) VALUES (:temp_item_id, :temp_item_qty, :temp_item_position, :session_id, :temp_date)");
-			while ($obj = $result1->fetchAll(PDO::FETCH_ASSOC)) {
-				foreach ($obj as $key => $value) {
-					$data = array(
-						':temp_item_id' => $value['item_id'],
-						':temp_item_qty' => $value['item_qty'],
-						':temp_item_position' => $value['item_position'],
-						':session_id' => $_SESSION['session_id'],
-						':temp_date' => date('Y-m-d')
-					);
-					$stmt->execute($data);
-				}
-			}
-		}
-	} catch (Exception $e) {
-		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
-		$_SESSION['_msg_err'] = $str;
-	}
-
 	$get_val = $conn->query("SELECT * FROM tbl_item_group WHERE status = '1' AND item_group_id = " . $_REQUEST['group_id']);
 	if ($get_val->rowCount() > 0) {
 		$get = $get_val->fetch(PDO::FETCH_OBJ);
@@ -301,6 +257,20 @@ if (isset($_REQUEST['group_id'])) {
 			var item_qty = $('#item_qty').val();
 			var item_position = $('#item_position').val();
 
+			// already in the table - add to its quantity instead of a second row
+			var existing = $('#itemGroupTable tbody tr.ig-row[data-item-id="' + item_id + '"]');
+			if (existing.length) {
+				var cur = parseFloat(existing.find('.ig_qty').val()) || 0;
+				existing.find('.ig_qty').val(cur + (parseFloat(item_qty) || 0));
+				existing.find('.ig_position').val(item_position);
+				fnItemGroupSort();
+				$("#item_name").val('');
+				$("#item_id").val('');
+				$("#item_qty").val('');
+				$("#item_position").val('');
+				return false;
+			}
+
 			$.ajax({
 				type: "POST",
 				url: "inc/cis_ajax/jquery_item_group_details.php",
@@ -308,15 +278,12 @@ if (isset($_REQUEST['group_id'])) {
 					"item_id": item_id,
 					"item_qty": item_qty,
 					"item_position": item_position,
-					'mode': 'save',
-					'rec_type': 'ind'
+					"sno": $('#itemGroupTable tbody tr').length + 1,
+					'mode': 'row'
 				}
 			}).done(function(msg) {
-				//alert(msg);
-				$('#show_table').html(msg);
-				var n = msg.indexOf("tbody");
-				$('#trade_items').val(n);
-
+				$('#itemGroupTable tbody').append(msg);
+				fnItemGroupSort();
 				$("#item_name").val('');
 				$("#item_id").val('');
 				$("#item_qty").val('');
@@ -327,9 +294,6 @@ if (isset($_REQUEST['group_id'])) {
 
 		//Trading Group
 		$("#add_items_group").click(function() {
-			/*if (notSelected(document.thisForm.group_id, "Group Name..!")) {
-				return false;
-			}*/
 			if (isNull(document.thisForm.item_qty, "Qty..")) {
 				return false;
 			}
@@ -348,37 +312,57 @@ if (isset($_REQUEST['group_id'])) {
 					"group_id": group_id,
 					"item_qty": item_qty,
 					"item_position": item_position,
-					'mode': 'save',
-					'rec_type': 'group'
+					"sno": $('#itemGroupTable tbody tr').length + 1,
+					'mode': 'group_rows'
 				}
 			}).done(function(msg) {
-				$('#show_table').html(msg);
-				var n = msg.indexOf("tbody");
-				$('#trade_items').val(n);
+				// merge: an item already listed gains the quantity, the rest are appended
+				var incoming = $('<tbody>').append(msg);
+				incoming.find('tr.ig-row').each(function() {
+					var id = $(this).attr('data-item-id');
+					var add = parseFloat($(this).find('.ig_qty').val()) || 0;
+					var row = $('#itemGroupTable tbody tr.ig-row[data-item-id="' + id + '"]');
+					if (row.length) {
+						var cur = parseFloat(row.find('.ig_qty').val()) || 0;
+						row.find('.ig_qty').val(cur + add);
+					} else {
+						$('#itemGroupTable tbody').append($(this));
+					}
+				});
+				fnItemGroupSort();
 				$("#group_id").select2('val', '');
 				$("#item_qty").val('');
 				$("#item_position").val('');
-
 			});
 		});
 
 	});
 
-
-	function remove_item(temp_id) {
-		$.ajax({
-			type: "POST",
-			url: "inc/cis_ajax/jquery_item_group_details.php",
-			data: {
-				temp_id: temp_id,
-				mode: 'delete'
-			}
-		}).done(function(msg) {
-			$('#show_table').html(msg);
-			var n = msg.indexOf("tbody");
-			$('#trade_items').val(n);
+	// keep the rows in position order and renumber
+	function fnItemGroupSort() {
+		var rows = $('#itemGroupTable tbody tr.ig-row').get();
+		rows.sort(function(a, b) {
+			var pa = parseFloat($(a).find('.ig_position').val()) || 0;
+			var pb = parseFloat($(b).find('.ig_position').val()) || 0;
+			return pa - pb;
 		});
+		$.each(rows, function(i, r) {
+			$('#itemGroupTable tbody').append(r);
+			$(r).find('.ig-sno').text(i + 1);
+		});
+		$('#trade_items').val($('#itemGroupTable tbody tr.ig-row').length);
 	}
+
+	$(document).on('change', '#itemGroupTable .ig_position', function() {
+		fnItemGroupSort();
+	});
+
+	$(document).on('click', '#itemGroupTable .ig-remove', function() {
+		$(this).closest('tr').remove();
+		fnItemGroupSort();
+	});
+
+	$(function() { fnItemGroupSort(); });
 
 	function fnValidate() {
 		if (isNull(document.thisForm.item_group_name, "Group Name..")) {
@@ -397,8 +381,7 @@ if (isset($_REQUEST['group_id'])) {
 			return false;
 		}
 
-		var trade_items = document.thisForm.trade_items.value;
-		if (document.thisForm.trade_items.value == "-1") {
+		if (parseInt(document.thisForm.trade_items.value || 0, 10) < 1) {
 			alert("Please add Items to Group..");
 			return false;
 		}
@@ -448,6 +431,7 @@ if (isset($_REQUEST['group_id'])) {
 					<div class="col-md-12">
 						<!-- This Form UI Starts here --->
 						<form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<input type="hidden" name="trade_items" id="trade_items" value="0">
 							<div class="card">
 								<div class="card-header bg-pgheader text-white header-elements-inline">
 									<h6 class="card-title"> Item Details</h6>
@@ -566,7 +550,7 @@ if (isset($_REQUEST['group_id'])) {
 
 									<div class="row">
 										<div id="show_table" class="col-md-12">
-											<table class="table table-xs table-bordered ">
+											<table class="table table-xs table-bordered " id="itemGroupTable">
 												<thead>
 													<tr class="bg-teal">
 														<th width="1%">S.No</th>
@@ -578,10 +562,23 @@ if (isset($_REQUEST['group_id'])) {
 														<th width="5%">Action</th>
 													</tr>
 												</thead>
+												<tbody>
+												<?php
+												// existing group items render straight from tbl_item_group_details
+												if (isset($_REQUEST['group_id']) && $_REQUEST['group_id'] != '') {
+													$ig_res = $conn->prepare("SELECT item_id, item_qty, item_position FROM tbl_item_group_details
+																			   WHERE item_group_id = :gid ORDER BY item_position ASC");
+													$ig_res->execute(array(':gid' => $_REQUEST['group_id']));
+													$ig_sno = 1;
+													while ($ig = $ig_res->fetch(PDO::FETCH_OBJ)) {
+														echo fnItemGroupRow($dbconn, $ig->item_id, $ig->item_qty, $ig->item_position, $ig_sno++);
+													}
+												}
+												?>
+												</tbody>
 											</table>
 										</div>
 									</div>
-									<script type="text/javascript">remove_item(0);</script>
 
 
 								
