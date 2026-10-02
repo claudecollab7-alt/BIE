@@ -24,8 +24,11 @@ if ($_REQUEST['branch_id'] == '')
 else
     $branch = $_REQUEST['branch_id'];
 
+$rpt_item_id = isset($_REQUEST['item_id']) ? trim($_REQUEST['item_id']) : '';
+
 // 2026-09-22 reason column + ADJ rows, qty shown signed
 // 2026-09-23 runs from GET so the stock list View All link works, query now bound
+// 2026-10-02 item is optional now - blank lists every item with an Item column, newest row on top
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -166,7 +169,7 @@ else
                                             ?>
                                         </select>
                                         <script>
-                                            document.getElementById('item_id').value = "<?php echo $_REQUEST['item_id']; ?>";
+                                            document.getElementById('item_id').value = "<?php echo $rpt_item_id; ?>";
                                         </script>
                                     </div>
                                     <div class="form-group col-md-3">
@@ -193,13 +196,21 @@ else
 
                                 <?php
                                 // $_REQUEST not $_POST so the View All link can open it already run
-                                if (isset($_REQUEST['Report']) && $_REQUEST['item_id'] != '') {
+                                if (isset($_REQUEST['Report'])) {
                                     $from_dt = date("Y-m-d", strtotime($_REQUEST['from_dt']));
                                     $to_dt = date("Y-m-d", strtotime($_REQUEST['to_dt']));
 
 
 
-                                    $itemName = " | " . $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $_REQUEST['item_id']);
+                                    // no item picked - list them all and name each row
+                                    $all_items = ($rpt_item_id == '');
+                                    $col_count = $all_items ? 10 : 9;
+
+                                    if ($all_items) {
+                                        $itemName = " | All Items";
+                                    } else {
+                                        $itemName = " | " . $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $rpt_item_id);
+                                    }
 
                                     // $branch_name =  $dbconn->GetSingleReconrd("mst_branch", "branch_name", "branch_id", $_REQUEST['branch_id']);
 
@@ -233,12 +244,13 @@ else
                                     echo '<table class="table table-xs invoice_tbl" id="rpt_db_table">
 										  <thead>
 										    <tr style="display:none">
-												<th colspan="10"><center><b>Item Stock History - Item Stock - Report</b><br>as on '
+												<th colspan="' . $col_count . '"><center><b>Item Stock History - Item Stock - Report</b><br>as on '
                                         . date("d-M-Y", strtotime($from_dt)) . ' - ' . date("d-M-Y", strtotime($to_dt)) . '' . $itemName . ' </center></th>
 											</tr>
 															<tr class="rpt_heading">
 																<th><b>#</b></th>
-																<th><b>Date</b></th>
+																<th><b>Date</b></th>'
+                                        . ($all_items ? '<th><b>Item</b></th>' : '') . '
 																<th><b>Type</b></th>
 																<th><b>Ref Code</b></th>
 																<th><b>Before Qty</b></th>
@@ -256,17 +268,26 @@ else
 
 
                                     // bound, not interpolated - reachable by GET from the stock list modal
-                                    $result = $conn->prepare("SELECT * FROM tbl_stock_flow
-                                             WHERE stock_status = 0 AND trans_qty > 0
-                                               AND trans_date BETWEEN :from_dt AND :to_dt
-                                               AND item_id = :item_id AND branch_id = :branch_id
-                                             ORDER BY auto_id ASC");
-                                    $result->execute(array(
+                                    $params = array(
                                         ':from_dt'   => $from_dt,
                                         ':to_dt'     => $to_dt,
-                                        ':item_id'   => (int)$_REQUEST['item_id'],
                                         ':branch_id' => (int)$_REQUEST['branch_id']
-                                    ));
+                                    );
+                                    $item_where = '';
+                                    if (!$all_items) {
+                                        $item_where = ' AND sf.item_id = :item_id ';
+                                        $params[':item_id'] = (int)$rpt_item_id;
+                                    }
+
+                                    // item name joined in - a lookup per row would be too many on the all-items run
+                                    $result = $conn->prepare("SELECT sf.*, itm.item_code, itm.item_desciption
+                                             FROM tbl_stock_flow sf
+                                             LEFT JOIN tbl_item_details itm ON itm.item_id = sf.item_id
+                                             WHERE sf.stock_status = 0 AND sf.trans_qty > 0
+                                               AND sf.trans_date BETWEEN :from_dt AND :to_dt
+                                               AND sf.branch_id = :branch_id" . $item_where . "
+                                             ORDER BY sf.trans_date DESC, sf.auto_id DESC");
+                                    $result->execute($params);
                                     if ($result->rowCount() > 0) {
                                         $Sno = 1;
                                         while ($obj = $result->fetch()) {
@@ -278,6 +299,12 @@ else
                                             $trans_type = fnStockTransLabel($obj->trans_type);
                                             $trans_qty  = fnStockSignedQty($obj);
                                             $remarks    = isset($obj->trans_remarks) ? $obj->trans_remarks : '';
+
+                                            // only shown on the all-items run
+                                            $item_label = trim(trim((string)$obj->item_code) . ' ~ ' . trim((string)$obj->item_desciption), ' ~');
+                                            if ($item_label == '') {
+                                                $item_label = 'Item ' . $obj->item_id;
+                                            }
 
                                             //------grn ------//
 
@@ -340,7 +367,8 @@ else
                                             echo '<tr ' . $color . '>
 
 												       <td>' . $Sno . '</td>
-												        <td align="center">' . date('d-m-y', strtotime($obj->trans_date)) . '</td>
+												        <td align="center">' . date('d-m-y', strtotime($obj->trans_date)) . '</td>'
+                                                        . ($all_items ? '<td align="left">' . htmlspecialchars($item_label) . '</td>' : '') . '
 												        <td align="center">' . $trans_type . '</td>
 												        <td align="center">' . $trans_code . '</td>
 												        <td>' . $obj->before_qty . '</td>
@@ -354,7 +382,7 @@ else
                                         }
                                     } else {
                                         echo ' <tr class="font-weight-semibold rpt_footer ">
-											            <td colspan="9" align="center">No History found..!</td>
+											            <td colspan="' . $col_count . '" align="center">No History found..!</td>
 											  </tr>';
                                     }
 
@@ -406,10 +434,8 @@ else
 
     function fnValidate() {
 
-        if (isNull(document.rptForm.item_id, "Item ..!")) {
-            return false;
-        }
-        document.rptForm.submit();
+        // item is optional - blank means every item
+        return true;
     }
 </script>
 
