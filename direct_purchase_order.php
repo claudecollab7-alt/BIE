@@ -138,6 +138,7 @@ if (isset($_POST['Draft'])) {
 		$update_po->execute($data1);
 		db_commit($conn);
 	} catch (Exception $e) {
+		fnLogError($e);
 		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
@@ -262,6 +263,7 @@ if (isset($_POST['UPDATE'])) {
 		$update_po->execute($data1);
 		db_commit($conn);
 	} catch (Exception $e) {
+		fnLogError($e);
 		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
@@ -389,6 +391,7 @@ if (isset($_POST['FINALIZE'])) {
 			header("location:lst_direct_po.php");
 			die();
 		} catch (Exception $e) {
+			fnLogError($e);
 			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
@@ -522,6 +525,7 @@ if (isset($_POST['FINALIZE'])) {
 			header("location:lst_direct_po.php");
 			die();
 		} catch (Exception $e) {
+			fnLogError($e);
 			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;

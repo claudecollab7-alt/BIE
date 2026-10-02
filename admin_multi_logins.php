@@ -9,6 +9,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 login query bound and no longer echoed, csrf + form token, session id regenerated
+
 // if (!isset($_REQUEST['branch_id']) || $_REQUEST['branch_id'] == '') {
 //     $_REQUEST['branch_id'] = 2	;
 // }
@@ -19,9 +21,21 @@ $dbconn = new dbhandler();
 $_SESSION['_admin_multi_login']="";
 if(isset($_POST['SAVE']))
 {
-	echo $sql = "SELECT * FROM tbl_user WHERE  usr_status = 1 AND  usr_access=1 AND usr_logname = '".$_REQUEST['txt_username']."' AND usr_logpwd = '".trim($_REQUEST['txt_userpwd'])."' ";
-	
-	$res = $conn->query($sql);
+	if (!csrf_check('admin_multi_logins')) {
+		$_SESSION['_msg'] = "Your session expired or the form was already submitted. Please try again..!";
+		header("location:admin_multi_logins.php");
+		die();
+	}
+
+	// bound, and no longer echoed - it used to print the password to the page
+	$res = $conn->prepare("SELECT * FROM tbl_user
+							WHERE usr_status = 1 AND usr_access = 1
+							  AND usr_logname = :usr_logname
+							  AND usr_logpwd = :usr_logpwd");
+	$res->execute(array(
+		':usr_logname' => $_REQUEST['txt_username'],
+		':usr_logpwd'  => trim($_REQUEST['txt_userpwd'])
+	));
 	$no = $res->rowCount();	
 	// print_r($_REQUEST['txt_username']);
 	// print_r($_REQUEST['txt_userpwd']);
@@ -29,6 +43,8 @@ if(isset($_POST['SAVE']))
 	if ($no>0) 
 	{		
 		$obj = $res->fetch(PDO::FETCH_OBJ);		
+		session_regenerate_id(true);
+		unset($_SESSION['csrf_token'], $_SESSION['form_tokens']);
 		$_SESSION['_user']="crm_user";
 		$_SESSION['_user_id']=$obj->usr_id;
 		$_SESSION['_user_name']=$obj->usr_name;
@@ -188,6 +204,7 @@ if(isset($_POST['SAVE']))
 
 						<!-- Basic datatable -->
 						<form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<?php csrf_fields('admin_multi_logins'); ?>
 							<input type="hidden" name="item_id" id="item_id" value="<?php echo $_REQUEST['item_id']; ?>">
 							
 							<input type="hidden" class="form-control" placeholder="" name="txt_username" id = "txt_username">

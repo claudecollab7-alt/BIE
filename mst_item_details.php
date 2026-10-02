@@ -150,6 +150,7 @@ if (isset($_POST['SAVE'])) {
 		$_SESSION['_msg'] = "Item details successfully saved..!";
 		db_commit($conn);
 	} catch (Exception $e) {
+		fnLogError($e);
 		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
@@ -244,6 +245,7 @@ if (isset($_POST['UPDATE'])) {
 		$_SESSION['_msg'] = "Item details successfully updated..!";
 		db_commit($conn);
 	} catch (Exception $e) {
+		fnLogError($e);
 		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;

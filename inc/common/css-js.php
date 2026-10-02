@@ -359,4 +359,56 @@
 */
 
 		});
+
+		// Stop a form being submitted twice. Runs only once validation has let
+		// the submit through, so an alert still leaves the buttons usable.
+		function fnLockForm(form) {
+			var f = $(form);
+			if (f.data('bie-locked')) {
+				return false;              // already on its way
+			}
+			f.data('bie-locked', true);
+
+			// disable after the browser has read the form, otherwise the clicked
+			// button's name is dropped and the php handler never sees it
+			setTimeout(function () {
+				f.find('input[type=submit], input[type=button], button')
+					.prop('disabled', true).addClass('disabled');
+			}, 0);
+			return true;
+		}
+
+		function fnUnlockForms() {
+			$('form').removeData('bie-locked');
+			$('form').find('input[type=submit], input[type=button], button')
+				.prop('disabled', false).removeClass('disabled');
+		}
+
+		$(document).on('submit', 'form', function (e) {
+			if (e.isDefaultPrevented()) {
+				return;                    // validation said no
+			}
+			if (fnLockForm(this) === false) {
+				e.preventDefault();        // second attempt, drop it
+			}
+		});
+
+		// several screens call document.thisForm.submit() from their validation,
+		// which never fires the submit event - lock those too
+		(function () {
+			var nativeSubmit = HTMLFormElement.prototype.submit;
+			HTMLFormElement.prototype.submit = function () {
+				if (fnLockForm(this) === false) {
+					return;
+				}
+				return nativeSubmit.apply(this, arguments);
+			};
+		})();
+
+		// the back button restores a page with its buttons disabled
+		$(window).on('pageshow', function (e) {
+			if (e.originalEvent && e.originalEvent.persisted) {
+				fnUnlockForms();
+			}
+		});
 	</script>

@@ -7,48 +7,77 @@ require_once("inc/common/userclass.php");
 $conn = new dbconnect();	
 $dbconn= new dbhandler();	
 
+// 2026-10-01 login query bound (it was concatenated), csrf + form token, session id regenerated on login
+
 if(isset($_POST['LOGIN']))
 {
-	$sql = "SELECT * FROM tbl_user WHERE  usr_status = 1 AND  usr_access=1 AND usr_logname = '".$_REQUEST['txt_username']."' AND usr_logpwd  
-			LIKE BINARY '".StandardHash($_REQUEST['txt_userpwd'])."' ";
-	
-	$res = $conn->query($sql);
-	$no = $res->rowCount();	
-	if ($no>0) 
-	{		
-		$obj = $res->fetch(PDO::FETCH_OBJ);		
-		$_SESSION['_user']="crm_user";
-		$_SESSION['_user_id']=$obj->usr_id;
-		$_SESSION['_user_name']=$obj->usr_name;
-		$_SESSION['_user_group']=$obj->usr_group;	
-		$_SESSION['_user_type']=$obj->usr_type;	
-		$_SESSION['_user_branch']=$obj->branch_id;	
-		$_SESSION['session_id'] = date("Ymd").date("His");
-		$_SESSION['_usr_avatar'] = $obj->usr_avatar;		
-		$_SESSION['_msg']="";
-		$_SESSION['_msg_err']="";
-		$_SESSION['timer'] = time();		
-		$_SESSION['_finyr']=$dbconn->GetSingleReconrd("mst_finyear","finyr_name","finyr_active",1);
-		header("location:home.php");	
-		die();
-	}
-	else
-	{		
-		$_SESSION['_user'] = "";
-		$_SESSION['_user_id'] = "";		
-		$_SESSION['_user_name'] = "";	
-		$_SESSION['_user_group'] = "";	
-		$_SESSION['_user_type'] = "";				
-		$_SESSION['_user_branch']= "";	
-		$_SESSION['session_id'] = "";
-		$_SESSION['_usr_avatar'] = "";			
-		$_SESSION['_msg']="Invalid User Name / Password. <br>Please Try Again..!";	
-		$_SESSION['_msg_err']="";
-		
+	// stale or repeated login post
+	if (!csrf_check('login')) {
+		$_SESSION['_msg'] = "Your session expired or the form was already submitted. Please try again..!";
 		header("location:index.php");
 		die();
 	}
-	
+
+	$logged_in = false;
+
+	try {
+		// bound, not built by hand - this query decides who gets in
+		$stmt = $conn->prepare("SELECT * FROM tbl_user
+								 WHERE usr_status = 1 AND usr_access = 1
+								   AND usr_logname = :usr_logname
+								   AND usr_logpwd LIKE BINARY :usr_logpwd");
+		$stmt->execute(array(
+			':usr_logname' => trim($_REQUEST['txt_username']),
+			':usr_logpwd'  => StandardHash($_REQUEST['txt_userpwd'])
+		));
+
+		$obj = $stmt->fetch(PDO::FETCH_OBJ);
+		$logged_in = ($obj !== false);
+	} catch (Exception $e) {
+		fnLogError($e, 'login');
+		$logged_in = false;
+	}
+
+	if ($logged_in)
+	{
+		// new session id on login, so a fixed one cannot be reused
+		session_regenerate_id(true);
+		unset($_SESSION['csrf_token'], $_SESSION['form_tokens']);
+
+		$_SESSION['_user']="crm_user";
+		$_SESSION['_user_id']=$obj->usr_id;
+		$_SESSION['_user_name']=$obj->usr_name;
+		$_SESSION['_user_group']=$obj->usr_group;
+		$_SESSION['_user_type']=$obj->usr_type;
+		$_SESSION['_user_branch']=$obj->branch_id;
+		$_SESSION['session_id'] = date("Ymd").date("His");
+		$_SESSION['_usr_avatar'] = $obj->usr_avatar;
+		$_SESSION['_msg']="";
+		$_SESSION['_msg_err']="";
+		$_SESSION['timer'] = time();
+		$_SESSION['_finyr']=$dbconn->GetSingleReconrd("mst_finyear","finyr_name","finyr_active",1);
+		header("location:home.php");
+		die();
+	}
+	else
+	{
+		fnLogError('failed login for ' . trim($_REQUEST['txt_username']), 'login');
+
+		$_SESSION['_user'] = "";
+		$_SESSION['_user_id'] = "";
+		$_SESSION['_user_name'] = "";
+		$_SESSION['_user_group'] = "";
+		$_SESSION['_user_type'] = "";
+		$_SESSION['_user_branch']= "";
+		$_SESSION['session_id'] = "";
+		$_SESSION['_usr_avatar'] = "";
+		$_SESSION['_msg']="Invalid User Name / Password. <br>Please Try Again..!";
+		$_SESSION['_msg_err']="";
+
+		header("location:index.php");
+		die();
+	}
+
 }
 ?>
 
@@ -85,6 +114,7 @@ if(isset($_POST['LOGIN']))
 
 				<!-- Login card -->				
 				<form name="thisForm" class="login-form" method="post" action="index.php" onSubmit="return fnValidate();">
+					<?php csrf_fields('login'); ?>
 					<div class="card mb-0">
 						<div class="card-body">
 							<div class="text-center mb-3">
@@ -96,7 +126,7 @@ if(isset($_POST['LOGIN']))
 							</div>
 
 							<div class="form-group form-group-feedback form-group-feedback-left">
-								<input type="text" class="form-control" placeholder="Username" name="txt_username" id = "txt_username" value="admin@bie.com">
+								<input type="text" class="form-control" placeholder="Username" name="txt_username" id = "txt_username" value="" autocomplete="username">
 								<div class="form-control-feedback">
 									<i class="icon-user text-muted"></i>
 								</div>
@@ -104,7 +134,7 @@ if(isset($_POST['LOGIN']))
 														
 							<div class="form-group form-group-feedback form-group-feedback-left">
 								
-								<input type="password" class="form-control" placeholder="Password" name="txt_userpwd" id="txt_userpwd">
+								<input type="password" class="form-control" placeholder="Password" name="txt_userpwd" id="txt_userpwd" autocomplete="current-password">
 								<div class="form-control-feedback form-group-feedback-right">	
 									<span toggle="#txt_userpwd" class="far fa-eye toggle-password"></span>
 								</div>

@@ -10,6 +10,8 @@ $dbconn = new dbhandler();
 
 // 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -17,6 +19,9 @@ $dbconn = new dbhandler();
 $so_amoutn = $dbconn->GetSingleReconrd("tbl_sales_order", "bal_value", "so_id", $_REQUEST['so_id']);
 $bal = floatval($so_amoutn);
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('pay_receipt')) {
+		csrf_fail('lst_sales_receipt.php');
+	}
     $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
     $_REQUEST['pay_date'] = date("Y-m-d", strtotime($_REQUEST['pay_date']));
     $_REQUEST['pay_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
@@ -169,6 +174,7 @@ if (isset($_REQUEST['so_id'])) {
                 <div class="row">
                     <div class="col-md-7">
                         <form name='thisForm' id="validate" class="form-horizontal" method='post' action="pay_receipt.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+                        	<?php csrf_fields('pay_receipt'); ?>
                             <input type="hidden" name="so_id" id="so_id" value="<?php echo $_REQUEST['so_id']; ?>">
                             <input type="hidden" name="supp_id" id="supp_id" value="<?php echo $obj->supp_id; ?>">
                             <input type="hidden" id="bal_value_hidd" name="bal_value_hidd" value='' />

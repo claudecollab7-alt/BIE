@@ -138,6 +138,7 @@ if (isset($_POST['SAVE']) && $_POST['status'] == 'requote') {
 		}
 		db_commit($conn);
 	} catch (Exception $e) {
+		fnLogError($e);
 		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
@@ -461,6 +462,7 @@ if (isset($_POST['FINALIZE'])) {
 			}
 			db_commit($conn);
 		} catch (Exception $e) {
+			fnLogError($e);
 			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
@@ -564,6 +566,7 @@ if (isset($_POST['FINALIZE'])) {
 			}
 			db_commit($conn);
 		} catch (Exception $e) {
+			fnLogError($e);
 			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
@@ -666,6 +669,7 @@ if (isset($_POST['FINALIZE'])) {
 			}
 			db_commit($conn);
 		} catch (Exception $e) {
+			fnLogError($e);
 			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;

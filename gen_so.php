@@ -124,6 +124,7 @@ if (isset($_POST['SAVE'])) {
         }
         db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
         db_rollback($conn);
         $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         header("location:lst_sales_order.php");
@@ -231,6 +232,7 @@ if (isset($_POST['UPDATE'])) {
         // print_r($data);die();
         db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
         db_rollback($conn);
         $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         header("location:lst_sales_order.php");
@@ -251,6 +253,7 @@ if (isset($_POST['ACCOUNTS'])) {
 
         db_commit($conn);
     } catch (Exception $e) {
+    	fnLogError($e);
         db_rollback($conn);
         $_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
         header("location:lst_sales_order.php");

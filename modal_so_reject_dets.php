@@ -11,39 +11,55 @@ require_once("inc/common/dbhandler.php");
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
 if (isset($_POST['CONFIRM']))
 {
-	$so_date = $dbconn->GetSingleReconrd("tbl_sales_order","so_date","so_id",$_REQUEST['so_id']);
-	// $_REQUEST['so_credit_due_date'] = date('Y-m-d', strtotime($so_date. ' + '.$_REQUEST['so_credit_days'].' days')); 
-	$stmt = null;				
-	$stmt = $conn->prepare("UPDATE tbl_sales_order SET so_cancel_by = :so_cancel_by, so_cancel_date_time = :so_cancel_date_time, so_cancel_reason = :so_cancel_reason, so_status = :so_status, 
-	so_approve_status = :so_approve_status, so_cancel_status = :so_cancel_status, so_credit_days = :so_credit_days, accounts_status = :accounts_status, pay_status = :pay_status WHERE so_id = :so_id");
-	$data = array(
-		'so_id'=>$_REQUEST['so_id'],
-		':so_cancel_by' => '1',
-		':so_cancel_date_time' => date('Y-m-d H:i:s'),
-		':so_cancel_reason' => $_REQUEST['so_cancel_reason'],
-		':so_status' => '6',
-		':so_approve_status' => '0',
-		':so_cancel_status' => '1', 
-		':so_credit_days' => '0', 
-		':accounts_status' => '0', 
-		':pay_status' => '0' 
-		
-	);
-   
-	$stmt->execute($data);
-    // .
-
-// print_r($data);die();
-	header("location:lst_sales_order.php");	
-	die();
-	
+	if (!csrf_check('modal_so_reject_dets')) {
+		csrf_fail('lst_so_approval.php');
 	}
+
+	try {
+		db_begin($conn);
+		$so_date = $dbconn->GetSingleReconrd("tbl_sales_order","so_date","so_id",$_REQUEST['so_id']);
+		// $_REQUEST['so_credit_due_date'] = date('Y-m-d', strtotime($so_date. ' + '.$_REQUEST['so_credit_days'].' days')); 
+		$stmt = null;				
+		$stmt = $conn->prepare("UPDATE tbl_sales_order SET so_cancel_by = :so_cancel_by, so_cancel_date_time = :so_cancel_date_time, so_cancel_reason = :so_cancel_reason, so_status = :so_status, 
+		so_approve_status = :so_approve_status, so_cancel_status = :so_cancel_status, so_credit_days = :so_credit_days, accounts_status = :accounts_status, pay_status = :pay_status WHERE so_id = :so_id");
+		$data = array(
+			'so_id'=>$_REQUEST['so_id'],
+			':so_cancel_by' => '1',
+			':so_cancel_date_time' => date('Y-m-d H:i:s'),
+			':so_cancel_reason' => $_REQUEST['so_cancel_reason'],
+			':so_status' => '6',
+			':so_approve_status' => '0',
+			':so_cancel_status' => '1', 
+			':so_credit_days' => '0', 
+			':accounts_status' => '0', 
+			':pay_status' => '0' 
+		
+		);
+   
+		$stmt->execute($data);
+	    // .
+
+	// print_r($data);die();
+		db_commit($conn);
+		header("location:lst_sales_order.php");	
+		die();
+	
+	} catch (Exception $e) {
+		fnLogError($e);
+		db_rollback($conn);
+		$_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
+	}
+	header("location:lst_so_approval.php");
+	die();
+}
 ?>
 <!-- Basic modal -->
 
@@ -57,6 +73,7 @@ if (isset($_POST['CONFIRM']))
 					<button type="button" class="close" data-dismiss="modal">&times;</button>
 				</div>
             <form action="modal_so_reject_dets.php" method="POST">
+            	<?php csrf_fields('modal_so_reject_dets'); ?>
                 <div class="modal-body py-0" id="m_sales_rej_code">				
                     <div class="col-md-6 pt-5 pb-5 text-center">
                         <span id="spinner-light" class="text-loading">

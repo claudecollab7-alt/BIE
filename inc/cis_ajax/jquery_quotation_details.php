@@ -183,6 +183,7 @@ if ($_POST['mode'] == 'save' && isset($_POST['group_id'])) {
 					            </td>
 							</tr>';
 			} catch (Exception $e) {
+				fnLogError($e);
 				$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 				$_SESSION['_msg_err'] = $str;
 			}

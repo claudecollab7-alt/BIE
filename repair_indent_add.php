@@ -94,6 +94,7 @@ if (isset($_POST['SAVE'])) {
 		// $update_enq->execute($data1);
 		db_commit($conn);
 	} catch (Exception $e) {
+		fnLogError($e);
 		db_rollback($conn);
 		$str = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
 		$_SESSION['_msg_err'] = $str;
@@ -169,6 +170,7 @@ if (isset($_POST['UPDATE'])) {
 		$update_po->execute($data1);
 		db_commit($conn);
 	} catch (Exception $e) {
+		fnLogError($e);
 		db_rollback($conn);
 		$str = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
 		$_SESSION['_msg_err'] = $str;

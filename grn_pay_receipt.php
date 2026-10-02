@@ -8,11 +8,16 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 if (isset($_POST['SAVE'])) {
+	if (!csrf_check('grn_pay_receipt')) {
+		csrf_fail('grn_payment_details.php');
+	}
 	// $no_bal = $_REQUEST['pay_amount'] - $_REQUEST['bal_value'];
 
 
@@ -29,6 +34,7 @@ if (isset($_POST['SAVE'])) {
 	}
 
 	try {
+		db_begin($conn);
 
 		$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 		$_REQUEST['modify_by'] = $_SESSION['_userid'];
@@ -81,7 +87,10 @@ if (isset($_POST['SAVE'])) {
 		}
 
 		$_SESSION['_msg'] = "GRN Payment succesfully saved..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -91,6 +100,9 @@ if (isset($_POST['SAVE'])) {
 }
 
 if (isset($_POST['UPDATE'])) {
+	if (!csrf_check('grn_pay_receipt')) {
+		csrf_fail('grn_payment_details.php');
+	}
 
 	// $grn_pay_status = 0;
 	$update_id = $_REQUEST['txtHid'];
@@ -117,6 +129,7 @@ if (isset($_POST['UPDATE'])) {
 	}
 
 	try {
+		db_begin($conn);
 
 		$stmt = null;
 		$stmt = $conn->prepare("INSERT INTO tbl_grn_pay_receipt (grn_id, pay_slno, pay_finyr, pay_date, pay_type, pay_amount, pay_cardno, pay_creditcardno, pay_debitcardno, pay_at, pay_netbank, pay_refno, pay_chq_no, pay_chq_dt, pay_remarks, 
@@ -173,7 +186,10 @@ if (isset($_POST['UPDATE'])) {
 
 
 		$_SESSION['_msg'] = "GRN Payment succesfully Updated..!";
+		db_commit($conn);
 	} catch (Exception $e) {
+		db_rollback($conn);
+		fnLogError($e);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
@@ -277,6 +293,7 @@ if ($_REQUEST['grn_id'] != "") {
 				<div class="row">
 					<div class="col-md-7">
 						<form name='thisForm' id="validate" class="form-horizontal" method='post' action="grn_pay_receipt.php" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<?php csrf_fields('grn_pay_receipt'); ?>
 							<input type="hidden" name="grn_id" id="grn_id" value="<?php echo $_REQUEST['grn_id']; ?>">
 							<input type="hidden" name="saved_grn_ids" id="saved_grn_ids" value="<?php echo $obj->grn_ids; ?>">
 							<input type="hidden" name="supp_id" id="supp_id" value="<?php echo $obj->supp_id; ?>">
