@@ -8,6 +8,45 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-02 - Item Stock History report: item optional, newest row on top
+
+`rpt_item_stock_history_branch_wise.php`
+
+- **Item is no longer mandatory.** Leaving the item blank now reports every item for the
+  chosen branch and date range. `fnValidate()` was blocking the submit with an "Item ..!"
+  alert, and the result block was guarded by `$_REQUEST['item_id'] != ''`, so a blank item
+  silently rendered nothing. Both removed.
+- **An Item column appears on the all-items run** (between Date and Type), showing
+  `item_code ~ item_description`. A row whose item was removed from the master falls back
+  to `Item <id>`. The single-item run keeps its nine columns as before - the heading
+  colspan and the "No History found..!" colspan follow the column count instead of being
+  hardcoded.
+- **Item name comes from a join**, `LEFT JOIN tbl_item_details`, not a `GetSingleReconrd`
+  per row. On an all-items run that would have been one query per line.
+- **Newest first.** `ORDER BY auto_id ASC` became
+  `ORDER BY sf.trans_date DESC, sf.auto_id DESC`, so the latest movement is on top and
+  several movements on the same date are still in the order they were recorded, reversed.
+- The item filter is appended to the `WHERE` only when an item is chosen; the parameter is
+  bound either way. Branch, date range, `stock_status = 0` and `trans_qty > 0` are
+  unchanged.
+- `$_REQUEST['item_id']` is read once into `$rpt_item_id`, so the page no longer warns on a
+  first visit with no item in the request.
+
+The View All link from the Item Stock List modal still arrives with `item_id` set, so that
+path is unchanged.
+
+### Checks
+
+`test_stockhist_rpt.php` (20) - a blank item returns every item in the branch and range,
+rows come back date-descending then auto_id-descending, the join supplies the item name and
+an orphan row falls back to its id, a chosen item still filters, and branch / zero-qty /
+out-of-range rows are still excluded. `test_stockhist_render.php` (18) - the page's own
+table block rendered against real tables: header and body cell counts agree in both modes,
+the Item column only appears on the all-items run, remarks stay escaped, and the empty-state
+colspan matches.
+
+---
+
 ## 2026-10-01 - Login pages: query bound, csrf, session id regenerated
 
 ### `index.php`
