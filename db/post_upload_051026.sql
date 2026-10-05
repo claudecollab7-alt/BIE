@@ -6,6 +6,7 @@
 --    cash denominations (2000 off, 1/2/5 added).
 --
 --  Run the steps in order. Each one prints what it should have done.
+--  Every step is safe to run twice - nothing is inserted or repaired twice.
 -- ============================================================================
 
 
@@ -47,14 +48,23 @@ DELETE FROM tbl_user_rights WHERE sm_id = 127 AND mm_id IN (3, 20);
 --  Item Stock List   = sm_id 148 under main menu 3  (Item Masters)
 --  Admin (usr_type A) sees every menu and needs no row.
 
+--  There is no unique key on (usr_id, mm_id, sm_id), so both statements skip
+--  anyone who already has the row. Running them twice adds nothing.
+
 INSERT INTO tbl_user_rights (usr_id, mm_id, sm_id)
-SELECT DISTINCT usr_id, 20, 147
-  FROM (SELECT usr_id FROM tbl_user_rights WHERE mm_id = 20) AS s;
+SELECT s.usr_id, 20, 147
+  FROM (SELECT DISTINCT usr_id FROM tbl_user_rights WHERE mm_id = 20) AS s
+  LEFT JOIN (SELECT usr_id FROM tbl_user_rights WHERE mm_id = 20 AND sm_id = 147) AS h
+         ON h.usr_id = s.usr_id
+ WHERE h.usr_id IS NULL;
 -- expect: 3 rows (users 2, 6, 7)
 
 INSERT INTO tbl_user_rights (usr_id, mm_id, sm_id)
-SELECT DISTINCT usr_id, 3, 148
-  FROM (SELECT usr_id FROM tbl_user_rights WHERE mm_id = 3) AS s;
+SELECT s.usr_id, 3, 148
+  FROM (SELECT DISTINCT usr_id FROM tbl_user_rights WHERE mm_id = 3) AS s
+  LEFT JOIN (SELECT usr_id FROM tbl_user_rights WHERE mm_id = 3 AND sm_id = 148) AS h
+         ON h.usr_id = s.usr_id
+ WHERE h.usr_id IS NULL;
 -- expect: 3 rows (users 2, 6, 7)
 
 -- check - expect 6 rows, no value showing as 127
@@ -79,8 +89,9 @@ SELECT COUNT(*) AS zeroed_rows
   FROM tbl_invoice_details
  WHERE inv_value = 0 AND net_value > 0;
 
--- 4b. backup before writing
-CREATE TABLE tbl_invoice_details_bkp_051026 AS SELECT * FROM tbl_invoice_details;
+-- 4b. backup before writing. IF NOT EXISTS so a second run keeps the original
+--     backup instead of failing or overwriting it.
+CREATE TABLE IF NOT EXISTS tbl_invoice_details_bkp_051026 AS SELECT * FROM tbl_invoice_details;
 
 -- 4c. repair. tax_value is rebuilt in the same statement because it is 0 on
 --     106 of the 111 rows. The other 5 (details_id 2183, 2424, 17242, 17246,
@@ -155,28 +166,27 @@ DROP TABLE IF EXISTS mst_customer_branch_temp;
 
 
 -- ---------------------------------------------------------------------------
--- STEP 7  final check - every line should read OK
+-- STEP 7  final check - run these one at a time, each should read OK
 -- ---------------------------------------------------------------------------
-SELECT 'rights column widened' AS item,
-       IF(COLUMN_TYPE LIKE 'smallint%', 'OK', 'NOT DONE') AS status
-  FROM information_schema.COLUMNS
- WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbl_user_rights' AND COLUMN_NAME = 'sm_id'
-UNION ALL
-SELECT 'new menu rights granted',
-       IF(COUNT(*) = 6, 'OK', CONCAT('found ', COUNT(*), ', expected 6'))
-  FROM tbl_user_rights WHERE sm_id IN (147, 148)
-UNION ALL
-SELECT 'clamped rights rows gone',
-       IF(COUNT(*) = 0, 'OK', CONCAT(COUNT(*), ' left'))
-  FROM tbl_user_rights WHERE sm_id = 127 AND mm_id IN (3, 20)
-UNION ALL
-SELECT 'invoice amounts repaired',
-       IF(COUNT(*) = 0, 'OK', CONCAT(COUNT(*), ' still zero'))
-  FROM tbl_invoice_details WHERE inv_value = 0 AND net_value > 0
-UNION ALL
-SELECT 'temp tables dropped',
-       IF(COUNT(*) = 0, 'OK', CONCAT(COUNT(*), ' left'))
-  FROM information_schema.TABLES
- WHERE TABLE_SCHEMA = DATABASE()
-   AND TABLE_NAME IN ('tbl_dc_details_temp','tbl_package_box_details_temp',
-                      'tbl_item_group_details_temp','mst_customer_branch_temp');
+--  Kept as five separate queries on purpose. Joining them with UNION ALL does
+--  not work here: once the first branch reads information_schema, MariaDB
+--  looks for the plain table names in information_schema too and throws
+--  "#1109 Unknown table 'tbl_user_rights' in information_schema".
+
+-- 7a. rights column widened - expect smallint(6)
+SHOW COLUMNS FROM tbl_user_rights LIKE 'sm_id';
+
+-- 7b. new menu rights granted - expect OK
+SELECT IF(COUNT(*) = 6, 'OK', CONCAT('found ', COUNT(*), ', expected 6')) AS new_menu_rights
+  FROM tbl_user_rights WHERE sm_id IN (147, 148);
+
+-- 7c. clamped rights rows gone - expect OK
+SELECT IF(COUNT(*) = 0, 'OK', CONCAT(COUNT(*), ' left')) AS clamped_rows
+  FROM tbl_user_rights WHERE sm_id = 127 AND mm_id IN (3, 20);
+
+-- 7d. invoice amounts repaired - expect OK
+SELECT IF(COUNT(*) = 0, 'OK', CONCAT(COUNT(*), ' still zero')) AS zeroed_invoice_lines
+  FROM tbl_invoice_details WHERE inv_value = 0 AND net_value > 0;
+
+-- 7e. temp tables dropped - expect an empty result
+SHOW TABLES LIKE '%_temp';

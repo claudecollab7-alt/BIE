@@ -57,6 +57,20 @@ price, discount and the HSN master, so printed invoices were always correct, and
 `tbl_invoice.inv_tot_value` was never affected. This repairs the stored columns the list
 and edit screens read.
 
+### Fixes after the first run on the server
+
+- **Step 7 failed with `#1109 Unknown table 'tbl_user_rights' in information_schema`.**
+  It was one `UNION ALL` whose first branch read `information_schema.COLUMNS`; MariaDB
+  then looked for the plain table names in `information_schema` as well. Split into five
+  separate queries, which also read better in phpMyAdmin. Steps 1 to 6 had already run -
+  step 7 only reports.
+- **Step 3 would have inserted duplicates on a second run.** There is no unique key on
+  `(usr_id, mm_id, sm_id)`, so re-running the file would have doubled the rights rows.
+  Both grants now skip anyone who already has the row.
+- **Step 4b would have failed on a second run**, or overwritten the backup. Changed to
+  `CREATE TABLE IF NOT EXISTS`, so the original backup is kept. Every step in the file is
+  now safe to run twice.
+
 ### Checks
 
 `test_postupload.php` (24) replays every data-changing statement against the real rows
