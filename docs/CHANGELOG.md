@@ -8,6 +8,66 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-05 - Server queries for the 05-10-26 database
+
+Checked the new live dump (`db/bie_db_051026.sql`) against what the uploaded code
+needs. Everything to run is in **`db/post_upload_051026.sql`**, step by step, with the
+row count each step should report.
+
+Already live, nothing to do: the `tbl_stock_flow` columns and indexes,
+`tbl_stock_adjustment`, menu rows 147 / 148, and the cash denominations.
+
+### What still has to be run
+
+1. **`tbl_user_rights.sm_id` is a signed `TINYINT`.** It stops at 127, so the rights rows
+   for sm_id 147 and 148 were both silently clamped to 127 when they were inserted -
+   MariaDB is not in strict mode. The two new menus therefore never appeared for the
+   branch users, and because 127 is a real menu (Employee Salary Setting under main menu
+   23) those users now show it wrongly ticked on the rights screen. Widened to
+   `SMALLINT`, `mm_id` with it. This had to be first: `mst_users_rights.php` deletes and
+   re-inserts a user's whole rights set on save, so any save would have clamped them
+   again.
+2. **The six clamped rows** (auto_id 662-667, users 2 / 6 / 7, sm_id 127 under main menus
+   3 and 20) are deleted. auto_id 507 - user 4, sm_id 127 under main menu 23 - is genuine
+   and is left.
+3. **Rights granted properly** for sm_id 147 and 148 to whoever holds the parent menu.
+   Three users each. Admin needs no row.
+4. **Invoice line Amount repair.** 111 lines across 35 invoices.
+5. **Optional**: the GST split columns on those same 111 lines.
+6. **Drop the four temp tables** once the uploaded screens are tested. Three are empty;
+   `tbl_package_box_details_temp` holds 12 abandoned scratch rows. No code refers to any
+   of them now.
+
+### `db/invoice_value_repair.sql` was wrong - superseded
+
+It rebuilt the zeroed `inv_value` as `net_value - tax_value`. Against the real data that
+is wrong twice over: `tax_value` is also 0 on 106 of the 111 rows, and `net_value` is the
+gross, so the subtraction hands back the gross. Its own cross-check then rejected all 111
+rows, so it would have repaired nothing - it was written from the column names rather
+than from the data.
+
+The taxable value is `net_value / (1 + vat/100)`. That agrees with
+`qty x unit_price` less the discount percent on all 111 rows, so step 4 uses it and
+rebuilds `tax_value` in the same statement. Five rows (details_id 2183, 2424, 17242,
+17246, 17725) carry a `tax_value` worked out on the undiscounted price; they are
+corrected too.
+
+Worth knowing: `invoice_print.php` recomputes the line value, tax and GST split from qty,
+price, discount and the HSN master, so printed invoices were always correct, and
+`tbl_invoice.inv_tot_value` was never affected. This repairs the stored columns the list
+and edit screens read.
+
+### Checks
+
+`test_postupload.php` (24) replays every data-changing statement against the real rows
+parsed out of `bie_db_051026.sql`: 6 rights rows deleted and the genuine one kept, 3 + 3
+granted with no duplicates, the sidebar query then returning both menus for users 2, 6 and
+7, 111 invoice lines repaired with `inv_value + tax_value = net_value` and
+`inv_value = qty x price less discount` on every one, no healthy row altered, 0 proforma
+rows, and the optional step 5 confined to the same 111.
+
+---
+
 ## 2026-10-02 - Item Stock History report: item optional, newest row on top
 
 `rpt_item_stock_history_branch_wise.php`
