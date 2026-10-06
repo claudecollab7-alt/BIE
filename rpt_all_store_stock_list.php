@@ -23,6 +23,8 @@ if ($_REQUEST['to_dt'] == '')
 else
     $rpt_to_dt = $_REQUEST['to_dt'];
 
+// 2026-10-06 branch columns driven from mst_branch - the body only ever wrote ho and kl, so Rajapalayam had a header but no cells
+
 //ini_set('display_errors', '1');
 //ini_set('display_startup_errors', '1');
 //error_reporting(E_ALL);
@@ -230,8 +232,9 @@ else
                                 //echo "<pre>";print_r($_POST);exit;
                                 $Itemname='';
                                 // $branch_name1 = '';
-                                $sql = "SELECT * FROM mst_branch WHERE branch_status = '1' ";
-                                $branch_name1 = $conn->query($sql);
+                                // kept as an array - the header and the rows both need it
+                                $sql = "SELECT * FROM mst_branch WHERE branch_status = '1' ORDER BY branch_id";
+                                $rpt_branches = $conn->query($sql)->fetchAll(PDO::FETCH_OBJ);
                             //    echo  $rowcount=mysqli_num_rows($result);
                                 if (isset($_POST['Report'])) {
                                    // $from_dt = date("Y-m-d", strtotime($_REQUEST['from_dt']));
@@ -304,9 +307,9 @@ else
                                                 <th><b>Category</b></th>
 												<th style="text-align: right;"><b>Selling Price</b></th>
 												<th style="text-align: right;"><b>Net Price</b></th>';
-                                                while($itm = $branch_name1->fetch()){
-                                                echo '<th>'. $itm->branch_name .'</th>';
-                                                 }
+                                                foreach ($rpt_branches as $itm) {
+                                                    echo '<th style="text-align: right;">'. $itm->branch_name .'</th>';
+                                                }
                                                 echo '</tr>
 		                    			</thead>
 		                            	<tbody>';
@@ -347,8 +350,10 @@ else
                                                 $item_image    = '<img class="fancybox"  src="project_img/no-image.jpg" width="50px" height="50px" >';
                                             }
 
-                                            $SQL1 = "SELECT * FROM tbl_item_stock where item_id = $obj->item_id";
-                                            $result1 = $conn->query($SQL1);
+                                            // one stock row per item - fetched here, read per branch below
+                                            $stmt1 = $conn->prepare("SELECT * FROM tbl_item_stock WHERE item_id = :item_id");
+                                            $stmt1->execute(array(':item_id' => $obj->item_id));
+                                            $stockRow = $stmt1->fetch(PDO::FETCH_OBJ);
 
                                             if($obj->item_type == 2){
                                                 $Itemtypename = 'Trading';
@@ -384,12 +389,11 @@ else
 													<td align="left">' . $obj->category_name . '</td>
 													<td align="right">' . $item_selling_price. '</td>
 													<td align="right">' . number_format($tax_item_selling_price,2). '</td>';
-                                                        while($obj1 = $result1->fetch()){
-                                                            echo '<td align="right">' . $obj1->ho_stock . '</td>';
-                                                        
-                                                           
-                                                      
-                                                          echo '<td style="text-align: right;">' . $obj1->kl_stock . '</td>';
+                                                        // a cell for every branch in the header, else the row runs short
+                                                        foreach ($rpt_branches as $br) {
+                                                            $fld = $br->branch_stock_field;
+                                                            $qty = ($stockRow && $fld != '' && isset($stockRow->$fld)) ? $stockRow->$fld : '0.000';
+                                                            echo '<td style="text-align: right;">' . $qty . '</td>';
                                                         }
 												    echo '</tr>';
                                             //$tot_sales_value += $total;
@@ -402,7 +406,7 @@ else
                                                 </tr>-->';
                                     } else {
                                         echo ' <tr class="font-weight-semibold rpt_footer ">
-																	   <td colspan="10" align="center">No History found..!</td>
+																	   <td colspan="' . (9 + count($rpt_branches)) . '" align="center">No History found..!</td>
 																	</tr>';
                                     }
 

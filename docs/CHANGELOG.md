@@ -8,6 +8,46 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-06 - Stock List: Rajapalayam had a header but no cells
+
+`rpt_all_store_stock_list.php`
+
+The branch column headers were built by looping `mst_branch` - three active branches, so
+three headers - but the row loop wrote exactly two cells, hardcoded:
+
+```php
+while ($obj1 = $result1->fetch()) {
+    echo '<td align="right">' . $obj1->ho_stock . '</td>';
+    echo '<td style="text-align: right;">' . $obj1->kl_stock . '</td>';
+}
+```
+
+Every row was one cell short of its header, so the browser left the last column with
+nothing under it - which is what looked like a merged Rajapalayam column. The figures were
+not wrong, that column simply was never written.
+
+Now the branch list is read once into `$rpt_branches` and both the header and the rows walk
+it, each row taking that branch's own `branch_stock_field` from the item's stock row. A
+branch added to `mst_branch` gets its column with no code change. Also:
+
+- The branch list used to be a live cursor that the header loop drained, so it could only
+  ever be read once. It is an array now.
+- An item with no `tbl_item_stock` row used to produce **no** branch cells at all, leaving
+  that row short by two. It now shows `0.000` under every branch.
+- The per-item stock lookup is a prepared statement rather than the item id concatenated
+  into SQL.
+- The "No History found..!" colspan follows the branch count instead of being fixed at 10.
+
+### Checks
+
+`test_stocklist_cols.php` (19) renders the page's own table block against real tables:
+header and body cell counts agree with three branches, with a fourth added to `mst_branch`,
+and with only two; the values land under the right branch each time (`17|5|2`, then
+`17|5|2|9`); an inactive branch is left out; an item with no stock row stays full width and
+reads `0.000`; and the empty-state colspan spans every column.
+
+---
+
 ## 2026-10-06 - Save and Generate Report stopped working - double-submit lock regression
 
 My double-submit lock broke roughly 50 screens: every master add/edit, every report
