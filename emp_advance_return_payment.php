@@ -6,6 +6,7 @@ require_once("inc/common/userclass.php");
 require_once("inc/common/css-js.php");
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-06 repaid total read on $conn - it left out the repayment being saved
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -81,7 +82,7 @@ if (isset($_POST['SAVE'])) {
 		$stmt2->execute($data2);
 		$last_id = $conn->lastInsertId();
 		
-		echo $total_paid_amount = $dbconn->GetSingleReconrd("tbl_emp_advance_return_payment","SUM(payment_amount)","advance_id = ".$_REQUEST['advance_id']." AND emp_id",$update_id);
+		echo $total_paid_amount = db_value($conn, "SELECT SUM(payment_amount) FROM tbl_emp_advance_return_payment WHERE advance_id = :advance_id AND emp_id = :emp_id", array(':advance_id' => $_REQUEST['advance_id'], ':emp_id' => $update_id));
 		
 		if($total_paid_amount>=$advance_amount){
 

@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-01 item rows moved off tbl_dc_details_temp - built in php, posted back as arrays
 // 2026-10-01 packing moved off tbl_package_box_details_temp - rides on the item row, box counts done in javascript
+// 2026-10-06 packing keeps its own box type and dispatch qty - editing a completed dc was zeroing them and the box counts
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -117,8 +118,8 @@ if (isset($_POST['SAVE']))
                     ':pack_box_no'   => $_REQUEST['pack_box_no_csv'][$d],
                     ':pack_item_qty' => $_REQUEST['pack_item_qty_csv'][$d],
                     ':total_qty'     => $_REQUEST['pack_total_qty'][$d],
-                    ':box_id'        => $_REQUEST['box_id'][$d],
-                    ':dispatch_qty'  => $_REQUEST['dc_dispatch_qty'][$d]
+                    ':box_id'        => $_REQUEST['pack_box_id'][$d],
+                    ':dispatch_qty'  => $_REQUEST['pack_dispatch_qty'][$d]
                 ));
             }
         }
@@ -219,8 +220,8 @@ if (isset($_POST['UPDATE']))
                     ':pack_box_no'   => $_REQUEST['pack_box_no_csv'][$d],
                     ':pack_item_qty' => $_REQUEST['pack_item_qty_csv'][$d],
                     ':total_qty'     => $_REQUEST['pack_total_qty'][$d],
-                    ':box_id'        => $_REQUEST['box_id'][$d],
-                    ':dispatch_qty'  => $_REQUEST['dc_dispatch_qty'][$d]
+                    ':box_id'        => $_REQUEST['pack_box_id'][$d],
+                    ':dispatch_qty'  => $_REQUEST['pack_dispatch_qty'][$d]
                 ));
             }
         }
@@ -319,8 +320,8 @@ if (isset($_POST['FINALIZE']))
                     ':pack_box_no'   => $_REQUEST['pack_box_no_csv'][$d],
                     ':pack_item_qty' => $_REQUEST['pack_item_qty_csv'][$d],
                     ':total_qty'     => $_REQUEST['pack_total_qty'][$d],
-                    ':box_id'        => $_REQUEST['box_id'][$d],
-                    ':dispatch_qty'  => $_REQUEST['dc_dispatch_qty'][$d]
+                    ':box_id'        => $_REQUEST['pack_box_id'][$d],
+                    ':dispatch_qty'  => $_REQUEST['pack_dispatch_qty'][$d]
                 ));
             }
         }
@@ -433,7 +434,7 @@ if (isset($_REQUEST['dc_id']))
                         WHERE a.dc_status = 1 AND b.dc_id = :dc_id");
         $result1->execute(array(':dc_id' => $_REQUEST['dc_id']));
 
-        $pack_q = $conn->prepare("SELECT pack_box_no, pack_item_qty, total_qty FROM tbl_package_box_details
+        $pack_q = $conn->prepare("SELECT pack_box_no, pack_item_qty, total_qty, box_id, dispatch_qty FROM tbl_package_box_details
                                    WHERE dc_id = :dc_id AND item_id = :item_id");
 
         while ($value = $result1->fetch(PDO::FETCH_ASSOC)) {
@@ -452,7 +453,9 @@ if (isset($_REQUEST['dc_id']))
                 'dc_remarks'       => $value['dc_remarks'],
                 'pack_box_no'      => $pk ? $pk['pack_box_no'] : '',
                 'pack_item_qty'    => $pk ? $pk['pack_item_qty'] : '',
-                'pack_total_qty'   => $pk ? $pk['total_qty'] : ''
+                'pack_total_qty'   => $pk ? $pk['total_qty'] : '',
+                'pack_box_id'      => $pk ? $pk['box_id'] : '',
+                'pack_dispatch_qty'=> $pk ? $pk['dispatch_qty'] : ''
             );
         }
 
@@ -522,7 +525,9 @@ elseif (isset($_REQUEST['so_id']))
             'dc_remarks'      => '',
             'pack_box_no'     => '',
             'pack_item_qty'   => '',
-            'pack_total_qty'  => ''
+            'pack_total_qty'  => '',
+            'pack_box_id'     => '',
+            'pack_dispatch_qty' => ''
         );
     }
 
@@ -735,7 +740,7 @@ elseif (isset($_REQUEST['so_id']))
 
                                                                             <td><div class="input-append"><input type="text" readonly tabindex="-1" style="width:85px;" name="no_of_box[]" class="form-control no_of_box"  id= "no_of_box_'.$iSno.'" onkeypress="return isNumberKey_With_Dot(event)" value="'.$obj->no_of_box.'" ></div></td>
 
-                                                                            <td><input type="text" readonly tabindex="-1" class="form-control" name="dc_remarks[]" id="dc_remarks" value="'.$obj->dc_remarks.'"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.$obj->dc_qty.'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"><input type="hidden" name="pack_box_no_csv[]" class="pack_box_no_csv" value="'.htmlspecialchars($obj->pack_box_no, ENT_QUOTES).'"><input type="hidden" name="pack_item_qty_csv[]" class="pack_item_qty_csv" value="'.htmlspecialchars($obj->pack_item_qty, ENT_QUOTES).'"><input type="hidden" name="pack_total_qty[]" class="pack_total_qty" value="'.htmlspecialchars($obj->pack_total_qty, ENT_QUOTES).'"></td>
+                                                                            <td><input type="text" readonly tabindex="-1" class="form-control" name="dc_remarks[]" id="dc_remarks" value="'.$obj->dc_remarks.'"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.$obj->dc_qty.'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"><input type="hidden" name="pack_box_no_csv[]" class="pack_box_no_csv" value="'.htmlspecialchars($obj->pack_box_no, ENT_QUOTES).'"><input type="hidden" name="pack_item_qty_csv[]" class="pack_item_qty_csv" value="'.htmlspecialchars($obj->pack_item_qty, ENT_QUOTES).'"><input type="hidden" name="pack_total_qty[]" class="pack_total_qty" value="'.htmlspecialchars($obj->pack_total_qty, ENT_QUOTES).'"><input type="hidden" name="pack_box_id[]" class="pack_box_id" value="'.htmlspecialchars($obj->pack_box_id, ENT_QUOTES).'"><input type="hidden" name="pack_dispatch_qty[]" class="pack_dispatch_qty" value="'.htmlspecialchars($obj->pack_dispatch_qty, ENT_QUOTES).'"></td>
                                                                         </tr>';
                                                                     }
                                                                     else
@@ -776,7 +781,7 @@ elseif (isset($_REQUEST['so_id']))
                                                                        
 
 
-                                                                       <td><input type="text"  class="form-control" tabindex="-1" name="dc_remarks[]" id="dc_remarks" value="' . $obj->dc_remarks . '"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.$obj->dc_qty.'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"><input type="hidden" name="pack_box_no_csv[]" class="pack_box_no_csv" value="'.htmlspecialchars($obj->pack_box_no, ENT_QUOTES).'"><input type="hidden" name="pack_item_qty_csv[]" class="pack_item_qty_csv" value="'.htmlspecialchars($obj->pack_item_qty, ENT_QUOTES).'"><input type="hidden" name="pack_total_qty[]" class="pack_total_qty" value="'.htmlspecialchars($obj->pack_total_qty, ENT_QUOTES).'"></td>
+                                                                       <td><input type="text"  class="form-control" tabindex="-1" name="dc_remarks[]" id="dc_remarks" value="' . $obj->dc_remarks . '"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.$obj->dc_qty.'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"><input type="hidden" name="pack_box_no_csv[]" class="pack_box_no_csv" value="'.htmlspecialchars($obj->pack_box_no, ENT_QUOTES).'"><input type="hidden" name="pack_item_qty_csv[]" class="pack_item_qty_csv" value="'.htmlspecialchars($obj->pack_item_qty, ENT_QUOTES).'"><input type="hidden" name="pack_total_qty[]" class="pack_total_qty" value="'.htmlspecialchars($obj->pack_total_qty, ENT_QUOTES).'"><input type="hidden" name="pack_box_id[]" class="pack_box_id" value="'.htmlspecialchars($obj->pack_box_id, ENT_QUOTES).'"><input type="hidden" name="pack_dispatch_qty[]" class="pack_dispatch_qty" value="'.htmlspecialchars($obj->pack_dispatch_qty, ENT_QUOTES).'"></td>
 
                                                                        <input type="hidden" name="hide_item_id" class="hide_item_id" value="'.$obj->dc_item_id.'">
                                                                        <input type="hidden" name="item_type" class="item_type" id="item_type" value="'.$item_type.'">
@@ -1031,6 +1036,8 @@ elseif (isset($_REQUEST['so_id']))
                 packRow.find('.pack_box_no_csv').val(box_no.join(','));
                 packRow.find('.pack_item_qty_csv').val(qty.join(','));
                 packRow.find('.pack_total_qty').val(total);
+                packRow.find('.pack_box_id').val(packRow.find('.box_id').val());
+                packRow.find('.pack_dispatch_qty').val(packRow.find('.dc_dispatch_qty').val());
             }
 
             fnCountBoxTypes();
@@ -1043,7 +1050,7 @@ elseif (isset($_REQUEST['so_id']))
             var seen = {1: {}, 2: {}, 3: {}, 4: {}};
 
             $('#quo_table tbody tr').each(function() {
-                var type = parseInt($(this).find('.box_id').val() || 0, 10);
+                var type = parseInt($(this).find('.pack_box_id').val() || 0, 10);
                 var csv = $(this).find('.pack_box_no_csv').val() || '';
                 if (!seen[type] || csv === '') { return; }
 

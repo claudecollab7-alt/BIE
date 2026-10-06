@@ -15,6 +15,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-06 punch check read on $conn - it saw rows already deleted above, so a re-import dropped them for good
 
     ini_set('display_errors', '1');
     ini_set('display_startup_errors', '1');
@@ -63,7 +64,7 @@ if (isset($_POST['IMPORT'])) {
                 $stmt = $conn->prepare("DELETE FROM tbl_attendance WHERE work_date = '" . date('Y-m-d', strtotime($_REQUEST['biometric_time'])) . "' AND bio_id = " . $_REQUEST['bio_id'] . " ");
                 $stmt->execute();
 
-                $attn_exist = $dbconn->GetSingleReconrd("tbl_attendance_import_new", "auto_id", "emp_id = '" . $_REQUEST['emp_id'] . "' AND biometric_time = '" . $_REQUEST['biometric_time'] . "' AND bio_id", $_REQUEST['bio_id']);
+                $attn_exist = db_value($conn, "SELECT auto_id FROM tbl_attendance_import_new WHERE emp_id = :emp_id AND biometric_time = :bt AND bio_id = :bio_id", array(':emp_id' => $_REQUEST['emp_id'], ':bt' => $_REQUEST['biometric_time'], ':bio_id' => $_REQUEST['bio_id']));
 
 
 

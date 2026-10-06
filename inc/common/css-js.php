@@ -360,13 +360,13 @@
 
 		});
 
-		// Stop a form being submitted twice. Runs only once validation has let
-		// the submit through, so an alert still leaves the buttons usable.
+		// Double-click guard. Once a form's submit has actually gone through, its
+		// buttons are disabled and any further click on them is dropped before page
+		// code runs. It never cancels or changes the first submission, and leaves
+		// form.submit() alone - the single-use form token on the server is what
+		// stops a duplicate save, this only stops the second click.
 		function fnLockForm(form) {
 			var f = $(form);
-			if (f.data('bie-locked')) {
-				return false;              // already on its way
-			}
 			f.data('bie-locked', true);
 
 			// disable after the browser has read the form, otherwise the clicked
@@ -375,7 +375,6 @@
 				f.find('input[type=submit], input[type=button], button')
 					.prop('disabled', true).addClass('disabled');
 			}, 0);
-			return true;
 		}
 
 		function fnUnlockForms() {
@@ -384,38 +383,27 @@
 				.prop('disabled', false).removeClass('disabled');
 		}
 
+		// lock only when the submit really goes ahead - a validation alert leaves it usable
 		$(document).on('submit', 'form', function (e) {
 			if (e.isDefaultPrevented()) {
-				return;                    // validation said no
+				return;
 			}
-			if (fnLockForm(this) === false) {
-				e.preventDefault();        // second attempt, drop it
-			}
+			fnLockForm(this);
 		});
 
-		// most screens validate with onSubmit="return fnValidate();" and fnValidate
-		// ends with document.thisForm.submit(). that call lands while the browser is
-		// already submitting, so it must be left alone - the browser's own
-		// submission is the one carrying the clicked button's name
-		var bieSubmitting = null;
-		document.addEventListener('submit', function (e) {
-			bieSubmitting = e.target;
-			setTimeout(function () { bieSubmitting = null; }, 0);
+		// a second click on a form already on its way is stopped here, before its
+		// onclick or the browser's own submit can run
+		document.addEventListener('click', function (e) {
+			var btn = $(e.target).closest('input[type=submit], input[type=button], button');
+			if (!btn.length) {
+				return;
+			}
+			var form = btn.prop('form') || btn.closest('form')[0];
+			if (form && $(form).data('bie-locked')) {
+				e.preventDefault();
+				e.stopPropagation();
+			}
 		}, true);
-
-		// a form.submit() with no submit event behind it still needs locking
-		(function () {
-			var nativeSubmit = HTMLFormElement.prototype.submit;
-			HTMLFormElement.prototype.submit = function () {
-				if (bieSubmitting === this) {
-					return;
-				}
-				if (fnLockForm(this) === false) {
-					return;
-				}
-				return nativeSubmit.apply(this, arguments);
-			};
-		})();
 
 		// the back button restores a page with its buttons disabled
 		$(window).on('pageshow', function (e) {

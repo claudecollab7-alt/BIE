@@ -7,11 +7,14 @@ ob_start();
 require_once("inc/common/dbconnect.php");
 require_once("inc/common/functions.php");
 require_once("inc/common/dbhandler.php");
+require_once("inc/common/csrf.php");
+require_once("inc/common/db_txn.php");
 
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-06 loads its own csrf and txn helpers - opened on its own it died on csrf_fields()
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');

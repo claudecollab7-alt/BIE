@@ -9,6 +9,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-06 paid total read on $conn - it left out the payment being saved, so a grn never showed fully paid
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -159,7 +160,7 @@ if (isset($_POST['UPDATE'])) {
 		$stmt->execute($data);
 
 
-		$sum_pay_amount = $dbconn->GetSingleReconrd("tbl_grn_pay_receipt", "SUM(pay_amount)", "grn_id", $update_id);
+		$sum_pay_amount = db_value($conn, "SELECT SUM(pay_amount) FROM tbl_grn_pay_receipt WHERE grn_id = :grn_id", array(':grn_id' => $update_id));
 		$payable_amount = $dbconn->GetSingleReconrd("tbl_grn", "grn_pay_amount", "grn_id", $update_id);
 
 

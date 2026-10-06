@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-06 prepared qty read on $conn - it left out the lines just saved, so a complete po went to admin as partial
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 $po_pre_date = date("Y-m-d");
@@ -269,7 +270,7 @@ if (isset($_POST['send_to_admin'])) {
                 $stmt2->execute($data);
             }
         }
-        $sum_pi_qty = $dbconn->GetSingleReconrd("tbl_po_prepare_dets", "SUM(si_qty)", "si_id", $_REQUEST['si_id']);
+        $sum_pi_qty = db_value($conn, "SELECT SUM(si_qty) FROM tbl_po_prepare_dets WHERE si_id = :si_id", array(':si_id' => $_REQUEST['si_id']));
         $sum_po_qty = $dbconn->GetSingleReconrd("tbl_store_indent_details", "SUM(si_qty)", "si_id", $_REQUEST['si_id']);
         $send_admin_status = 0;
         if ($sum_pi_qty == $sum_po_qty) {
