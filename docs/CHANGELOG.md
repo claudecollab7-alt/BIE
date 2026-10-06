@@ -8,6 +8,34 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-07 - Details rows: count() on a single value is fatal on PHP 8
+
+The server runs PHP 8 - the error wording `count(): Argument #1 ($value)` only exists from
+8.0 - although the database dumps report 7.4.6.
+
+Every details save counted its posted rows with `count($_REQUEST['x'])`. When a field came in
+as a single value instead of `x[]`, PHP 8 stops with "count(): Argument #1 ($value) must be of
+type Countable|array, string given"; PHP 7 counted it as 1 row.
+
+New `fnRowCount('x')` in `inc/common/functions.php` returns the number of posted rows, or 0
+when the field is missing, empty or a single value. All 109 such counts in 20 files use it:
+dc_add, dc_invoice, direct_purchase_order, gen_so, grn_add, grn_pay_receipt, mng_credit,
+mng_invoice, mst_customer_new, mst_employee_add, mst_item_grouping, mst_itemprice_history,
+pay_receipt, purchase_return_add, quo_invoice, quo_proforma, quotation, repair_indent_add,
+spare_mapping, store_indent_add.
+
+Where it came from in `quotation.php` and `dc_invoice.php`: the package dropdown was named
+`pack_id`, the same as the posted package rows `pack_id[]`. With a package picked but not
+added, only the dropdown's value arrived. PHP 8 crashed; PHP 7 saved a junk package row
+built from it. The dropdown is now `name="pack_pick"` (id unchanged, the scripts read it by
+id), so it can never stand in for the rows.
+
+Checked on the real quotation screen (quotation 1357, a package picked but not added,
+Update): old code on PHP 8 - the fatal above; old code on PHP 7.4 - one junk package row;
+new code on both - saved, no stray row.
+
+---
+
 ## 2026-10-06 - 06-10-26 database checked, principal master, every onclick button proven
 
 ### Database (`bie_db_061026.sql`)

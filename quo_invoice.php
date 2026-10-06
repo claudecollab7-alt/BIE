@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 // 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
 // 2026-09-30 edit view posted quo_value (not a column here) and wiped inv_value, now inv_value
 // 2026-09-24 try/catch added, handlers had none before
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -92,7 +93,7 @@ if (isset($_POST['SAVE'])) {
         $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, inv_value, tax_value, net_value) 
     	VALUES (:inv_id, :item_id, :inv_qty, :inv_unit, :unit_price, :inv_discount, :inv_discount_amt, :vat, :inv_value, :tax_value, :net_value)");
 
-        $row_count = count($_REQUEST['temp_item_id']);
+        $row_count = fnRowCount('temp_item_id');
 
         for ($n = 0; $n < $row_count; $n++) {
             $data1 = array(
@@ -121,7 +122,7 @@ if (isset($_POST['SAVE'])) {
         $stmt = $conn->prepare("INSERT INTO tbl_invoice_pack_details (inv_id, inv_pack_decp, inv_pack_percent, inv_pack_text, inv_pack_taxable_val, gst_id, inv_pack_vat, inv_pack_value, inv_pack_total)
     		                    VALUES (:inv_id, :inv_pack_decp, :inv_pack_percent, :inv_pack_text, :inv_pack_taxable_val, :gst_id, :inv_pack_vat, :inv_pack_value, :inv_pack_total)");
 
-        $row_count = (count($_REQUEST['pack_id']));
+        $row_count = fnRowCount('pack_id');
         if ($row_count > 0) {
             for ($n = 0; $n < $row_count; $n++) {
                 $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
@@ -148,7 +149,7 @@ if (isset($_POST['SAVE'])) {
             $cash = null;
             $cash = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
 
-            $cash_row_count = (count($_REQUEST['temp_cash_id']));
+            $cash_row_count = fnRowCount('temp_cash_id');
             if ($cash_row_count > 0) {
                 for ($n = 0; $n < $cash_row_count; $n++) {
                 
@@ -233,7 +234,7 @@ if (isset($_POST['UPDATE']))
         $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, inv_value, tax_value, net_value) 
         VALUES (:inv_id, :item_id, :inv_qty, :inv_unit, :unit_price, :inv_discount, :inv_discount_amt, :vat, :inv_value, :tax_value, :net_value)");
 
-        $row_count = count($_REQUEST['temp_item_id']);
+        $row_count = fnRowCount('temp_item_id');
 
         for ($n = 0; $n < $row_count; $n++) {
             $data1 = array(
@@ -260,7 +261,7 @@ if (isset($_POST['UPDATE']))
         $stmt = $conn->prepare("INSERT INTO tbl_invoice_pack_details (inv_id, inv_pack_decp, inv_pack_percent, inv_pack_text, inv_pack_taxable_val, gst_id, inv_pack_vat, inv_pack_value, inv_pack_total)
                                 VALUES (:inv_id, :inv_pack_decp, :inv_pack_percent, :inv_pack_text, :inv_pack_taxable_val, :gst_id, :inv_pack_vat, :inv_pack_value, :inv_pack_total)");
 
-        $row_count = (count($_REQUEST['pack_id']));
+        $row_count = fnRowCount('pack_id');
         if ($row_count > 0) {
             for ($n = 0; $n < $row_count; $n++) {
                 $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
@@ -287,7 +288,7 @@ if (isset($_POST['UPDATE']))
             $cash = null;
             $cash = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
 
-            $cash_row_count = (count($_REQUEST['temp_cash_id']));
+            $cash_row_count = fnRowCount('temp_cash_id');
             if ($cash_row_count > 0) {
                 for ($n = 0; $n < $cash_row_count; $n++) {
                 
@@ -373,7 +374,7 @@ if (isset($_POST['FINALIZE']))
         $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, inv_value, tax_value, net_value) 
         VALUES (:inv_id, :item_id, :inv_qty, :inv_unit, :unit_price, :inv_discount, :inv_discount_amt, :vat, :inv_value, :tax_value, :net_value)");
 
-        $row_count = count($_REQUEST['temp_item_id']);
+        $row_count = fnRowCount('temp_item_id');
 
         for ($n = 0; $n < $row_count; $n++) {
             $data1 = array(
@@ -400,7 +401,7 @@ if (isset($_POST['FINALIZE']))
         $stmt = $conn->prepare("INSERT INTO tbl_invoice_pack_details (inv_id, inv_pack_decp, inv_pack_percent, inv_pack_text, inv_pack_taxable_val, gst_id, inv_pack_vat, inv_pack_value, inv_pack_total)
                                 VALUES (:inv_id, :inv_pack_decp, :inv_pack_percent, :inv_pack_text, :inv_pack_taxable_val, :gst_id, :inv_pack_vat, :inv_pack_value, :inv_pack_total)");
 
-        $row_count = (count($_REQUEST['pack_id']));
+        $row_count = fnRowCount('pack_id');
         if ($row_count > 0) {
             for ($n = 0; $n < $row_count; $n++) {
                 $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
@@ -427,7 +428,7 @@ if (isset($_POST['FINALIZE']))
             $cash = null;
             $cash = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
 
-            $cash_row_count = (count($_REQUEST['temp_cash_id']));
+            $cash_row_count = fnRowCount('temp_cash_id');
             if ($cash_row_count > 0) {
                 for ($n = 0; $n < $cash_row_count; $n++) {
                 
@@ -446,7 +447,7 @@ if (isset($_POST['FINALIZE']))
 
         /* STOCK DETAILS */
 
-        for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+        for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
             if ($_REQUEST['temp_qty'][$x] <= 0) {
                 continue;
             }
@@ -471,7 +472,7 @@ if (isset($_POST['FINALIZE']))
         // $_REQUEST['modify_by'] = $_SESSION['_user_id'];
         // $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 
-        // for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+        // for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
         //     $stmt3 = null;
         //     $stmt3 = $conn->prepare("UPDATE tbl_item_details SET item_curr_stock = :item_curr_stock, modify_date_time=:modify_date_time, modify_by=:modify_by WHERE item_id = :item_id ");
 

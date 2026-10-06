@@ -16,6 +16,7 @@ $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-06 csrf token added to the multi uom form too - its save and update were always rejected
 // 2026-10-06 multi uom rows have no min / max discount field - bind the column default 0 instead of null
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 //  ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -47,7 +48,7 @@ if (isset($_POST['SAVE'])) {
 			// $_REQUEST['created_by'] = $_SESSION['_user_id'];
 
 			if (isset($_REQUEST['branch_new_discount'])) {
-				for ($x = 0; $x < count($_REQUEST['branch_new_discount']); $x++) {
+				for ($x = 0; $x < fnRowCount('branch_new_discount'); $x++) {
 
 					$_REQUEST['created_dtm'] = date('Y-m-d H:i:s');
 					$_REQUEST['created_by'] = $_SESSION['_user_id'];

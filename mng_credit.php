@@ -10,6 +10,7 @@ isAdmin();
 // 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -72,9 +73,9 @@ if (isset($_POST['UPDATE'])) {
 
         /* details */
         if (isset($_REQUEST['temp_cash_id'])) {
-            for ($x = 0; $x < count($_REQUEST['temp_cash_id']); $x++) {
+            for ($x = 0; $x < fnRowCount('temp_cash_id'); $x++) {
 
-                //echo count($_REQUEST['temp_cash_id']);
+                //echo fnRowCount('temp_cash_id');
                 $stmt1 = null;
                 $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, crd_id, cash_id, den_name, den_count, den_total) 
                  VALUES (:inv_id, :crd_id, :cash_id, :den_name, :den_count, :den_total)");

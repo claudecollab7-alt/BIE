@@ -13,6 +13,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('isplay_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -185,7 +186,7 @@ if (isset($_POST['SAVE'])) {
         $stmt = null;
         $stmt = $conn->prepare("INSERT INTO tbl_asset_details (emp_id, asset_id, issue_date, asset_qty, asset_value, sim_no, mobile_no, sim_limit) VALUES (:emp_id, :asset_id, :issue_date, :asset_qty, :asset_value, :sim_no, :mobile_no,:sim_limit)");
         if(isset($_REQUEST['hidd_asset_id'])){
-            $row_count = count($_REQUEST['hidd_asset_id']);
+            $row_count = fnRowCount('hidd_asset_id');
             for ($n = 0; $n < $row_count; $n++) {
                 $data = array(
                     ':emp_id' => $last_id,
@@ -208,7 +209,7 @@ if ($_REQUEST['emp_type'] == 1) {
         $stmt = $conn->prepare("INSERT INTO mst_employee_certificate (emp_id, emp_cert_name, emp_cert_copy) VALUES (:emp_id, :emp_cert_name,:emp_cert_copy)");
 
         if(isset($_REQUEST['emp_certname']) && $_REQUEST['emp_certcopy'] !=''){
-            $row_count = count($_REQUEST['emp_certname']);
+            $row_count = fnRowCount('emp_certname');
 
             for ($n = 0; $n < $row_count; $n++) {
 
@@ -307,7 +308,7 @@ if (isset($_POST['UPDATE'])) {
  
 
 if(isset($_REQUEST['emp_certname']) && $_REQUEST['emp_certname'] !=''){
-    $row_count = count($_REQUEST['emp_certname']);
+    $row_count = fnRowCount('emp_certname');
     for ($n = 0; $n < $row_count; $n++) {
 
         if ($_FILES['emp_certcopy']['name'][$n] != "") {
@@ -562,7 +563,7 @@ if(isset($_REQUEST['emp_certname']) && $_REQUEST['emp_certname'] !=''){
 
 if(isset($_REQUEST['hidd_asset_id'])){
 
-    $row_count = count($_REQUEST['hidd_asset_id']);
+    $row_count = fnRowCount('hidd_asset_id');
     for ($n = 0; $n < $row_count; $n++) {
         $data_asset = array(
             ':emp_id' => $update_id,

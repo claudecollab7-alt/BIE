@@ -10,6 +10,7 @@ isAdmin();
 // 2026-09-22 stock update moved to fnApplyStockMovement(), writes tbl_stock_flow
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -86,9 +87,9 @@ if (isset($_POST['Draft'])) {
 
         /* details */
         if (isset($_REQUEST['temp_item_id'])) {
-            for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+            for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 
-                //echo count($_REQUEST['temp_item_id']);
+                //echo fnRowCount('temp_item_id');
                 $item_value = $item_taxval = $item_total = 0;
                 $stmt1 = null;
                 $stmt1 = $conn->prepare("INSERT INTO  tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, cgst_per, cgst_val, sgst_per, sgst_val, igst_per, 
@@ -127,9 +128,9 @@ if (isset($_POST['Draft'])) {
         $result->execute();
         /* details */
         if (isset($_REQUEST['temp_cash_id'])) {
-            for ($x = 0; $x < count($_REQUEST['temp_cash_id']); $x++) {
+            for ($x = 0; $x < fnRowCount('temp_cash_id'); $x++) {
 
-                //echo count($_REQUEST['temp_cash_id']);
+                //echo fnRowCount('temp_cash_id');
                 $stmt1 = null;
                 $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) 
 				VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
@@ -225,9 +226,9 @@ if (isset($_POST['UPDATE'])) {
 
         /* details */
         if (isset($_REQUEST['temp_item_id'])) {
-            for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+            for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 
-                //echo count($_REQUEST['temp_item_id']);
+                //echo fnRowCount('temp_item_id');
                 $item_value = $item_taxval = $item_total = 0;
                 $stmt1 = null;
                 $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, cgst_per, cgst_val, sgst_per, sgst_val, igst_per, 
@@ -267,9 +268,9 @@ if (isset($_POST['UPDATE'])) {
 
         /* details */
         if (isset($_REQUEST['temp_cash_id'])) {
-            for ($x = 0; $x < count($_REQUEST['temp_cash_id']); $x++) {
+            for ($x = 0; $x < fnRowCount('temp_cash_id'); $x++) {
 
-                //echo count($_REQUEST['temp_cash_id']);
+                //echo fnRowCount('temp_cash_id');
                 $stmt1 = null;
                 $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) 
                  VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
@@ -359,9 +360,9 @@ if (isset($_POST['FINALIZE'])) {
 
         /* details */
         if (isset($_REQUEST['temp_item_id'])) {
-            for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+            for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 
-                //echo count($_REQUEST['temp_item_id']);
+                //echo fnRowCount('temp_item_id');
                 $item_value = $item_taxval = $item_total = 0;
                 $stmt1 = null;
                 $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_details (inv_id, item_id, inv_qty, inv_unit, unit_price, inv_discount, inv_discount_amt, vat, cgst_per, cgst_val, sgst_per, sgst_val, igst_per, 
@@ -401,9 +402,9 @@ if (isset($_POST['FINALIZE'])) {
 
         /* details */
         if (isset($_REQUEST['temp_cash_id'])) {
-            for ($x = 0; $x < count($_REQUEST['temp_cash_id']); $x++) {
+            for ($x = 0; $x < fnRowCount('temp_cash_id'); $x++) {
 
-                //echo count($_REQUEST['temp_cash_id']);
+                //echo fnRowCount('temp_cash_id');
                 $stmt1 = null;
                 $stmt1 = $conn->prepare("INSERT INTO tbl_invoice_denomination_details (inv_id, cash_id, den_name, den_count, den_total) 
                  VALUES (:inv_id, :cash_id, :den_name, :den_count, :den_total)");
@@ -424,7 +425,7 @@ if (isset($_POST['FINALIZE'])) {
 
         /* STOCK DETAILS */
 
-        for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+        for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
             if ($_REQUEST['temp_qty'][$x] <= 0) {
                 continue;
             }
@@ -449,7 +450,7 @@ if (isset($_POST['FINALIZE'])) {
         // $_REQUEST['modify_by'] = $_SESSION['_user_id'];
         // $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 
-        // for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+        // for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
         // 	$stmt1 = null;
         // 	$stmt1 = $conn->prepare("UPDATE tbl_item_details SET item_curr_stock = :item_curr_stock, modify_date_time=:modify_date_time, modify_by=:modify_by WHERE item_id = :item_id ");
 

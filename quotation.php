@@ -11,6 +11,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8; package picker renamed so it cannot override the rows
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -91,7 +92,7 @@ if (isset($_POST['SAVE']) && $_POST['status'] == 'requote') {
 		$stmt = $conn->prepare("INSERT INTO tbl_quotation_details (quo_id,  item_id, quo_qty, show_image, quo_unit, selling_price, quo_discount, quo_discount_amt, vat, quo_value, tax_value, net_value) 
 	    						VALUES (:quo_id, :item_id, :quo_qty, :show_image,  :quo_unit, :selling_price, :quo_discount, :quo_discount_amt, :vat, :quo_value, :tax_value, :net_value)");
 
-		$row_count = count($_REQUEST['temp_item_id']);
+		$row_count = fnRowCount('temp_item_id');
 		for ($n = 0; $n < $row_count; $n++) {
 
 			$data = array(
@@ -118,7 +119,7 @@ if (isset($_POST['SAVE']) && $_POST['status'] == 'requote') {
 		$stmt = $conn->prepare("INSERT INTO tbl_quo_pack_details (quo_id, quo_pack_decp, quo_pack_percent, quo_pack_text, quo_pack_taxable_val, gst_id, quo_pack_vat, quo_pack_value, quo_pack_total)
 								VALUES (:quo_id, :quo_pack_decp, :quo_pack_percent, :quo_pack_text, :quo_pack_taxable_val, :gst_id, :quo_pack_vat, :quo_pack_value, :quo_pack_total)");
 
-		$row_count = ($_REQUEST['pack_id']) ? count($_REQUEST['pack_id']) : 0;
+		$row_count = fnRowCount('pack_id');
 		if ($row_count > 0) {
 			for ($n = 0; $n < $row_count; $n++) {
 
@@ -192,7 +193,7 @@ if (isset($_POST['SAVE']) && $_POST['status'] == 'requote') {
 	$stmt = $conn->prepare("INSERT INTO tbl_quotation_details (quo_id,  item_id, quo_qty, show_image, quo_unit, selling_price, quo_discount, quo_discount_amt, vat, quo_value, tax_value, net_value) 
 		                    VALUES (:quo_id, :item_id, :quo_qty, :show_image, :quo_unit, :selling_price, :quo_discount, :quo_discount_amt, :vat, :quo_value, :tax_value, :net_value)");
 
-	$row_count = count($_REQUEST['temp_item_id']);
+	$row_count = fnRowCount('temp_item_id');
 	for ($n = 0; $n < $row_count; $n++) {
 		$data = array(
 			':quo_id' => $last_id,
@@ -220,7 +221,7 @@ if (isset($_POST['SAVE']) && $_POST['status'] == 'requote') {
 
 	$stmt = $conn->prepare("INSERT INTO tbl_quo_pack_details (quo_id, quo_pack_decp, quo_pack_percent, quo_pack_text, quo_pack_taxable_val, gst_id, quo_pack_vat, quo_pack_value, quo_pack_total)
 		                    VALUES (:quo_id, :quo_pack_decp, :quo_pack_percent, :quo_pack_text, :quo_pack_taxable_val, :gst_id, :quo_pack_vat, :quo_pack_value, :quo_pack_total)");
-	$row_count = ($_REQUEST['pack_id']) ? count($_REQUEST['pack_id']) : 0;
+	$row_count = fnRowCount('pack_id');
 	if ($row_count > 0) {
 		for ($n = 0; $n < $row_count; $n++) {
 			$quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
@@ -299,7 +300,7 @@ if (isset($_POST['UPDATE'])) {
 	$stmt = null;
 	$stmt = $conn->prepare("INSERT INTO tbl_quotation_details (quo_id,  item_id, quo_qty, show_image,  quo_unit, selling_price, quo_discount, quo_discount_amt, vat, quo_value, tax_value, net_value) 
 							VALUES (:quo_id, :item_id, :quo_qty, :show_image, :quo_unit, :selling_price, :quo_discount, :quo_discount_amt, :vat, :quo_value, :tax_value, :net_value)");
-	$row_count = count($_REQUEST['temp_item_id']);
+	$row_count = fnRowCount('temp_item_id');
 
 	for ($n = 0; $n < $row_count; $n++) {
 		$data = array(
@@ -334,7 +335,7 @@ if (isset($_POST['UPDATE'])) {
 	$stmt = $conn->prepare("INSERT INTO tbl_quo_pack_details (quo_id, quo_pack_decp, quo_pack_percent, quo_pack_text, quo_pack_taxable_val, gst_id, quo_pack_vat, quo_pack_value, quo_pack_total)
 							VALUES (:quo_id, :quo_pack_decp, :quo_pack_percent, :quo_pack_text, :quo_pack_taxable_val, :gst_id, :quo_pack_vat, :quo_pack_value, :quo_pack_total)");
 
-	$row_count = ($_REQUEST['pack_id']) ? count($_REQUEST['pack_id']) : 0;
+	$row_count = fnRowCount('pack_id');
 	if ($row_count > 0) {
 		for ($n = 0; $n < $row_count; $n++) {
 			$_REQUEST['quo_pack_total'][$n] = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
@@ -415,7 +416,7 @@ if (isset($_POST['FINALIZE'])) {
 			$stmt = $conn->prepare("INSERT INTO tbl_quotation_details (quo_id,  item_id, quo_qty, show_image, quo_unit, selling_price, quo_discount, quo_discount_amt, vat, quo_value, tax_value, net_value) 
 		                    VALUES (:quo_id, :item_id, :quo_qty, :show_image, :quo_unit, :selling_price, :quo_discount, :quo_discount_amt, :vat, :quo_value, :tax_value, :net_value)");
 
-			$row_count = count($_REQUEST['temp_item_id']);
+			$row_count = fnRowCount('temp_item_id');
 			for ($n = 0; $n < $row_count; $n++) {
 				$data = array(
 					':quo_id' => $last_id,
@@ -442,7 +443,7 @@ if (isset($_POST['FINALIZE'])) {
 			$stmt = $conn->prepare("INSERT INTO tbl_quo_pack_details (quo_id, quo_pack_decp, quo_pack_percent, quo_pack_text, quo_pack_taxable_val, gst_id, quo_pack_vat, quo_pack_value, quo_pack_total)
 		                    VALUES (:quo_id, :quo_pack_decp, :quo_pack_percent, :quo_pack_text, :quo_pack_taxable_val, :gst_id, :quo_pack_vat, :quo_pack_value, :quo_pack_total)");
 
-			$row_count = ($_REQUEST['pack_id']) ? count($_REQUEST['pack_id']) : 0;
+			$row_count = fnRowCount('pack_id');
 			if ($row_count > 0) {
 				for ($n = 0; $n < $row_count; $n++) {
 					$quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
@@ -515,7 +516,7 @@ if (isset($_POST['FINALIZE'])) {
 			$stmt = $conn->prepare("INSERT INTO tbl_quotation_details (quo_id,  item_id, quo_qty, show_image,  quo_unit, selling_price, quo_discount, quo_discount_amt, vat, quo_value, tax_value, net_value) 
 				VALUES (:quo_id, :item_id, :quo_qty, :show_image, :quo_unit, :selling_price, :quo_discount, :quo_discount_amt, :vat, :quo_value, :tax_value, :net_value)");
 
-			$row_count = count($_REQUEST['temp_item_id']);
+			$row_count = fnRowCount('temp_item_id');
 
 			for ($n = 0; $n < $row_count; $n++) {
 				$data = array(
@@ -545,8 +546,8 @@ if (isset($_POST['FINALIZE'])) {
 			$stmt = null;
 			$stmt = $conn->prepare("INSERT INTO tbl_quo_pack_details (quo_id, quo_pack_decp, quo_pack_percent, quo_pack_text, quo_pack_taxable_val, gst_id, quo_pack_vat, quo_pack_value, quo_pack_total)
 									VALUES (:quo_id, :quo_pack_decp, :quo_pack_percent, :quo_pack_text, :quo_pack_taxable_val, :gst_id, :quo_pack_vat, :quo_pack_value, :quo_pack_total)");
-			$row_count = ($_REQUEST['pack_id']) ? count($_REQUEST['pack_id']) : 0;
-			// 			$row_count = count($_REQUEST['pack_id']);
+			$row_count = fnRowCount('pack_id');
+			// 			$row_count = fnRowCount('pack_id');
 			if ($row_count > 0) {
 				for ($n = 0; $n < $row_count; $n++) {
 
@@ -622,7 +623,7 @@ if (isset($_POST['FINALIZE'])) {
 			$stmt = $conn->prepare("INSERT INTO tbl_quotation_details (quo_id,  item_id, quo_qty, show_image, quo_unit, selling_price, quo_discount, quo_discount_amt, vat, quo_value, tax_value, net_value) 
 		                    VALUES (:quo_id, :item_id, :quo_qty, :show_image, :quo_unit, :selling_price, :quo_discount, :quo_discount_amt, :vat, :quo_value, :tax_value, :net_value)");
 
-			$row_count = count($_REQUEST['temp_item_id']);
+			$row_count = fnRowCount('temp_item_id');
 			for ($n = 0; $n < $row_count; $n++) {
 				$data = array(
 					':quo_id' => $last_id,
@@ -649,7 +650,7 @@ if (isset($_POST['FINALIZE'])) {
 			$stmt = $conn->prepare("INSERT INTO tbl_quo_pack_details (quo_id, quo_pack_decp, quo_pack_percent, quo_pack_text, quo_pack_taxable_val, gst_id, quo_pack_vat, quo_pack_value, quo_pack_total)
 		                    VALUES (:quo_id, :quo_pack_decp, :quo_pack_percent, :quo_pack_text, :quo_pack_taxable_val, :gst_id, :quo_pack_vat, :quo_pack_value, :quo_pack_total)");
 
-			$row_count = ($_REQUEST['pack_id']) ? count($_REQUEST['pack_id']) : 0;
+			$row_count = fnRowCount('pack_id');
 			if ($row_count > 0) {
 				for ($n = 0; $n < $row_count; $n++) {
 					$quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';
@@ -1162,7 +1163,7 @@ if (isset($_REQUEST['quo_id'])) {
 														<div class="form-group col-md-3">
 															<p><b>Description</b></p>
 															<div>
-																<select name="pack_id" id="pack_id" class="select">
+																<select name="pack_pick" id="pack_id" class="select">
 																	<option value="">-- Select --</option>
 																	<?php
 																	if ($otdets_principal_id > 0) {

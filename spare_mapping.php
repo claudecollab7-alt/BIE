@@ -9,6 +9,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -36,7 +37,7 @@ if (isset($_POST['SAVE']) || isset($_POST['UPDATE'])) {
 						VALUES
 						(:item_id, :spare_item_id, :created_by, :created_dtm)");
 
-			for ($x = 0; $x < count($_REQUEST['spare_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('spare_item_id'); $x++) {
 				if ($_REQUEST['spare_item_id'][$x] > 0) {
 					$data1 = array(
 						':item_id'       => $item_id,

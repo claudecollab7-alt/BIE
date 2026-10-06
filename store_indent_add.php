@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -70,7 +71,7 @@ if (isset($_POST['SAVE'])) {
 		$stmt = $conn->prepare("INSERT INTO tbl_store_indent_details (si_id,  item_id, si_qty, item_moq, item_uom, si_unit, curr_stock) 
 	    						VALUES (:si_id, :item_id, :si_qty, :item_moq, :item_uom, :si_unit, :curr_stock)");
 
-		$row_count = count($_REQUEST['temp_item_id']);
+		$row_count = fnRowCount('temp_item_id');
 		for ($n = 0; $n < $row_count; $n++) {
 
 			$data = array(
@@ -138,9 +139,9 @@ if (isset($_POST['UPDATE'])) {
 
 		/* details */
 		$po_value = 0;
-		for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+		for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 
-			echo count($_REQUEST['temp_item_id']);
+			echo fnRowCount('temp_item_id');
 			$item_value = $item_taxval = $item_total = 0;
 			$stmt1 = null;
 			$stmt1 = $conn->prepare("INSERT INTO tbl_store_indent_details (si_id, item_id, si_qty, item_moq, item_uom, si_unit, curr_stock) 
@@ -216,9 +217,9 @@ if (isset($_POST['FINALIZE'])) {
 
 			/* details */
 			
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 
-				//echo count($_REQUEST['temp_item_id']);
+				//echo fnRowCount('temp_item_id');
 				$item_value = $item_taxval = $item_total = 0;
 				$stmt1 = null;
 				$stmt1 = $conn->prepare("INSERT INTO tbl_store_indent_details (si_id, item_id, si_qty, item_moq, item_uom, si_unit, curr_stock) 

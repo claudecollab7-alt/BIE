@@ -31,6 +31,13 @@ function isAdmin()
 
 
 	
+// rows posted as name[] - 0 when the field is missing, empty or came in as a single value.
+// count() on a string is a fatal error from php 8 and counted 1 on php 7.
+function fnRowCount($key)
+{
+	return (isset($_REQUEST[$key]) && is_array($_REQUEST[$key])) ? count($_REQUEST[$key]) : 0;
+}
+
 function StandardHash($plain) {
 	return md5("$plain:Tulips2015");
 }		

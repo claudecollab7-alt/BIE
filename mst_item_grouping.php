@@ -12,6 +12,7 @@ $dbconn = new dbhandler();
 
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL); 
 
@@ -52,7 +53,7 @@ if (isset($_POST['SAVE'])) {
 			$stmt = null;
 			$stmt = $conn->prepare("INSERT INTO tbl_item_group_details (item_group_id, item_id, item_qty, item_position) VALUES (:item_group_id, :item_id, :item_qty, :item_position)");
 
-			for ($g = 0; $g < count($_REQUEST['ig_item_id']); $g++) {
+			for ($g = 0; $g < fnRowCount('ig_item_id'); $g++) {
 				if ((int)$_REQUEST['ig_item_id'][$g] <= 0) {
 					continue;
 				}
@@ -113,7 +114,7 @@ if (isset($_POST['UPDATE'])) {
 			$stmt = null;
 			$stmt = $conn->prepare("INSERT INTO tbl_item_group_details (item_group_id, item_id, item_qty, item_position) VALUES (:item_group_id, :item_id, :item_qty, :item_position)");
 
-			for ($g = 0; $g < count($_REQUEST['ig_item_id']); $g++) {
+			for ($g = 0; $g < fnRowCount('ig_item_id'); $g++) {
 				if ((int)$_REQUEST['ig_item_id'][$g] <= 0) {
 					continue;
 				}

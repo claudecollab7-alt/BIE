@@ -10,6 +10,7 @@ $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-09-24 try/catch added, handlers had none before
 // 2026-09-30 edit view posted quo_value (not a column here) and wiped pro_value, now pro_value
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -79,7 +80,7 @@ if (isset($_POST['SAVE'])) {
     	VALUES (:pro_id, :item_id, :pro_qty, :pro_unit, :unit_price, :pro_discount, :pro_discount_amt, :vat, :pro_value, :tax_value, :net_value)");
 
         if (isset($_REQUEST['temp_item_id'])) {
-            $row_count = count($_REQUEST['temp_item_id']);
+            $row_count = fnRowCount('temp_item_id');
 
             for ($n = 0; $n < $row_count; $n++) {
                 $data1 = array(
@@ -104,7 +105,7 @@ if (isset($_POST['SAVE'])) {
     		                    VALUES (:pro_id, :pro_pack_decp, :pro_pack_percent, :pro_pack_text, :pro_pack_taxable_val, :gst_id, :pro_pack_vat, :pro_pack_value, :pro_pack_total)");
 
         if (isset($_REQUEST['pack_id'])) {
-            $row_count = (count($_REQUEST['pack_id']));
+            $row_count = fnRowCount('pack_id');
             if ($row_count > 0) {
                 for ($n = 0; $n < $row_count; $n++) {
                     $quo_pack_total = isset($_REQUEST['quo_pack_total'][$n]) ? $_REQUEST['quo_pack_total'][$n] : '';

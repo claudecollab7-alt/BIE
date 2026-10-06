@@ -11,6 +11,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('display_errors', '	1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -75,7 +76,7 @@ if (isset($_POST['SAVE']))
 		
 		if (isset($_REQUEST['temp_rtn_item_id'])) {	
 			
-		    for ($x = 0; $x < count($_REQUEST['temp_rtn_item_id']); $x++) {
+		    for ($x = 0; $x < fnRowCount('temp_rtn_item_id'); $x++) {
 					
 				$stmt1 = null;				
 			    $stmt1 = $conn->prepare("INSERT INTO tbl_purchase_return_details (rtn_id, rtn_item_id, rtn_unit, po_qty, cus_dc_qty, rtn_rejected_qty) VALUES (:rtn_id, :rtn_item_id, :rtn_unit, :po_qty, :cus_dc_qty, :rtn_rejected_qty)");
@@ -172,7 +173,7 @@ if (isset($_POST['UPDATE']))
 		// $result = $conn->query("SELECT * FROM tbl_grn_details_temp WHERE session_id = '".$_SESSION['session_id']."' ORDER BY temp_rtn_id");
 		if (isset($_REQUEST['temp_rtn_item_id'])) {	
 			
-		    for ($x = 0; $x < count($_REQUEST['temp_rtn_item_id']); $x++) {
+		    for ($x = 0; $x < fnRowCount('temp_rtn_item_id'); $x++) {
 					
 				$stmt1 = null;				
 			    $stmt1 = $conn->prepare("INSERT INTO tbl_purchase_return_details (rtn_id, rtn_item_id, rtn_unit, po_qty, cus_dc_qty, rtn_rejected_qty) VALUES (:rtn_id, :rtn_item_id, :rtn_unit, :po_qty, :cus_dc_qty, :rtn_rejected_qty)");
@@ -255,7 +256,7 @@ if (isset($_POST['FINALIZE']))
 		// $result = $conn->query("SELECT * FROM tbl_grn_details_temp WHERE session_id = '".$_SESSION['session_id']."' ORDER BY temp_rtn_id");
 		if (isset($_REQUEST['temp_rtn_item_id'])) {	
 			
-		    for ($x = 0; $x < count($_REQUEST['temp_rtn_item_id']); $x++) {
+		    for ($x = 0; $x < fnRowCount('temp_rtn_item_id'); $x++) {
 					
 				$stmt1 = null;				
 			    $stmt1 = $conn->prepare("INSERT INTO tbl_purchase_return_details (rtn_id, rtn_item_id, rtn_unit, po_qty, cus_dc_qty, rtn_rejected_qty) VALUES (:rtn_id, :rtn_item_id, :rtn_unit, :po_qty, :cus_dc_qty, :rtn_rejected_qty)");

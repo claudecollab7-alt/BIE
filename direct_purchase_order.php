@@ -8,6 +8,7 @@ isAdmin();
 
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -64,9 +65,9 @@ if (isset($_POST['Draft'])) {
 		/* details */
 		$po_value = 0;
 		if (isset($_REQUEST['temp_item_id'])) {
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 
-				//echo count($_REQUEST['temp_item_id']);
+				//echo fnRowCount('temp_item_id');
 				$item_value = $item_taxval = $item_total = 0;
 				$stmt1 = null;
 				$stmt1 = $conn->prepare("INSERT INTO tbl_purchase_order_details (po_id, item_id, po_qty, po_unit, item_price, cost_price, vat, cgst_per, cgst_val, sgst_per, sgst_val, igst_per, 
@@ -108,9 +109,9 @@ if (isset($_POST['Draft'])) {
 		$result = $conn->prepare($delete_details);
 		$result->execute();
 		if (isset($_REQUEST['temp_pr_id'])) {
-			for ($x = 0; $x < count($_REQUEST['temp_pr_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_pr_id'); $x++) {
 
-				//echo count($_REQUEST['temp_item_id']);
+				//echo fnRowCount('temp_item_id');
 				$stmt1 = null;
 				$stmt1 = $conn->prepare("INSERT INTO  tbl_po_print_details (po_id, pr_id, pr_name, pr_desc, pr_sort) 
 								VALUES (:po_id, :pr_id, :pr_name, :pr_desc, :pr_sort)");
@@ -190,9 +191,9 @@ if (isset($_POST['UPDATE'])) {
 
 		/* details */
 		$po_value = 0;
-		for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+		for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 
-			echo count($_REQUEST['temp_item_id']);
+			echo fnRowCount('temp_item_id');
 			$item_value = $item_taxval = $item_total = 0;
 			$stmt1 = null;
 			$stmt1 = $conn->prepare("INSERT INTO tbl_purchase_order_details (po_id, item_id, po_qty, po_unit, item_price, cost_price, vat, cgst_per, cgst_val, sgst_per, sgst_val, igst_per, 
@@ -235,9 +236,9 @@ if (isset($_POST['UPDATE'])) {
 		$result = $conn->prepare($delete_details);
 		$result->execute();
 		if (isset($_REQUEST['temp_pr_id'])) {
-			for ($x = 0; $x < count($_REQUEST['temp_pr_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_pr_id'); $x++) {
 
-				//echo count($_REQUEST['temp_item_id']);
+				//echo fnRowCount('temp_item_id');
 				$stmt1 = null;
 				$stmt1 = $conn->prepare("INSERT INTO  tbl_po_print_details (po_id, pr_id, pr_name, pr_desc, pr_sort) 
 									VALUES (:po_id, :pr_id, :pr_name, :pr_desc, :pr_sort)");
@@ -314,9 +315,9 @@ if (isset($_POST['FINALIZE'])) {
 
 			/* details */
 			$po_value = 0;
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 
-				//echo count($_REQUEST['temp_item_id']);
+				//echo fnRowCount('temp_item_id');
 				$item_value = $item_taxval = $item_total = 0;
 				$stmt1 = null;
 				$stmt1 = $conn->prepare("INSERT INTO tbl_purchase_order_details (po_id, item_id, po_qty, po_unit, item_price, cost_price, vat, cgst_per, cgst_val, sgst_per, sgst_val, igst_per, 
@@ -359,9 +360,9 @@ if (isset($_POST['FINALIZE'])) {
 			$result = $conn->prepare($delete_details);
 			$result->execute();
 			if (isset($_REQUEST['temp_pr_id'])) {
-				for ($x = 0; $x < count($_REQUEST['temp_pr_id']); $x++) {
+				for ($x = 0; $x < fnRowCount('temp_pr_id'); $x++) {
 
-					//echo count($_REQUEST['temp_item_id']);
+					//echo fnRowCount('temp_item_id');
 					$stmt1 = null;
 					$stmt1 = $conn->prepare("INSERT INTO  tbl_po_print_details (po_id, pr_id, pr_name, pr_desc, pr_sort) 
 								VALUES (:po_id, :pr_id, :pr_name, :pr_desc, :pr_sort)");
@@ -447,9 +448,9 @@ if (isset($_POST['FINALIZE'])) {
 
 			/* details */
 			$po_value = 0;
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 
-				//echo count($_REQUEST['temp_item_id']);
+				//echo fnRowCount('temp_item_id');
 				$item_value = $item_taxval = $item_total = 0;
 				$stmt1 = null;
 				$stmt1 = $conn->prepare("INSERT INTO tbl_purchase_order_details (po_id, item_id, po_qty, po_unit, item_price, cost_price, vat, cgst_per, cgst_val, sgst_per, sgst_val, igst_per, 
@@ -492,9 +493,9 @@ if (isset($_POST['FINALIZE'])) {
 			$result = $conn->prepare($delete_details);
 			$result->execute();
 			if (isset($_REQUEST['temp_pr_id'])) {
-				for ($x = 0; $x < count($_REQUEST['temp_pr_id']); $x++) {
+				for ($x = 0; $x < fnRowCount('temp_pr_id'); $x++) {
 
-					//echo count($_REQUEST['temp_item_id']);
+					//echo fnRowCount('temp_item_id');
 					$stmt1 = null;
 					$stmt1 = $conn->prepare("INSERT INTO  tbl_po_print_details (po_id, pr_id, pr_name, pr_desc, pr_sort) 
 								VALUES (:po_id, :pr_id, :pr_name, :pr_desc, :pr_sort)");
