@@ -26,7 +26,7 @@ version wrote.
 | `po_prepare.php` | Same - prepared qty summed without the lines just saved, so a complete PO went to admin as partial. | 24 Sep |
 | `emp_advance_return_payment.php` | Same - repaid total left out the repayment being saved. | 24 Sep |
 | `import_attendance.php` | Same, worse - the "already imported?" check still saw punches deleted a line earlier, skipped the re-insert, and the delete was committed. Re-importing an overlapping file dropped those punches. | 1 Oct |
-| `mst_itemprice_history.php` | The multi-UOM form (`thisForm2`) had no csrf token, so its Save and Update were always rejected. | 24 Sep |
+| `mst_itemprice_history.php` | The multi-UOM form (`thisForm2`) had no csrf token, so its Save and Update were always rejected. Behind that, its insert read `branch_new_min_discount[]` / `branch_new_max_discount[]`, which those rows have never had, so it would have failed on a NOT NULL column anyway - true since the first commit. Now binds the column default 0 when the field is absent. Checked: the multi-UOM row now saves. | 24 Sep |
 | `dc_add.php` | Packing took its box type and dispatch qty from the visible row. On a DC whose line it had itself completed, the page's own load-time check blanks those inputs (old behaviour), so saving it zeroed the packing and the box counts. Packing now carries its own box type and qty, loaded from the saved packing and set when packing, as the temp table did. | 1 Oct |
 | `modal_so_det.php`, `modal_so_reject_dets.php`, `modal_grn_reject_dets.php` | Opened on their own they died on `csrf_fields()`. They now load the csrf and txn helpers themselves. In normal use they are included by their list pages and worked. | 1 Oct |
 
@@ -52,7 +52,25 @@ stock was never added, so re-entering them after the upload is correct and safe.
   GRN update - same rows, or differing only by the intended fixes (invoice Amount no longer
   zeroed, ledger rows carry direction / column / remark).
 
+### Also confirmed end to end on the deployed vs fixed code
+
+- New GRN from a PO: deployed code wrote nothing and burned a GRN id; fixed code writes the
+  same rows as the original.
+- Paying a GRN in full, PO prepare Draft / Send to Admin: fixed code matches the original.
+- Advance repayment: deployed left the advance open with balance 0, fixed closes it.
+- Attendance re-import: deployed 3 punches -> 0, fixed keeps 3 on every re-import. No
+  attendance has been imported on the live server since June, so nothing was lost.
+- Stock Adjustment: 202 -> 200 with an ADJ ledger row and the reason.
+- Masters (brand, category, colour, department, designation, division, HSN, labour, principal,
+  UOM, branch, city, state, district, salary package, item, item group, supplier, employee):
+  same rows as the original. Customer differs only in that a trailing space on a branch name
+  is now trimmed.
+- No advances or GRN payments in the live data were affected by the stale reads.
+
 ### Left as it was (older than these changes)
+
+- The GRN list shows "DataTables warning: Invalid JSON response" after finalizing a branch-2
+  draft GRN - same in the original code.
 
 - Opening a DC whose line that same DC completed shows "Dispatch Qty Must be Less Than the
   SO Qty" and blanks the qty, because "Despatched" includes the DC's own qty. Saving it then

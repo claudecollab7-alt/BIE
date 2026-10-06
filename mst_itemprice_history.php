@@ -15,6 +15,7 @@ $dbconn = new dbhandler();
 // 2026-09-22 Current Stock made read only, price save no longer writes qty
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-06 csrf token added to the multi uom form too - its save and update were always rejected
+// 2026-10-06 multi uom rows have no min / max discount field - bind the column default 0 instead of null
 
 //  ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -59,8 +60,8 @@ if (isset($_POST['SAVE'])) {
 						':branch_id' =>  $_REQUEST['branch_id'][$x],
 						':new_price' => $_REQUEST['branch_new_price'][$x],
 						':new_discount' => $_REQUEST['branch_new_discount'][$x],
-						':new_min_discount' => $_REQUEST['branch_new_min_discount'][$x],
-						':new_max_discount' => $_REQUEST['branch_new_max_discount'][$x],
+						':new_min_discount' => isset($_REQUEST['branch_new_min_discount'][$x]) ? $_REQUEST['branch_new_min_discount'][$x] : 0,
+						':new_max_discount' => isset($_REQUEST['branch_new_max_discount'][$x]) ? $_REQUEST['branch_new_max_discount'][$x] : 0,
 						':new_cost_price' => $_REQUEST['branch_new_cost_price'][$x],
 						':new_selling_price' => $_REQUEST['branch_new_selling_price'][$x],
 						':new_margin_percent' => $_REQUEST['margin_percent'][$x],
