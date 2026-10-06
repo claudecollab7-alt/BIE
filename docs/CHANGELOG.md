@@ -8,6 +8,67 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-06 - Save and Generate Report stopped working - double-submit lock regression
+
+My double-submit lock broke roughly 50 screens: every master add/edit, every report
+filter, and the main document screens. Reported as "report not working" on Stock List and
+"unable to create new items" in Item Masters; the cause is the same for both.
+
+### What happened
+
+Nearly every screen validates like this:
+
+```html
+<form name="thisForm" onSubmit="return fnValidate();">
+```
+```js
+function fnValidate() {
+    if (isNull(...)) { return false; }
+    document.thisForm.submit();      // and then returns true, or nothing
+}
+```
+
+That `document.thisForm.submit()` lands while the browser is already submitting the form.
+The browser ignores it - a form cannot start a second submission while the submit event is
+still being dispatched - and then carries on with its own submission, which is the one that
+includes the clicked button, `SAVE=SAVE` or `Report=Report`. Every php handler is gated on
+`isset($_POST['SAVE'])` or `isset($_POST['Report'])`, so that button name is what makes the
+page do anything.
+
+The lock wrapped `HTMLFormElement.prototype.submit`, so that ignored call still marked the
+form as locked. The browser's real submission then reached the lock's submit handler, which
+saw a locked form, took it for a second click and cancelled it. What reached php was the
+programmatic submission - the whole form **except** the button name. So the page posted,
+reloaded, and did nothing.
+
+### The fix
+
+`inc/common/css-js.php` now notes, in a capture-phase listener that runs before any inline
+`onSubmit`, which form is mid-submit. A `form.submit()` for that same form is left alone:
+no lock, no native call, so the browser's own submission proceeds carrying the button. A
+`form.submit()` with no submit event behind it - from a link or a select - still locks as
+before.
+
+### Why the first test missed it
+
+The old browser test replaced `HTMLFormElement.prototype.submit` with a counter, so nothing
+was ever posted and it could only count submissions, not see what they contained. It
+counted one submission and passed. Rewritten against a real server that records POST
+bodies, so every case now asserts the button name and field values php would actually
+receive.
+
+### Checks
+
+`jstest/run.js` (22) against Chromium and a real server: the `form.submit()` validation
+pattern in both its shapes (returning true, and returning nothing) posts once with the
+button name; double-clicking either still posts once; a failed validation posts nothing and
+leaves the buttons usable, and submits properly once fixed; a plain `return true`
+validation still works; a programmatic submit behind a link still posts once and is still
+locked against a second click; two forms on a page stay independent; buttons still disable
+once a submit goes through.
+
+---
+
 ## 2026-10-05 - Server queries for the 05-10-26 database
 
 Checked the new live dump (`db/bie_db_051026.sql`) against what the uploaded code

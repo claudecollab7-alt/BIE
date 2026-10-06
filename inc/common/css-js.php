@@ -393,11 +393,23 @@
 			}
 		});
 
-		// several screens call document.thisForm.submit() from their validation,
-		// which never fires the submit event - lock those too
+		// most screens validate with onSubmit="return fnValidate();" and fnValidate
+		// ends with document.thisForm.submit(). that call lands while the browser is
+		// already submitting, so it must be left alone - the browser's own
+		// submission is the one carrying the clicked button's name
+		var bieSubmitting = null;
+		document.addEventListener('submit', function (e) {
+			bieSubmitting = e.target;
+			setTimeout(function () { bieSubmitting = null; }, 0);
+		}, true);
+
+		// a form.submit() with no submit event behind it still needs locking
 		(function () {
 			var nativeSubmit = HTMLFormElement.prototype.submit;
 			HTMLFormElement.prototype.submit = function () {
+				if (bieSubmitting === this) {
+					return;
+				}
 				if (fnLockForm(this) === false) {
 					return;
 				}
