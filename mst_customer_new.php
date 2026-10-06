@@ -12,6 +12,7 @@ $dbconn = new dbhandler();
 // 2026-10-01 branch rows moved off mst_customer_branch_temp - rows live in the page, posted back as arrays
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -112,7 +113,7 @@ if (isset($_POST['SAVE'])) {
 			$stmt = null;
 			$stmt = $conn->prepare("INSERT INTO mst_customer_branch (supp_id, branch_name, prefix, branch_contact_person, branch_contact_no, branch_add1, branch_add2, state_id, district_id, city_id, branch_pincode) VALUES (:supp_id, :branch_name, :prefix, :branch_contact_person, :branch_contact_no, :branch_add1, :branch_add2, :state_id, :district_id, :city_id, :branch_pincode)");
 
-			for ($b = 0; $b < count($_REQUEST['br_name']); $b++) {
+			for ($b = 0; $b < fnRowCount('br_name'); $b++) {
 				if (trim($_REQUEST['br_name'][$b]) == '') {
 					continue;
 				}
@@ -238,7 +239,7 @@ if (isset($_POST['UPDATE'])) {
 			$stmt = null;
 			$stmt = $conn->prepare("INSERT INTO mst_customer_branch (supp_id, branch_name, prefix, branch_contact_person, branch_contact_no, branch_add1, branch_add2, state_id, district_id, city_id, branch_pincode) VALUES (:supp_id, :branch_name, :prefix, :branch_contact_person, :branch_contact_no, :branch_add1, :branch_add2, :state_id, :district_id, :city_id, :branch_pincode)");
 
-			for ($b = 0; $b < count($_REQUEST['br_name']); $b++) {
+			for ($b = 0; $b < fnRowCount('br_name'); $b++) {
 				if (trim($_REQUEST['br_name'][$b]) == '') {
 					continue;
 				}

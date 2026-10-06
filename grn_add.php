@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 // 2026-09-22 stock update moved to fnApplyStockMovement(), writes tbl_stock_flow
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-06 new grn commit moved above the redirect - it sat after die; so every new grn was rolled back
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -73,7 +74,7 @@ if (isset($_REQUEST['Draft'])) {
 		$delete_details  = $conn->query('DELETE FROM tbl_grn_details WHERE grn_id = ' . $grn_id);
 		$delete_details->execute();
 
-		for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+		for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 			$stmt1 = null;
 			$stmt1 = $conn->prepare("INSERT INTO tbl_grn_details (grn_id, grn_item_id, grn_unit, po_qty, grn_accepted_qty, grn_rejected_qty, grn_pending_qty, grn_recived_qty ) 
                         VALUES (:grn_id, :grn_item_id, :grn_unit, :po_qty, :grn_accepted_qty, :grn_rejected_qty, :grn_pending_qty, :grn_recived_qty)");
@@ -164,7 +165,7 @@ if (isset($_POST['UPDATE'])) {
 		$result->execute();
 		
 
-		for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+		for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 			$stmt1 = null;
 			$stmt1 = $conn->prepare("INSERT INTO tbl_grn_details (grn_id, grn_item_id, grn_unit, po_qty, grn_accepted_qty, grn_rejected_qty, grn_pending_qty, grn_recived_qty ) 
                 VALUES (:grn_id, :grn_item_id, :grn_unit, :po_qty, :grn_accepted_qty, :grn_rejected_qty, :grn_pending_qty, :grn_recived_qty)");
@@ -239,7 +240,7 @@ if (isset($_POST['FINALIZE'])) {
 
 			/* details */
 
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 				$stmt1 = null;
 				$stmt1 = $conn->prepare("INSERT INTO tbl_grn_details (grn_id, grn_item_id, grn_unit, po_qty, grn_accepted_qty, grn_rejected_qty, grn_pending_qty, grn_recived_qty ) 
                 VALUES (:grn_id, :grn_item_id, :grn_unit, :po_qty, :grn_accepted_qty, :grn_rejected_qty, :grn_pending_qty, :grn_recived_qty)");
@@ -263,7 +264,7 @@ if (isset($_POST['FINALIZE'])) {
 
 			/* STOCK DETAILS */
 
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 				if ($_REQUEST['grn_accepted_qty'][$x] <= 0) {
 					continue;
 				}
@@ -289,7 +290,7 @@ if (isset($_POST['FINALIZE'])) {
 			// $_REQUEST['modify_by'] = $_SESSION['_user_id'];
 			// $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 
-			// for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			// for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 			// 	$stmt1 = null;
 			// 	$stmt1 = $conn->prepare("UPDATE tbl_item_details SET item_curr_stock = :item_curr_stock, modify_date_time=:modify_date_time, modify_by=:modify_by WHERE item_id = :item_id ");
 
@@ -308,7 +309,7 @@ if (isset($_POST['FINALIZE'])) {
 
 			/* GRN status */
 
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 				$pend_qty +=  $_REQUEST['grn_pending_qty'][$x];
 			}
 
@@ -390,7 +391,7 @@ if (isset($_POST['FINALIZE'])) {
 			$result = $conn->prepare($delete_details);
 			$result->execute();
 
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 				$stmt1 = null;
 				$stmt1 = $conn->prepare("INSERT INTO tbl_grn_details (grn_id, grn_item_id, grn_unit, po_qty, grn_accepted_qty, grn_rejected_qty, grn_pending_qty, grn_recived_qty ) 
                         VALUES (:grn_id, :grn_item_id, :grn_unit, :po_qty, :grn_accepted_qty, :grn_rejected_qty, :grn_pending_qty, :grn_recived_qty)");
@@ -413,7 +414,7 @@ if (isset($_POST['FINALIZE'])) {
 			/* details */
 			/* STOCK DETAILS */
 
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 				if ($_REQUEST['grn_accepted_qty'][$x] <= 0) {
 					continue;
 				}
@@ -439,7 +440,7 @@ if (isset($_POST['FINALIZE'])) {
 			// $_REQUEST['modify_by'] = $_SESSION['_user_id'];
 			// $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 
-			// for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			// for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 			// 	$stmt1 = null;
 			// 	$stmt1 = $conn->prepare("UPDATE tbl_item_details SET item_curr_stock = :item_curr_stock, modify_date_time=:modify_date_time, modify_by=:modify_by WHERE item_id = :item_id ");
 
@@ -458,7 +459,7 @@ if (isset($_POST['FINALIZE'])) {
 
 			/* GRN status */
 
-			for ($x = 0; $x < count($_REQUEST['temp_item_id']); $x++) {
+			for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
 				$pend_qty +=  $_REQUEST['grn_pending_qty'][$x];
 			}
 

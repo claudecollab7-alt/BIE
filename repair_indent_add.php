@@ -11,6 +11,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -57,7 +58,7 @@ if (isset($_POST['SAVE'])) {
 		$stmt = $conn->prepare("INSERT INTO tbl_sales_repair_details (sal_repair_id, repair_item_id, spare_item_id, repair_qty, repair_unit, repair_tax, repair_selling_price, repair_value, repair_tax_val, repair_net_val, repair_remarks)
 		 VALUES (:sal_repair_id, :repair_item_id, :spare_item_id, :repair_qty, :repair_unit, :repair_tax, :repair_selling_price, :repair_value, :repair_tax_val, :repair_net_val, :repair_remarks)");
 
-		$row_count = count($_REQUEST['temp_repair_item_id']);
+		$row_count = fnRowCount('temp_repair_item_id');
 		$sal_repair_value = 0;
 		for ($n = 0; $n < $row_count; $n++) {
 
@@ -141,7 +142,7 @@ if (isset($_POST['UPDATE'])) {
 		$stmt = $conn->prepare("INSERT INTO tbl_sales_repair_details (sal_repair_id, repair_item_id, spare_item_id, repair_qty, repair_unit, repair_tax, repair_selling_price, repair_value, repair_tax_val, repair_net_val, repair_remarks)
 		 VALUES (:sal_repair_id, :repair_item_id, :spare_item_id, :repair_qty, :repair_unit, :repair_tax, :repair_selling_price, :repair_value, :repair_tax_val, :repair_net_val, :repair_remarks)");
 
-		$row_count = count($_REQUEST['temp_repair_item_id']);
+		$row_count = fnRowCount('temp_repair_item_id');
 		$sal_repair_value = 0;
 		for ($n = 0; $n < $row_count; $n++) {
 

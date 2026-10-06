@@ -9,6 +9,7 @@ $conn = new dbconnect();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-09-24 try/catch added, handlers had none before
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
     // ini_set('display_errors', '1');
     // ini_set('display_startup_errors', '1');
@@ -77,7 +78,7 @@ if (isset($_POST['SAVE'])) {
         $stmt = null;
         $stmt = $conn->prepare("INSERT INTO tbl_sales_order_details (so_id,  item_id, so_qty, so_unit, so_selling_price, so_discount, so_discount_amt, so_vat, so_value, so_tax_value, item_total) 
     	VALUES (:so_id, :item_id, :so_qty,  :so_unit, :so_selling_price, :so_discount, :so_discount_amt, :so_vat, :so_value, :so_tax_value, :item_total)");
-        $row_count = count($_REQUEST['temp_item_id']);
+        $row_count = fnRowCount('temp_item_id');
 
         for ($n = 0; $n < $row_count; $n++) {
             $data = array(
@@ -103,7 +104,7 @@ if (isset($_POST['SAVE'])) {
         $stmt = $conn->prepare("INSERT INTO tbl_sales_order_pack_dts (so_id, pack_decp, pack_percent, pack_text, pack_taxable_val, gst_id, pack_vat, pack_value, pack_total)
     		                    VALUES (:so_id, :pack_decp, :pack_percent, :pack_text, :pack_taxable_val, :gst_id, :pack_vat, :pack_value, :pack_total)");
         if(isset($_REQUEST['pack_id'])){
-            $row_count = (count($_REQUEST['pack_id']));
+            $row_count = fnRowCount('pack_id');
             if ($row_count > 0) {
                 for ($n = 0; $n < $row_count; $n++) {
                     $quo_pack_total = isset($_REQUEST['pack_total'][$n]) ? $_REQUEST['pack_total'][$n] : '';
@@ -180,7 +181,7 @@ if (isset($_POST['UPDATE'])) {
         $stmt = null;
         $stmt = $conn->prepare("INSERT INTO tbl_sales_order_details (so_id,  item_id, so_qty, so_unit, so_selling_price, so_discount, so_discount_amt, so_vat, so_value, so_tax_value, item_total) 
     VALUES (:so_id, :item_id, :so_qty,  :so_unit, :so_selling_price, :so_discount, :so_discount_amt, :so_vat, :so_value, :so_tax_value, :item_total)");
-        $row_count = count($_REQUEST['temp_item_id']);
+        $row_count = fnRowCount('temp_item_id');
 
         for ($n = 0; $n < $row_count; $n++) {
             $data = array(
@@ -209,7 +210,7 @@ if (isset($_POST['UPDATE'])) {
 
         if(isset($_REQUEST['pack_id'])){
 
-            $row_count = count($_REQUEST['pack_id']);
+            $row_count = fnRowCount('pack_id');
             if ($row_count > 0) {
                 for ($n = 0; $n < $row_count; $n++) {
                     $quo_pack_total = isset($_REQUEST['pack_total'][$n]) ? $_REQUEST['pack_total'][$n] : '';

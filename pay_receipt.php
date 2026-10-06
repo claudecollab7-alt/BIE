@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 // 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -88,7 +89,7 @@ if (isset($_POST['SAVE'])) {
         $stmt = null;
         $stmt = $conn->prepare("INSERT INTO tbl_receipt_details (receipt_id, cash_id, cash_count, cash_value) VALUES (:receipt_id, :cash_id, :cash_count, :cash_value)");
 
-        $row_count = count($_REQUEST['receipt_cash_id']);
+        $row_count = fnRowCount('receipt_cash_id');
         for ($n = 0; $n < $row_count; $n++) {
             $data = array(
                 ':receipt_id' => $last_id,

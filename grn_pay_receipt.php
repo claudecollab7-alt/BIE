@@ -10,6 +10,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
 // 2026-10-06 paid total read on $conn - it left out the payment being saved, so a grn never showed fully paid
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -47,7 +48,7 @@ if (isset($_POST['SAVE'])) {
 				$grn_ids = implode(',', $_REQUEST['grn_ids']);
 			}
 
-			if (count($_REQUEST['grn_ids']) > 0) {
+			if (fnRowCount('grn_ids') > 0) {
 				$pay_type = "M";
 			}
 		} else {
@@ -81,7 +82,7 @@ if (isset($_POST['SAVE'])) {
 		$update_so->execute($data1);
 
 		if (isset($_REQUEST['grn_ids'])) {
-			if (count($_REQUEST['grn_ids']) > 0) {
+			if (fnRowCount('grn_ids') > 0) {
 				$update_multi_grn = $conn->prepare("UPDATE tbl_grn SET pay_type= 'N', grn_ids= '" . $_REQUEST['grn_id'] . "', grn_bill_copy= '" . $_REQUEST['grn_bill_copy'] . "', grn_pay_amount=0, grn_bal_value=0  WHERE grn_id IN (" . $grn_ids . ") AND po_id= '" . $_REQUEST['po_id'] . "' ");
 				$update_multi_grn->execute();
 			}

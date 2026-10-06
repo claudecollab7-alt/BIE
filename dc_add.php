@@ -12,6 +12,7 @@ $dbconn = new dbhandler();
 // 2026-10-01 item rows moved off tbl_dc_details_temp - built in php, posted back as arrays
 // 2026-10-01 packing moved off tbl_package_box_details_temp - rides on the item row, box counts done in javascript
 // 2026-10-06 packing keeps its own box type and dispatch qty - editing a completed dc was zeroing them and the box counts
+// 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -68,7 +69,7 @@ if (isset($_POST['SAVE']))
             $stmt = null;
             $stmt = $conn->prepare("INSERT INTO tbl_dc_details (dc_id, dc_item_id, dc_qty, dc_dispatch_qty, bal_qty, dc_unit, box_id, no_of_box, dc_remarks) VALUES (:dc_id, :dc_item_id, :dc_qty, :dc_dispatch_qty, :bal_qty, :dc_unit, :box_id, :no_of_box, :dc_remarks)");
 
-            for ($d = 0; $d < count($_REQUEST['dc_item_id']); $d++) {
+            for ($d = 0; $d < fnRowCount('dc_item_id'); $d++) {
                 if ((int)$_REQUEST['dc_item_id'][$d] <= 0) {
                     continue;
                 }
@@ -107,7 +108,7 @@ if (isset($_POST['SAVE']))
             $stmt = null;
             $stmt = $conn->prepare("INSERT INTO tbl_package_box_details (so_id, dc_id, item_id, pack_box_no, pack_item_qty, total_qty, box_id, dispatch_qty) VALUES (:so_id, :dc_id, :item_id, :pack_box_no, :pack_item_qty, :total_qty, :box_id, :dispatch_qty)");
 
-            for ($d = 0; $d < count($_REQUEST['dc_item_id']); $d++) {
+            for ($d = 0; $d < fnRowCount('dc_item_id'); $d++) {
                 if ((int)$_REQUEST['dc_item_id'][$d] <= 0 || trim($_REQUEST['pack_box_no_csv'][$d]) == '') {
                     continue;
                 }
@@ -181,7 +182,7 @@ if (isset($_POST['UPDATE']))
             $stmt = null;
             $stmt = $conn->prepare("INSERT INTO tbl_dc_details (dc_id, dc_item_id, dc_qty, dc_dispatch_qty, bal_qty, dc_unit, box_id, no_of_box, dc_remarks) VALUES (:dc_id, :dc_item_id, :dc_qty, :dc_dispatch_qty, :bal_qty, :dc_unit, :box_id, :no_of_box, :dc_remarks)");
 
-            for ($d = 0; $d < count($_REQUEST['dc_item_id']); $d++) {
+            for ($d = 0; $d < fnRowCount('dc_item_id'); $d++) {
                 if ((int)$_REQUEST['dc_item_id'][$d] <= 0) {
                     continue;
                 }
@@ -209,7 +210,7 @@ if (isset($_POST['UPDATE']))
             $stmt = null;
             $stmt = $conn->prepare("INSERT INTO tbl_package_box_details (so_id, dc_id, item_id, pack_box_no, pack_item_qty, total_qty, box_id, dispatch_qty) VALUES (:so_id, :dc_id, :item_id, :pack_box_no, :pack_item_qty, :total_qty, :box_id, :dispatch_qty)");
 
-            for ($d = 0; $d < count($_REQUEST['dc_item_id']); $d++) {
+            for ($d = 0; $d < fnRowCount('dc_item_id'); $d++) {
                 if ((int)$_REQUEST['dc_item_id'][$d] <= 0 || trim($_REQUEST['pack_box_no_csv'][$d]) == '') {
                     continue;
                 }
@@ -281,7 +282,7 @@ if (isset($_POST['FINALIZE']))
             $stmt = null;
             $stmt = $conn->prepare("INSERT INTO tbl_dc_details (dc_id, dc_item_id, dc_qty, dc_dispatch_qty, bal_qty, dc_unit, box_id, no_of_box, dc_remarks) VALUES (:dc_id, :dc_item_id, :dc_qty, :dc_dispatch_qty, :bal_qty, :dc_unit, :box_id, :no_of_box, :dc_remarks)");
 
-            for ($d = 0; $d < count($_REQUEST['dc_item_id']); $d++) {
+            for ($d = 0; $d < fnRowCount('dc_item_id'); $d++) {
                 if ((int)$_REQUEST['dc_item_id'][$d] <= 0) {
                     continue;
                 }
@@ -309,7 +310,7 @@ if (isset($_POST['FINALIZE']))
             $stmt = null;
             $stmt = $conn->prepare("INSERT INTO tbl_package_box_details (so_id, dc_id, item_id, pack_box_no, pack_item_qty, total_qty, box_id, dispatch_qty) VALUES (:so_id, :dc_id, :item_id, :pack_box_no, :pack_item_qty, :total_qty, :box_id, :dispatch_qty)");
 
-            for ($d = 0; $d < count($_REQUEST['dc_item_id']); $d++) {
+            for ($d = 0; $d < fnRowCount('dc_item_id'); $d++) {
                 if ((int)$_REQUEST['dc_item_id'][$d] <= 0 || trim($_REQUEST['pack_box_no_csv'][$d]) == '') {
                     continue;
                 }
