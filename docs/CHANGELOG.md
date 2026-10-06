@@ -8,6 +8,60 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-06 - Audit of every changed screen: save buttons, GRN rollback, stale reads, DC packing
+
+Started from "Send to Purchase not working". Every screen changed since 22 Sep was then
+checked by running the original code and the current code side by side on PHP 7.4 and
+MariaDB, each against a copy of the live database (`bie_db_051026.sql`), opening every
+screen and clicking every save button on real documents, then comparing the rows each
+version wrote.
+
+### Fixed
+
+| Screen | What was wrong | Since |
+|---|---|---|
+| `inc/common/css-js.php` | Double-submit lock rewritten. Buttons whose own `onclick` calls `fnValidate()`, which calls `form.submit()`, posted without their name: Send to Purchase, invoice Draft / Update / Finalize, direct PO Draft / Update / Finalize, GRN Draft and Save GRN, credit Update, Generate PO. The page just reloaded. The lock no longer touches `form.submit()` or cancels a submission; it only disables the buttons once a submit is under way and drops later clicks. The single-use form token is the real guard. | 1 Oct |
+| `grn_add.php` | New GRN from a PO: `db_commit` sat after `header(); die;`, so the GRN, its lines, the stock-in and the PO status were rolled back every time while the screen said "GRN Successfully Recorded". | 24 Sep |
+| `grn_pay_receipt.php` | Paid total summed through `$dbconn`, a second connection that cannot see the payment just inserted, so a GRN paid in full was marked partly paid. Now read on `$conn`. | 24 Sep |
+| `po_prepare.php` | Same - prepared qty summed without the lines just saved, so a complete PO went to admin as partial. | 24 Sep |
+| `emp_advance_return_payment.php` | Same - repaid total left out the repayment being saved. | 24 Sep |
+| `import_attendance.php` | Same, worse - the "already imported?" check still saw punches deleted a line earlier, skipped the re-insert, and the delete was committed. Re-importing an overlapping file dropped those punches. | 1 Oct |
+| `mst_itemprice_history.php` | The multi-UOM form (`thisForm2`) had no csrf token, so its Save and Update were always rejected. | 24 Sep |
+| `dc_add.php` | Packing took its box type and dispatch qty from the visible row. On a DC whose line it had itself completed, the page's own load-time check blanks those inputs (old behaviour), so saving it zeroed the packing and the box counts. Packing now carries its own box type and qty, loaded from the saved packing and set when packing, as the temp table did. | 1 Oct |
+| `modal_so_det.php`, `modal_so_reject_dets.php`, `modal_grn_reject_dets.php` | Opened on their own they died on `csrf_fields()`. They now load the csrf and txn helpers themselves. In normal use they are included by their list pages and worked. | 1 Oct |
+
+`inc/common/db_txn.php` gains `db_value($conn, $sql, $params)` - one value read on the
+connection doing the work. Making `$dbconn` share `$conn` was tried and rejected: on PHP 7.4
+any statement, even a SELECT, resets `lastInsertId()` to 0, so a lookup between an insert and
+`lastInsertId()` would have saved detail rows against id 0.
+
+### Data lost on the live server
+
+GRN ids 1563, 1564, 1565, 1566, 1569, 1570, 1572, 1573 and 1576 are missing - each is a GRN
+entered between 25 Sep and 3 Oct that was rolled back. Ids up to 1559 have no gaps. Their
+stock was never added, so re-entering them after the upload is correct and safe.
+
+### Checked and fine
+
+- PHP 7.4 compatibility of the whole tree (PHPCompatibility, testVersion 7.4): nothing I wrote
+  needs PHP 8. The one `match` is in the old `update_stock.php` import script.
+- Every form that posts to a csrf-checked handler carries the matching token.
+- No `die` / `exit` in any form between a write and its commit, anywhere.
+- 183 screens and edit views opened in both versions: no new PHP, JS or AJAX errors.
+- Save buttons compared old vs new: store indent, invoice, DC invoice, quotation invoice,
+  GRN update - same rows, or differing only by the intended fixes (invoice Amount no longer
+  zeroed, ledger rows carry direction / column / remark).
+
+### Left as it was (older than these changes)
+
+- Opening a DC whose line that same DC completed shows "Dispatch Qty Must be Less Than the
+  SO Qty" and blanks the qty, because "Despatched" includes the DC's own qty. Saving it then
+  zeroes the qty in `tbl_dc_details`. Same in the original code.
+- `store_indent_add.php` calls `.autocomplete()` with its plugin include commented out.
+- `user_actions.php` queries a column `inst_id` that `tbl_user_rights` does not have.
+
+---
+
 ## 2026-10-06 - Stock List: Rajapalayam had a header but no cells
 
 `rpt_all_store_stock_list.php`

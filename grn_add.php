@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-09-22 stock update moved to fnApplyStockMovement(), writes tbl_stock_flow
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-06 new grn commit moved above the redirect - it sat after die; so every new grn was rolled back
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -470,10 +471,10 @@ if (isset($_POST['FINALIZE'])) {
 			}
 
 			$_SESSION['_msg'] = "GRN Successfully Recorded..!";
-			header("location:grn_list.php");
-			die;
 			/* GRN status */
 			db_commit($conn);
+			header("location:grn_list.php");
+			die;
 		} catch (Exception $e) {
 			fnLogError($e);
 			db_rollback($conn);

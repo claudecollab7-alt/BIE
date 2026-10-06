@@ -21,3 +21,13 @@ function db_rollback($conn)
 		$conn->rollBack();
 	}
 }
+
+// one value, read on the connection doing the work - $dbconn is a second connection and
+// cannot see rows this transaction has written until it commits
+function db_value($conn, $sql, $params = array())
+{
+	$stmt = $conn->prepare($sql);
+	$stmt->execute($params);
+	$v = $stmt->fetchColumn();
+	return ($v === false) ? '' : $v;
+}

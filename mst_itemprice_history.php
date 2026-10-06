@@ -14,6 +14,7 @@ $dbconn = new dbhandler();
 // //}
 // 2026-09-22 Current Stock made read only, price save no longer writes qty
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-06 csrf token added to the multi uom form too - its save and update were always rejected
 
 //  ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -812,6 +813,7 @@ if ($_REQUEST['item_id'] != "") {
 						</form>
 
 						<form name='thisForm2' id='thisForm2' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();" enctype="multipart/form-data">
+							<?php csrf_fields('itemprice_history'); ?>
 
 							<?php $multi_uom_id = $dbconn->GetSingleReconrd("tbl_item_details", "multi_uom_id", "item_id", $obj->item_id);
 							// $new_item_uom = explode(",", $multi_uom_id);
