@@ -8,6 +8,49 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-06 - 06-10-26 database checked, principal master, every onclick button proven
+
+### Database (`bie_db_061026.sql`)
+
+Every change from this work is live: `tbl_stock_flow` columns, decimals and indexes,
+`tbl_stock_adjustment`, menu rows 147 / 148 with six rights rows, `tbl_user_rights.sm_id` /
+`mm_id` widened with the clamped rows gone, cash denominations (2000 off, 1 / 2 / 5 on in both
+tables), no zeroed invoice or proforma amounts, the four temp tables dropped.
+
+Every `INSERT` column list and `UPDATE ... SET` column in the code was then checked against
+this schema. One real gap: **`mst_principal` has no `created_by`, `created_dtm`, `modify_by`,
+`modify_dtm`**, which `mst_principal.php` writes, so adding or editing a principal always
+failed with "Unknown column 'modify_by'". Same in the original code - the comparison had
+marked it SAME because both versions failed alike. **`db/post_upload_061026.sql`** adds the
+four columns (types as in the other masters, existing rows get 0 / NULL, safe to run twice).
+Checked: update records who and when, a new principal saves.
+
+The other unknown references are old and dead: `inc/cis_ajax/Untitled-1.php`,
+`mst_product_add.php` (`mst_products`), `user_actions.php` (`tbl_user_actions`).
+
+### Buttons with their own onclick - full list
+
+The first inventory searched for `onclick=` case-sensitively and could not see buttons with
+PHP inside the tag. Redone: 21 buttons in 10 files - the nine already listed plus
+`mst_supplier_approve.php` (Approve / Reject, written `onClick`). With the rewritten lock
+each one now posts its own name on the current code: Send to Purchase, Generate PO
+(`po_prepare_print.php`, a purchase order created and its lines marked generated), GRN Draft
+and Save GRN, invoice Update / Finalize, direct PO Update / Finalize, credit Update,
+quotation Finalize, employee Update, supplier Approve / Reject, purchase return Finalize.
+Draft on a brand new invoice or direct PO needs an item row first; it shares its
+validation with the Update / Finalize buttons above.
+
+### Correction
+
+The "DataTables warning: Invalid JSON response" listed earlier as an old GRN list problem
+was the test machine: its timezone database lacked the old name `Asia/Calcutta` that
+`functions.php` sets, so every json response began with a notice. XAMPP has the name.
+With it installed, every screen's ajax responses were rechecked on the current code - all
+clean apart from `lst_employee.php` asking for `ajaxEmployeeList.php` while the file is
+`ajaxEmployeelist.php`, which only matters on a case-sensitive (Linux) server.
+
+---
+
 ## 2026-10-06 - Audit of every changed screen: save buttons, GRN rollback, stale reads, DC packing
 
 Started from "Send to Purchase not working". Every screen changed since 22 Sep was then
@@ -69,8 +112,6 @@ stock was never added, so re-entering them after the upload is correct and safe.
 
 ### Left as it was (older than these changes)
 
-- The GRN list shows "DataTables warning: Invalid JSON response" after finalizing a branch-2
-  draft GRN - same in the original code.
 
 - Opening a DC whose line that same DC completed shows "Dispatch Qty Must be Less Than the
   SO Qty" and blanks the qty, because "Despatched" includes the DC's own qty. Saving it then
