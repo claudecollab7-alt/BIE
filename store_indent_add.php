@@ -539,7 +539,7 @@ $('#item' + item_id).remove();
 
                                     <fieldset>
                                         <?php
-										echo $_SESSION['_user_branch'];
+										// echo $_SESSION['_user_branch'];
                                             if ($_REQUEST['si_id'] != "") {
                                                 $si_no = leadingZeros($dbconn->GetSingleReconrd('tbl_store_indent', 'si_slno', 'si_id', $_REQUEST['si_id']), 4);
                                             } else {
