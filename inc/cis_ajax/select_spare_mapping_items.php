@@ -9,6 +9,9 @@ require_once("../common/dbhandler.php");
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-07 session released straight away so keystrokes are not queued; typed text bound, a quote no longer breaks it
+session_write_close();
+
 $q = strtolower($_GET["q"]);
 if (!$q) return;
 
@@ -17,9 +20,9 @@ $stmt = $conn->prepare("SELECT item_id,item_code,item_desciption
                         FROM tbl_item_details 
                         WHERE item_status = '1' 
                         AND item_type IN (2,5,6) 
-                        AND item_desciption LIKE '".$q."%' 
+                        AND item_desciption LIKE :q 
                         ORDER BY item_desciption ASC");
-$stmt->execute();
+$stmt->execute(array(':q' => $q . '%'));
 
 if($stmt->rowCount() > 0)
 {
