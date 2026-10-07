@@ -4,69 +4,49 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("item_search_lib.php");
 
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
+// 2026-10-07 one query for the best 30 matches instead of every match plus five lookups each, term bound, session released early
+
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
-$q = strtolower($_GET["q"]);
+
+// read what we need, then let go of the session so the next keystroke is not queued behind this one
+$branch_id = isset($_SESSION['_user_branch']) ? $_SESSION['_user_branch'] : 0;
+session_write_close();
 
 	if(isset($_GET["q"]))
-	{	
-		
-	//echo $srchQuery;
-		$branch_item_selling_price = $dbconn->GetSingleReconrd("mst_branch","branch_item_selling_price","branch_id",$_SESSION['_user_branch']);
-		$branch_item_min_discount = $dbconn->GetSingleReconrd("mst_branch","branch_item_min_discount","branch_id",$_SESSION['_user_branch']);
-		$branch_item_max_discount = $dbconn->GetSingleReconrd("mst_branch","branch_item_max_discount","branch_id",$_SESSION['_user_branch']);
+	{
+		$q = strtolower($_GET["q"]);
 
-		
-		$srchQuery = "SELECT * FROM tbl_item_details WHERE item_status=1
-		AND (item_code like '%$q%' OR item_desciption like '%$q%' OR item_purchase_code like '%$q%')";
-		
-		$srchRecords = $conn->query($srchQuery);
+		$col_price = fnItemStockColumn($conn, $branch_id, 'branch_item_selling_price');
+		$col_min   = fnItemStockColumn($conn, $branch_id, 'branch_item_min_discount');
+		$col_max   = fnItemStockColumn($conn, $branch_id, 'branch_item_max_discount');
+
+		$rows  = fnItemSearch($conn, $q, $branch_id);
+		$stock = fnItemStockFields($conn, $rows, array($col_price, $col_min, $col_max));
+
 		$response = array();
-		
-		while ($row = $srchRecords->fetch(PDO::FETCH_ASSOC)) 
+		foreach ($rows as $row)
 		{
-            $people = explode(",", $row['branch_id']);
+			$s = isset($stock[$row['item_id']]) ? $stock[$row['item_id']] : array();
 
-			if (in_array($_SESSION['_user_branch'], $people) || $_SESSION['_user_branch'] == 1)
-			{
-				$sname = $row['item_code'].' - '.$row['item_desciption'];
-				
-				$scode = $row['item_code'];
-				$sid = $row['item_id'];
-				$unit_price = $dbconn->GetSingleReconrd("tbl_item_stock","$branch_item_selling_price","item_id",$row['item_id']);
-				$min_discount = $dbconn->GetSingleReconrd("tbl_item_stock","$branch_item_min_discount","item_id",$row['item_id']);
-				$max_discount = $dbconn->GetSingleReconrd("tbl_item_stock","$branch_item_max_discount","item_id",$row['item_id']);
-				$item_type = $row['item_type'];
-				$uom = $dbconn->GetSingleReconrd("mst_uom","uom_name","uom_id",$row['item_uom']);
-				// $cgst = $dbconn->GetSingleReconrd("mst_hsn","cgst","hsn_id",$row['item_hsn']);
-				// $sgst = $dbconn->GetSingleReconrd("mst_hsn","sgst","hsn_id",$row['item_hsn']);
-				$igst = $dbconn->GetSingleReconrd("mst_hsn","igst","hsn_id",$row['item_hsn']);
-				$vat = $igst;
-				$gst = number_format((float)$vat,2);
-							
-				$temp_array = array();
-				$temp_array['value'] = $sname;
-				$temp_array['unit_price'] = $unit_price;
-				$temp_array['id'] = $sid;
-				// $temp_array['label'] = $scode.' - '.$sname.'';
-				$temp_array['item_type'] = $item_type;
-				$temp_array['uom'] = $uom;
-				$temp_array['max_discount'] = $max_discount;
-				$temp_array['min_discount'] = $min_discount;
-				// $temp_array['cgst'] = $cgst;
-				// $temp_array['sgst'] = $sgst;
-				// $temp_array['igst'] = $igst;
-				// $temp_array['vat'] = $vat;
-				$temp_array['gst'] = $gst;
-				$response[] = $temp_array;
-			}
+			$temp_array = array();
+			$temp_array['value'] = $row['item_code'].' - '.$row['item_desciption'];
+			$temp_array['unit_price'] = ($col_price != '' && isset($s[$col_price])) ? $s[$col_price] : '';
+			$temp_array['id'] = $row['item_id'];
+			$temp_array['item_type'] = $row['item_type'];
+			$temp_array['uom'] = (string)$row['uom_name'];
+			$temp_array['max_discount'] = ($col_max != '' && isset($s[$col_max])) ? $s[$col_max] : '';
+			$temp_array['min_discount'] = ($col_min != '' && isset($s[$col_min])) ? $s[$col_min] : '';
+			$temp_array['gst'] = number_format((float)$row['igst'], 2);
+			$response[] = $temp_array;
 		}
-		
+
 		echo json_encode($response, true);
 	}
 ?>

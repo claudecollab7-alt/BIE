@@ -7,6 +7,9 @@ require_once("../common/dbhandler.php");
 $conn   = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-07 session released straight away - it queued every keystroke's request behind the last
+session_write_close();
+
 // ── NEW: direct item detail lookup (called when repair_item_id is selected) ──
 if (isset($_REQUEST['mode']) && $_REQUEST['mode'] === 'get_item_details') {
     $repair_item_id = intval($_REQUEST['id']);

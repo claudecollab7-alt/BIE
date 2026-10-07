@@ -8,6 +8,43 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-07 - Item search boxes: suggestions in milliseconds instead of seconds
+
+The type-ahead item boxes on Quotation and Store Indent (and the smaller ones on Repair
+Indent and Spare Mapping) waited seconds before showing names.
+
+Measured on the 06-10-26 data, PHP 8: one letter took 8.6 s on Quotation (2,865 items,
+476 KB back) and 5 s on Store Indent. Typing "cp-7" at normal speed, the list showed after
+8.3 s even though "cp-7" alone took 19 ms. Four causes:
+
+1. Every match was returned, no limit - one letter matches most of the 4,225 active items.
+2. Each match ran three to five more queries (stock, price, discounts, unit, GST) - tens of
+   thousands of queries for one keystroke.
+3. The session stayed open for the whole request, and PHP lets only one request per
+   session run at a time, so each keystroke's search queued behind the slow one before it.
+4. The typed text went straight into the SQL - a `'` crashed it (`inc/auto/error_log`).
+
+Now (`inc/auto/item_search_lib.php`, used by `select_quotation_items.php` and
+`select_store_indent_items.php`): the session is released as soon as the branch is read; one
+query returns the best 30 matches - item code starting with the text first, then
+description, then the rest - with unit and GST joined; one more query fetches the stock
+fields for just those items, first stock row per item as before; the text is bound. The
+branch visibility rule is unchanged. `select_repair_indent_items.php` and
+`select_spare_mapping_items.php` release the session early too, and spare mapping binds its
+text. Item Grouping's search box is commented out and was left alone.
+
+Checked: old against new for 15 search terms on both pages, as a branch 1 and a branch 2
+user - 60 comparisons, every suggestion identical field for field, identical lists up to 30
+matches, the best 30 above that. One letter now 9 ms; typing "cp-7" the list is ready 9 ms
+after the last key. On the real Quotation page, picking a suggestion still fills item, price,
+unit and GST.
+
+Correction: the "store indent item search fails, plugin include commented out" item from
+earlier was wrong. These pages load jQuery UI from cdnjs, which the test machine could not
+reach. On a normal connection the search box works.
+
+---
+
 ## 2026-10-07 - Details rows: count() on a single value is fatal on PHP 8
 
 The server runs PHP 8 - the error wording `count(): Argument #1 ($value)` only exists from
@@ -144,7 +181,6 @@ stock was never added, so re-entering them after the upload is correct and safe.
 - Opening a DC whose line that same DC completed shows "Dispatch Qty Must be Less Than the
   SO Qty" and blanks the qty, because "Despatched" includes the DC's own qty. Saving it then
   zeroes the qty in `tbl_dc_details`. Same in the original code.
-- `store_indent_add.php` calls `.autocomplete()` with its plugin include commented out.
 - `user_actions.php` queries a column `inst_id` that `tbl_user_rights` does not have.
 
 ---
