@@ -8,6 +8,31 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-12 - Item master: All branches, principal code, min / max discount
+
+`mst_item_details.php`, new item and edit.
+
+1. **Branch** has an **All** option. The branch picked on a new item is now saved - before,
+   the dropdown was ignored and every item from a Head Office user was saved as branch 1.
+   All saves every active branch (today `1,2,3`), the same value Branch Wise Item Update
+   writes. Branch is required on a new item. On edit, an item mapped to every branch shows
+   All; edit still does not change branches - that stays with Branch Wise Item Update.
+   Items created by a non-Head-Office user still go to Item Approval as before.
+2. **Principal** reads `Name - Code`, e.g. `Shree Prayag Air Controls Pvt Ltd - SPAC`.
+3. **Min Discount / Max Discount** (from Item Price History) shown on a new item only,
+   hidden on edit. Saved to every branch's min / max discount column in `tbl_item_stock`,
+   alongside the price, discount and cost already written there. Blank saves 0. Min above
+   max is refused.
+
+No table changes.
+
+Checked on PHP 7.4 and 8 against the 12-10-26 live data: new item with All saved
+`branch_id 1,2,3`, with Kerala saved `2`; min 5 / max 30 landed in HO, KL and RJPM columns;
+cost 514.80 from 715 less 28 %; min 40 / max 30 refused; edit shows All / Kerala and the
+principal code, no discount fields, and Update still saves.
+
+---
+
 ## 2026-10-07 - Item search boxes: suggestions in milliseconds instead of seconds
 
 The type-ahead item boxes on Quotation and Store Indent (and the smaller ones on Repair
