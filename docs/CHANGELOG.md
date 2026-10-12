@@ -8,6 +8,59 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-12 - SPAC price list import
+
+`db/import_spac_price_list_121026.sql` - run once in phpMyAdmin on the bie database. It adds the
+4,702 items of `SPAC_PRICE_LIST_LP.xlsx` exactly as the item form would: principal Shree Prayag Air
+Controls (SPAC), division Pneumatic, type Trading, all active branches, no multiple UOM, stock 0.
+
+| Sheet column | Saved as |
+|---|---|
+| Category | category - AIR GUN, FRL, TUBING added; FITTING uses the existing FITTINGS |
+| Description | item description, upper case |
+| Supplier Item Code | supplier item code |
+| Sales Item Code & Purchase Code | sales item code and purchase code |
+| UOM | PCS = NOS, ROLL = ROLLS, SET = SET |
+| HSN | 8 new codes added at 18% (9 + 9) |
+| Item Price & selling price | item price and selling price |
+| Item Discount | 0.28 = 28 %; cost = price less discount, margin from cost to selling (715 -> 514.80, 38.89 %) |
+| SALE DISCOUNT | 0-10% = min 0, max 10 on every branch |
+
+Row 442 (TG25-2331-08M) had `#N/A` for UOM and HSN: saved as NOT APPLICABLE and HSN NA (0 %).
+P2S40X80 already exists as item 6626 under another principal; it is added again under SPAC.
+A sales code already imported under SPAC is skipped, so a second run adds nothing.
+
+Checked on a copy of the 12-10-26 live data, strict sql mode: 4,702 items and 4,702 stock rows
+added, nothing on the second run; imported items open and update in the item form and come up in
+the item search for every branch.
+
+---
+
+## 2026-10-12 - Item master: All branches, principal code, min / max discount
+
+`mst_item_details.php`, new item and edit.
+
+1. **Branch** has an **All** option. The branch picked on a new item is now saved - before,
+   the dropdown was ignored and every item from a Head Office user was saved as branch 1.
+   All saves every active branch (today `1,2,3`), the same value Branch Wise Item Update
+   writes. Branch is required on a new item. On edit, an item mapped to every branch shows
+   All; edit still does not change branches - that stays with Branch Wise Item Update.
+   Items created by a non-Head-Office user still go to Item Approval as before.
+2. **Principal** reads `Name - Code`, e.g. `Shree Prayag Air Controls Pvt Ltd - SPAC`.
+3. **Min Discount / Max Discount** (from Item Price History) shown on a new item only,
+   hidden on edit. Saved to every branch's min / max discount column in `tbl_item_stock`,
+   alongside the price, discount and cost already written there. Blank saves 0. Min above
+   max is refused.
+
+No table changes.
+
+Checked on PHP 7.4 and 8 against the 12-10-26 live data: new item with All saved
+`branch_id 1,2,3`, with Kerala saved `2`; min 5 / max 30 landed in HO, KL and RJPM columns;
+cost 514.80 from 715 less 28 %; min 40 / max 30 refused; edit shows All / Kerala and the
+principal code, no discount fields, and Update still saves.
+
+---
+
 ## 2026-10-07 - Item search boxes: suggestions in milliseconds instead of seconds
 
 The type-ahead item boxes on Quotation and Store Indent (and the smaller ones on Repair

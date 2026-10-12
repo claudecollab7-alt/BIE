@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 
 // 2026-09-22 stock row for a new item created via fnEnsureItemStockRow()
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
+// 2026-10-12 branch All option, principal code in dropdown, min/max discount on new item
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL); 
 
@@ -67,7 +68,15 @@ if (isset($_POST['SAVE'])) {
 		if ($_SESSION['_user_branch'] == 1) {
 
 			$branch_status = 1;
-			$branch_id = 1;
+			// branch picked in the form, All = every active branch
+			$branch_pick = isset($_REQUEST['branch_id']) ? $_REQUEST['branch_id'] : '';
+			if ($branch_pick == 'all') {
+				$branch_id = implode(',', $conn->query("SELECT branch_id FROM mst_branch WHERE branch_status = 1 ORDER BY branch_id")->fetchAll(PDO::FETCH_COLUMN));
+			} elseif (ctype_digit((string)$branch_pick)) {
+				$branch_id = $branch_pick;
+			} else {
+				$branch_id = 1;
+			}
 		} else {
 			$branch_status = 0;
 			$branch_id = 0;
@@ -119,6 +128,8 @@ if (isset($_POST['SAVE'])) {
 		$stmt->execute($data);
 
 		$last_id = $conn->lastInsertId();
+		$item_min_discount = (isset($_REQUEST['item_min_discount']) && is_numeric($_REQUEST['item_min_discount'])) ? $_REQUEST['item_min_discount'] : 0;
+		$item_max_discount = (isset($_REQUEST['item_max_discount']) && is_numeric($_REQUEST['item_max_discount'])) ? $_REQUEST['item_max_discount'] : 0;
 		if ($last_id > 0) {
 			// new item starts at 0, so no stock flow row yet
 			$stock_id = fnEnsureItemStockRow($conn, $last_id);
@@ -129,7 +140,7 @@ if (isset($_POST['SAVE'])) {
 					$stmt1 = null;
 					$stmt1 = $conn->prepare("UPDATE tbl_item_stock SET " . $value['branch_item_price'] . " = :branch_item_price, " . $value['branch_item_discount'] . " = :branch_item_discount, " . $value['branch_item_cost_price'] . " = :branch_item_cost_price,
 					" . $value['branch_item_selling_price'] . " = :branch_item_selling_price, " . $value['branch_item_margin'] . " = :margin_percent, " . $value['branch_item_msq'] . " = :branch_item_msq, " . $value['branch_item_maq'] . " = :branch_item_maq,
-					" . $value['branch_item_moq'] . " = :branch_item_moq WHERE stock_id = :stock_id");
+					" . $value['branch_item_moq'] . " = :branch_item_moq, " . $value['branch_item_min_discount'] . " = :branch_item_min_discount, " . $value['branch_item_max_discount'] . " = :branch_item_max_discount WHERE stock_id = :stock_id");
 
 					$data1 = array(
 						':stock_id' => $stock_id,
@@ -140,7 +151,9 @@ if (isset($_POST['SAVE'])) {
 						':margin_percent' => $_REQUEST['margin_percent'],
 						':branch_item_msq' => $_REQUEST['item_min_qty'],
 						':branch_item_maq' => $_REQUEST['item_order_min_qty'],
-						':branch_item_moq' => $_REQUEST['item_max_qty']
+						':branch_item_moq' => $_REQUEST['item_max_qty'],
+						':branch_item_min_discount' => $item_min_discount,
+						':branch_item_max_discount' => $item_max_discount
 
 					);
 					$stmt1->execute($data1);
@@ -496,6 +509,9 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 
 	function fnValidate() {
 
+		if (document.thisForm.txtHid.value == 0 && notSelected(document.thisForm.branch_id, "Branch..!")) {
+			return false;
+		}
 
 		if (notSelected(document.thisForm.item_type, "Item Type..!")) {
 			return false;
@@ -568,6 +584,12 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 
 		if ($("#item_hsn").val() == "") {
 			alert("Please Select HSN..!");
+			return false;
+		}
+		if ($("#item_min_discount").length && $("#item_min_discount").val() != "" && $("#item_max_discount").val() != "" &&
+			parseFloat($("#item_min_discount").val()) > parseFloat($("#item_max_discount").val())) {
+			alert("Min Discount cannot be more than Max Discount..!");
+			$("#item_min_discount").focus();
 			return false;
 		}
 		// if(notSelected(document.thisForm.,"HSN..!")){ return false; }
@@ -648,14 +670,23 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 										<label class="col-lg-2 col-form-label ">Branch<span class="text-mandatory"> *</span></label>
 
 										<div class="col-lg-4">
-											<select name="branch_id" id="branch_id" data-placeholder="Choose a Item Type.." class="select">
+											<select name="branch_id" id="branch_id" data-placeholder="Choose a Branch.." class="select">
 												<option value="">--- Select Branch ---</option>
+												<option value="all">All</option>
 												<?php
 
 												echo $dbconn->fnFillComboFromTable_Where("branch_id", "branch_name", "mst_branch", "branch_id", " WHERE branch_status = 1"); ?>
 											</select>
+											<?php
+											// item mapped to every active branch shows as All
+											$branch_sel = isset($obj->branch_id) ? $obj->branch_id : '';
+											$all_branches = implode(',', $conn->query("SELECT branch_id FROM mst_branch WHERE branch_status = 1 ORDER BY branch_id")->fetchAll(PDO::FETCH_COLUMN));
+											if ($branch_sel != '' && str_replace(' ', '', $branch_sel) == $all_branches) {
+												$branch_sel = 'all';
+											}
+											?>
 											<script>
-												document.thisForm.branch_id.value = "<?php echo $obj->branch_id; ?>"
+												document.thisForm.branch_id.value = "<?php echo $branch_sel; ?>"
 											</script>
 											<!-- <input type="hidden" class="form-control"  name="branch_id" id="branch_id"  maxlength="9" value="<?php //echo $obj->branch_id; 
 																																					?>" /> -->
@@ -706,7 +737,7 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 												<option value="">--- Select Principal ---</option>
 												<?php
 
-												echo $dbconn->fnFillComboFromTable_Where("principal_id", "principal_name", "mst_principal", "principal_id", " WHERE principal_status = 1"); ?>
+												echo $dbconn->fnFillComboFromTable_Where("principal_id", "IF(principal_code = '', principal_name, CONCAT(principal_name, ' - ', principal_code))", "mst_principal", "principal_id", " WHERE principal_status = 1"); ?>
 											</select>
 											<script>
 												document.thisForm.item_principal.value = "<?php echo $obj->item_principal; ?>";
@@ -921,6 +952,26 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 												<div class="input-group">
 													<span class="input-group-append">
 														<input type="text" class="form-control number_only" name="item_discount" id="item_discount" maxlength="9" value="<?php echo $obj->item_discount; ?>" placeholder="Enter Discount" onkeypress="return isNumberKey_With_Dot(event)">
+														<span class="input-group-text">%</span>
+													</span>
+												</div>
+											</div>
+										</div>
+										<div class="form-group row pt-2 hide_price">
+											<label class="col-lg-2 col-form-label">Min Discount</label>
+											<div class="col-lg-4">
+												<div class="input-group">
+													<span class="input-group-append">
+														<input type="text" class="form-control" name="item_min_discount" id="item_min_discount" maxlength="9" value="" placeholder="Enter Min Discount" onkeypress="return isNumberKey_With_Dot(event)">
+														<span class="input-group-text">%</span>
+													</span>
+												</div>
+											</div>
+											<label class="col-lg-2 col-form-label">Max Discount</label>
+											<div class="col-lg-4">
+												<div class="input-group">
+													<span class="input-group-append">
+														<input type="text" class="form-control" name="item_max_discount" id="item_max_discount" maxlength="9" value="" placeholder="Enter Max Discount" onkeypress="return isNumberKey_With_Dot(event)">
 														<span class="input-group-text">%</span>
 													</span>
 												</div>
