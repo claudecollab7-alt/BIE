@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 update location for creators in Task Settings (STOCK_LOCATION C) - was users 1 and 9
     // ini_set('display_errors', '1');
     // ini_set('display_startup_errors', '1');
     // error_reporting(E_ALL);
@@ -363,7 +364,7 @@ else
                                             }
         
         
-                                            if ($_SESSION['_user_id'] == 1 ||  $_SESSION['_user_id'] == 9) {
+                                            if (fnTaskCan('STOCK_LOCATION', 'C')) {
                                                 $edit_link = '<a href="inc/popup/fancybox_store_stocklist.php?item_id=' . $obj->item_id . '"
                                                 class="tip fancybox various fancybox.ajax" title="Update Location"><i class="fa fa-edit"></i></a>';
                                             } else {

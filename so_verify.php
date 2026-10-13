@@ -11,13 +11,15 @@ $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 // 2026-10-13 csrf + check - users holding the Sales Order in Accounts menu, so_id bound
+// 2026-10-13 verifier from Task Settings (SALES_RECEIPT V) - was the Sales Order in Accounts menu
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 fnAjaxGuard();
-if (!fnUserHasMenu($conn, 'lst_sales_receipt.php')) {
+$so_branch = $dbconn->GetSingleReconrd("tbl_sales_order", "bie_branch_id", "so_id", (int)$_POST["dataId"]);
+if (!fnTaskCan('SALES_RECEIPT', 'V', $so_branch)) {
 	fnAccessDenied(true);
 }
 

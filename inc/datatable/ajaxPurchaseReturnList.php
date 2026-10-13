@@ -6,10 +6,13 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 all branches for viewers in Task Settings (PURCHASE_RETURN W) - was admin or head office
+// 2026-10-13 GRN cancel link for approvers in Task Settings (GRN A) - was admin or head office
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 
@@ -46,7 +49,7 @@ if ($searchByYear != '') {
     
     $searchQuery .= " and (a.rtn_finyr =".$searchByYear.") ";
 }
-if($_SESSION['_user_id']==1 || $_SESSION['_user_branch']==1)
+if (fnTaskCan('PURCHASE_RETURN', 'W'))
 {
     $sel = $conn->query("SELECT count(*) as allcount FROM tbl_purchase_return a LEFT JOIN mst_supplier_new b ON a.supp_id=b.supp_id  WHERE 1 = 1" . $searchQuery);
     $records = $sel->fetch();
@@ -115,7 +118,7 @@ while ($row = $itemRecords->fetch())
         // $party_dc_no = $dbconn->GetSingleReconrd("tbl_purchase_inward","party_dc_no","pi_id",$row->pi_id);
 
      
-        if($_SESSION['_user_id']== 1 || $_SESSION['_user_branch']==1){
+        if (fnTaskCan('GRN', 'A', $row->branch_id)) {
 
             if($row->grn_status != 2 && $row->grn_cancel_status != 1){
                 $reject_link = '<a data-toggle="modal" data-target="#modalRejectGrnDets" href="" data-id="'.$row->grn_id.'" data-popup="tooltip" title="GRN Details"><i class="icon-bin bg-delete mr-2"></i></a>';

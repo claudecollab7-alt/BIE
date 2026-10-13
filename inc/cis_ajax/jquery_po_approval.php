@@ -13,13 +13,15 @@ $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 // 2026-10-13 login + csrf + approver check (same rule as the approve button), values bound
+// 2026-10-13 approver from Task Settings (PURCHASE_ORDER A)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 fnAjaxGuard();
-if ($_SESSION['_user_id'] != 1) {
+$po_branch = $dbconn->GetSingleReconrd("tbl_purchase_order", "branch_id", "po_id", (int)$_POST["id"]);
+if (!fnTaskCan('PURCHASE_ORDER', 'A', $po_branch)) {
 	fnAccessDenied(true);
 }
 

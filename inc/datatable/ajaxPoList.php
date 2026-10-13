@@ -6,11 +6,14 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-13 all branches for viewers in Task Settings (PURCHASE_ORDER W) - was admin or head office
+// 2026-10-13 edit links for creators in Task Settings (PURCHASE_ORDER C) - was admin or head office
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -75,7 +78,7 @@ if($app_user == $_SESSION['_user_id']){
 // $totalRecordwithFilter = $records->allcount;
 
 ## Fetch records
-if($_SESSION['_user_id']==1 || $_SESSION['_user_branch']==1)
+if (fnTaskCan('PURCHASE_ORDER', 'W'))
 {
     ## Total number of records without filtering
     $sel = $conn->query("SELECT count(*) as allcount FROM tbl_purchase_order a LEFT JOIN mst_supplier_new b ON a.supp_id=b.supp_id WHERE a.po_status > 0" . $searchQuery);
@@ -123,7 +126,7 @@ while ($row = $cusRecords->fetch()) {
     $grn_status= $final_grn='';
     $grn_details_qty = '';
     
-    if($_SESSION['_user_id']==1 || $_SESSION['_user_branch']==1){
+    if (fnTaskCan('PURCHASE_ORDER', 'C', $row->branch_id)) {
 
         if($row->po_status == 0 || $row->po_status == 1 || $row->po_status == 2 || $row->po_status == 4){
 

@@ -13,6 +13,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 login + csrf + approver check - same rule as the approve button (admin or the dc's branch)
+// 2026-10-13 approver from Task Settings (DC A, per branch)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -20,7 +21,7 @@ $dbconn = new dbhandler();
 
 fnAjaxGuard();
 $dc_branch = $dbconn->GetSingleReconrd("tbl_dc", "branch_id", "dc_id", (int)$_POST["dc_id"]);
-if (!($_SESSION['_user_id'] == 1 || ($dc_branch != '' && $dc_branch == $_SESSION['_user_branch']))) {
+if (!fnTaskCan('DC', 'A', $dc_branch)) {
 	fnAccessDenied(true);
 }
 

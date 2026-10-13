@@ -8,6 +8,7 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-13 branch filter for viewers in Task Settings (SUPPLIER W) - was head office
 
 if(isset($_REQUEST['approve']) && $_REQUEST['approve'] == 0)
     $searchByStatus = 0;
@@ -272,7 +273,7 @@ $searchByBranch='1';
                                             <input type='text' class="form-control" id='searchByCode' name="searchByCode" placeholder='Enter Code / Name / Mobile / GST'>
                                         </div>
                                     </div>
-                                    <?php if($_SESSION['_user_branch']==1){ ?>
+                                    <?php if (fnTaskCan('SUPPLIER', 'W')) { ?>
                                     <div class="col-md-3">
                                         <div class="form-group">
                                             <label>Branch</label>

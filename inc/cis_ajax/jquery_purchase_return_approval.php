@@ -13,13 +13,15 @@ $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 // 2026-10-13 login + csrf + approver check - the list holding this page is an admin-only menu, values bound
+// 2026-10-13 approver from Task Settings (PURCHASE_RETURN A)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
 fnAjaxGuard();
-if ($_SESSION['_user_id'] != 1) {
+$rtn_branch = $dbconn->GetSingleReconrd("tbl_purchase_return", "branch_id", "rtn_id", (int)$_POST["id"]);
+if (!fnTaskCan('PURCHASE_RETURN', 'A', $rtn_branch)) {
 	fnAccessDenied(true);
 }
 

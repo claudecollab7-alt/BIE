@@ -6,11 +6,14 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 
+// 2026-10-13 all branches for viewers in Task Settings (SUPPLIER W) - was admin or head office
+// 2026-10-13 supplier item mapping / delete for creators (SUPPLIER C, was head office), approve link for approvers (SUPPLIER A, was admin)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -57,7 +60,7 @@ if($app_user == $_SESSION['_user_id']){
 	$searchQuery .= " AND a.grn_status > 1 ";
 }
 */
-if($_SESSION['_user_id']== 1 || $_SESSION['_user_branch'] == 1)
+if (fnTaskCan('SUPPLIER', 'W'))
 {
 
 ## Total number of records without filtering
@@ -112,7 +115,6 @@ while ($row = $cusRecords->fetch())
     // $count = $dbconn->GetCount("tbl_supp_items","supp_id",$row->supp_id);
     // $data_new = '<a href = "supp_items.php?supp_id='.$row->supp_id.'">'.$count.'</a>';
     $item_assign = $dbconn->GetSingleReconrd("tbl_supp_items","supp_id","supp_item_status = '1' AND supp_id",$row->supp_id);
-    $supp_user = $dbconn->GetSingleReconrd("tbl_task_user","user_id","task_id",2);
 
     $supp_id = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_id","supp_id",$row->supp_id);
 
@@ -120,7 +122,7 @@ while ($row = $cusRecords->fetch())
         $contact_no .= ',<br/>'.$row->supp_mobile2;
     }
 
-    if(($row->supp_id == $item_assign || $row->branch_type == 'H') && $_SESSION['_user_branch'] != 1){
+    if(($row->supp_id == $item_assign || $row->branch_type == 'H') && !fnTaskCan('SUPPLIER', 'C')){
         $del_link = '<a href="javascript:;" rel="'.$row->supp_id.'" data-popup="tooltip" title="Remove" data-original-title="Remove" ><i class="icon-bin bg-delete-disabled mr-2"></i></a>';
     }
     else{
@@ -129,7 +131,7 @@ while ($row = $cusRecords->fetch())
 
     if($row->supp_approve_status == 1){
         $supp_status = '<span class="badge bg-success">Approved</span>';
-        if($_SESSION['_user_branch'] == 1){
+        if (fnTaskCan('SUPPLIER', 'C')) {
             $supp_link = '<a href="supp_items.php?supp_id='.$row->supp_id.'"><i class="icon-link  bg-edit mr-2" title="Item Mapping"></i></a>';  
         }else{
         $supp_link = '<a href="javascript:;"><i class="icon-link bg-edit-disabled mr-2" title="Item Mapping"></i></a>';  
@@ -164,7 +166,7 @@ while ($row = $cusRecords->fetch())
 
    
 
-    if($_SESSION['_user_id'] == 1){
+    if (fnTaskCan('SUPPLIER', 'A', $row->company_branch_id)) {
         $approve_link = '<a href="mst_supplier_approve.php?supp_id='.$row->supp_id.'" data-popup="tooltip" title="Edit" data-original-title="Edit" ><i class="icon-eye bg-edit mr-2"></i></a>';
         
     }

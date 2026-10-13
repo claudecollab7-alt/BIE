@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-12 branch All option, principal code in dropdown, min/max discount on new item
 // 2026-10-13 _userid (never set at login) replaced by _user_id
+// 2026-10-13 price block check uses Task Settings (ITEM C) - was user 1; both branches show it
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL); 
 
@@ -421,7 +422,7 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 		}).change();
 
 		<?php
-		if ($_SESSION['_user_id'] == 1) { ?>
+		if (fnTaskCan('ITEM', 'C')) { ?>
 			$('.hide_price').show();
 		<?php	} else { ?>
 			$('.hide_price').show();

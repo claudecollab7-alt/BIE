@@ -9,8 +9,9 @@ $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 // 2026-10-13 login + csrf + check - send for approval and approve are admin-only buttons
+// 2026-10-13 send for approval / approve from Task Settings (SALES_REPAIR V / A)
 fnAjaxGuard();
-if ($_SESSION['_user_id'] != 1) {
+if (!fnTaskCan('SALES_REPAIR', (isset($_POST['mode']) && $_POST['mode'] == 'verify') ? 'V' : 'A')) {
 	fnAccessDenied(true);
 }
 

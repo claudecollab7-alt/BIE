@@ -20,6 +20,7 @@ $dbconn= new dbhandler();
 // 2026-10-06 loads its own csrf and txn helpers - opened on its own it died on csrf_fields()
 // 2026-10-13 session started when posted directly - every confirm failed the csrf check since 2026-10-01
 // 2026-10-13 credit approval allowed only for the users on the credit-approval dashboard tile; approver saved as the user
+// 2026-10-13 credit approval for approvers in Task Settings (CREDIT_SALES A)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -30,7 +31,7 @@ if (isset($_POST['CONFIRM']))
 	if (!csrf_check('modal_so_det')) {
 		csrf_fail('lst_sales_receipt.php');
 	}
-	if (!fnTaskUserListed($conn, 3)) {
+	if (!fnTaskCan('CREDIT_SALES', 'A', $dbconn->GetSingleReconrd("tbl_sales_order", "bie_branch_id", "so_id", (int)$_REQUEST['so_id']))) {
 		fnAccessDenied(false, 'lst_so_approval.php');
 	}
 

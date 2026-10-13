@@ -13,6 +13,7 @@ $dbconn= new dbhandler();
 $searchByBranch='1';
 $searchByYear=$dbconn->GetSingleReconrd("mst_finyear","finyr","finyr_active",1);
 
+// 2026-10-13 branch filter for viewers in Task Settings (GRN W) - was head office
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 ?>
@@ -188,7 +189,7 @@ var dataTable = $('#grn_table').DataTable({
                                             <input type='text' class="form-control" id='searchByCode' name="searchByCode" placeholder='Enter GRN No. / Ref. No. , Supplier Name'>
                                         </div>
                                     </div>
-                                    <?php if($_SESSION['_user_branch']==1){ ?>
+                                    <?php if (fnTaskCan('GRN', 'W')) { ?>
                                     <div class="col-md-3">
                                         <div class="form-group">
                                             <label>Branch</label>

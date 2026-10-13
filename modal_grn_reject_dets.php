@@ -20,6 +20,7 @@ $dbconn= new dbhandler();
 // 2026-10-06 loads its own csrf and txn helpers - opened on its own it died on csrf_fields()
 // 2026-10-13 session started when posted directly - every confirm failed the csrf check since 2026-10-01
 // 2026-10-13 cancel allowed only for users who see the cancel link (admin or head office); cancelled-by is the user, was always 1
+// 2026-10-13 cancel for approvers in Task Settings (GRN A)
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -30,7 +31,7 @@ if (isset($_POST['CONFIRM']))
 	if (!csrf_check('modal_grn_reject_dets')) {
 		csrf_fail('grn_list.php');
 	}
-	if (!($_SESSION['_user_id'] == 1 || $_SESSION['_user_branch'] == 1)) {
+	if (!fnTaskCan('GRN', 'A', $dbconn->GetSingleReconrd("tbl_grn", "branch_id", "grn_id", (int)$_REQUEST['grn_id']))) {
 		fnAccessDenied(false, 'grn_list.php');
 	}
 

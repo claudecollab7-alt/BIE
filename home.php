@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 dashboard tiles for all-branch approvers in Task Settings - were the tbl_task_user ids
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -69,8 +70,7 @@ $dbconn = new dbhandler();
 				<div class="row">
 						<div class="col-md-3">
 							<!-- This Form UI Starts here --->
-						<?php $po_user = $dbconn->GetSingleReconrd("tbl_task_user","user_id","task_id",1); 
-						if($_SESSION['_user_id'] == $po_user){?>
+						<?php if (fnTaskCan('PURCHASE_ORDER', 'A')) { ?>
 							<!-- <div class="card card-body bg-orange-400 has-bg-image">
 								<div class="media">
 									<div class="media-body">
@@ -95,8 +95,7 @@ $dbconn = new dbhandler();
 					<div class="row">
 						<div class="col-md-3">
 							<!-- This Form UI Starts here --->
-						<?php $po_user = $dbconn->GetSingleReconrd("tbl_task_user","user_id","task_id",1); 
-						if($_SESSION['_user_id'] == $po_user){?>
+						<?php if (fnTaskCan('PURCHASE_ORDER', 'A')) { ?>
 							<div class="card card-body bg-blue-400 has-bg-image">
 								<div class="media">
 									<div class="media-body">
@@ -115,8 +114,7 @@ $dbconn = new dbhandler();
 
 						<div class="col-md-3">
 							<!-- This Form UI Starts here --->
-						<?php $supp_user = $dbconn->GetSingleReconrd("tbl_task_user","user_id","task_id",2); 
-						if($_SESSION['_user_id'] == $supp_user){?>
+						<?php if (fnTaskCan('SUPPLIER', 'A')) { ?>
 							<div class="card card-body bg-purple-400 has-bg-image">
 								<div class="media">
 									<div class="media-body">
@@ -134,9 +132,7 @@ $dbconn = new dbhandler();
 						</div>
 						<div class="col-md-3">
 							<!-- This Form UI Starts here --->
-						<?php $po_user = $dbconn->GetSingleReconrd("tbl_task_user","user_id","task_id",3); 
-						$approve_user = explode(",", $po_user);
-						if (in_array($_SESSION['_user_id'], $approve_user)){?>
+						<?php if (fnTaskCan('QUOTATION', 'A')) { ?>
 							<div class="card card-body bg-blue-400 has-bg-image">
 								<div class="media">
 									<div class="media-body">
@@ -156,9 +152,7 @@ $dbconn = new dbhandler();
 
 						<div class="col-md-3">
 							<!-- This Form UI Starts here --->
-						<?php $po_user = $dbconn->GetSingleReconrd("tbl_task_user","user_id","task_id",3); 
-						$approve_user = explode(",", $po_user);
-						if (in_array($_SESSION['_user_id'], $approve_user)){?>
+						<?php if (fnTaskCan('CREDIT_SALES', 'A')) { ?>
 							<div class="card card-body bg-purple-400 has-bg-image">
 								<div class="media">
 									<div class="media-body">
@@ -177,9 +171,7 @@ $dbconn = new dbhandler();
 
 						<div class="col-md-3">
 							<!-- This Form UI Starts here --->
-							<?php $po_user = $dbconn->GetSingleReconrd("tbl_task_user","user_id","task_id",3); 
-							$approve_user = explode(",", $po_user);
-							if (in_array($_SESSION['_user_id'], $approve_user)){?>
+							<?php if (fnTaskCan('ITEM', 'A')) { ?>
 								<div class="card card-body bg-blue-400 has-bg-image">
 									<div class="media">
 										<div class="media-body">
@@ -197,9 +189,7 @@ $dbconn = new dbhandler();
 						</div>
 						<div class="col-md-3">
 							<!-- This Form UI Starts here --->
-							<?php $po_user = $dbconn->GetSingleReconrd("tbl_task_user","user_id","task_id",3); 
-							$approve_user = explode(",", $po_user);
-							if (in_array($_SESSION['_user_id'], $approve_user)){?>
+							<?php if (fnTaskCan('GRN_PAYMENT', 'A')) { ?>
 								<div class="card card-body bg-purple-400 has-bg-image">
 									<div class="media">
 										<div class="media-body">

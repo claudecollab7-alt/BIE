@@ -8,6 +8,7 @@ isAdmin();
 
 
 // 2026-10-13 csrf + approver check (admin - the only user shown the approve link)
+// 2026-10-13 approver from Task Settings (SUPPLIER A)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -22,7 +23,7 @@ if(isset($_POST['APPROVE']))
 	if (!csrf_check('mst_supplier_approve')) {
 		csrf_fail('lst_supplier.php');
 	}
-	if ($_SESSION['_user_id'] != 1) {
+	if (!fnTaskCan('SUPPLIER', 'A', $dbconn->GetSingleReconrd("mst_supplier_new", "company_branch_id", "supp_id", (int)$_REQUEST['supp_id']))) {
 		fnAccessDenied(false, 'lst_supplier.php');
 	}
     try

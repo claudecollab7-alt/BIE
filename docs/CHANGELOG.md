@@ -8,6 +8,63 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-13 - Task Settings: who creates, verifies, approves and views, in one screen
+
+**Run `db/post_upload_131026.sql` with these files.** It creates `mst_task` and `tbl_task_assign`,
+adds the tasks below with starting rows that give every user exactly the access the code gave them,
+and adds the menu Settings > Task Settings. Safe to run again (starting rows only go in once).
+
+Before, these rules were typed into 70 files as user ids (`user_id == 1`, `== 9`), "head office"
+(`branch == 1`) and the three `tbl_task_user` rows. Now every screen asks `fnTaskCan(task, role, branch)`
+and the answer comes from Task Settings.
+
+Roles: **Creator** creates / edits, **Verifier** sends for approval or confirms, **Approver** approves,
+rejects and cancels, **Viewer** sees every branch on the lists. Each user row has a branch, or All.
+Admin users (type A) can do every task and need no rows. Any one approver is enough.
+
+| Task | Role - used for | Starting users (same as the old code) |
+|---|---|---|
+| Purchase Order | C - New PO button, edit links; A - approve / reject, dashboard tile; W - list | C, W: head office users. A: admin |
+| Supplier | C - item mapping, delete any; A - approve, tile; W - list | C, W: head office. A: admin |
+| Prepare Purchase Order | W - list | head office |
+| Purchase Return | A - approve / reject; W - list | W: head office. A: admin |
+| Quotation | A - approve / reject, tile; W - list | A: every user for their own branch. W: head office |
+| Sales Order | A - approve / reject / cancel; W - list | W: head office. A: admin |
+| Credit Sales Approval | A - approve credit SO, tile | admin |
+| Delivery Challan | A - approve / reject; W - list | A: every user for their own branch. W: head office |
+| Invoice | W - list | head office |
+| Sales Order in Accounts | V - confirm payment, mark credit; W - list | V: Accounts. W: head office |
+| GRN | A - cancel GRN; W - list | head office |
+| GRN Payment | A - edit paid amount, tile; W - list | W: head office. A: admin |
+| Store Indent | A - named approver on new indents; W - list | W: head office. A: admin |
+| Stock Location | C - update location | admin (user 9 in the old code does not exist) |
+| Item | C - edit / price / branch / delete links; A - approve branch items, tile | admin |
+| Sales Repair | V - send for approval; A - approve | admin |
+| Employee / Staff / Labour | W - the HR lists | head office |
+| Salary Issue | A - issue button on salary reports | admin |
+
+Dashboard tiles show for users holding the approver role for All branches (a tile counts every branch).
+
+Left as they are, on purpose: user-type checks (admin-only menus and user screen; the S / A checks on
+the masters, which every user passes), new items from head office going straight in without approval,
+and the stock column per branch on the stock list - these are about data, not people.
+`tbl_task_user` is no longer read and can be dropped later.
+
+One visible change: Purchase Return approve / reject now shows only to its approvers (admin); before,
+it showed to anyone who opened the page, though the list is an admin-only menu.
+
+Checked on PHP 7.4 and 8 against a copy of the 12-10-26 live data with the script run:
+- every screen above opened as each of the 7 users on the old and the new code - 273 user / screen
+  pairs, all the same apart from the three intended changes from the earlier entry (admin GRN amount
+  Edit, csrf fields on supplier approve, item form user id) and row order the old code already varies;
+- each approve / verify / cancel action called by each user - allowed exactly as before;
+- changing the settings takes effect: Purchase user added as PO approver gets the tile and the button
+  and can approve; Sales user's quotation viewer row removed shows only head office quotations;
+- Task Settings: add task, add many users per role, viewer locked to All branches, duplicate code
+  refused, non-admin sent back to the dashboard.
+
+---
+
 ## 2026-10-13 - Approve / verify / reject checked on the server
 
 Who sees each Approve, Reject, Verify and Cancel button is unchanged. What changed is that the

@@ -6,11 +6,13 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-13 all branches for viewers in Task Settings (EMPLOYEE W) - was admin or head office
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -46,7 +48,7 @@ if ($searchByEmployeeType != '') {
     $search .= " and (a.emp_type =".$searchByEmployeeType.") ";
 }
 
-if($_SESSION['_user_id']==1 || $_SESSION['_user_branch']==1)
+if (fnTaskCan('EMPLOYEE', 'W'))
 {
 $sel = $conn->query("SELECT count('a.emp_id,a.em_id,a.emp_type,a.emp_code,a.emp_name,a.emp_ctc,b.department_name,c.designation_name') as allcount FROM mst_employee as a 
     LEFT JOIN  mst_department as b ON a.department_id = b.department_id 

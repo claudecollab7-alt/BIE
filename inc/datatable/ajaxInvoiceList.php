@@ -6,10 +6,12 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 all branches for viewers in Task Settings (INVOICE W) - was admin or head office
 ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 
@@ -72,7 +74,7 @@ if ($searchByYear != '') {
 // $totalRecordwithFilter = $records->allcount;
 
 ## Fetch records
-if($_SESSION['_user_id']==1 || $_SESSION['_user_branch']==1)
+if (fnTaskCan('INVOICE', 'W'))
 {
     $sel = $conn->query("SELECT count(*) as allcount FROM tbl_invoice a left join mst_supplier_new as b  ON a.supp_id=b.supp_id WHERE 1 = 1" . $searchQuery);
     $records = $sel->fetch();

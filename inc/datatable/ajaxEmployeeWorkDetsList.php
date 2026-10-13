@@ -6,11 +6,13 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-13 all branches for viewers in Task Settings (EMPLOYEE W) - was admin or head office
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -51,7 +53,7 @@ if ($month_id != '') {
     $search .= " and (MONTH(a.work_date) =".$month_id.") ";
 }
 
-if($_SESSION['_user_id']==1 || $_SESSION['_user_branch']==1)
+if (fnTaskCan('EMPLOYEE', 'W'))
 {
 
 $sel = $conn->query("SELECT count('b.emp_code,b.emp_id,a.attn_id,b.emp_name,a.work_date,a.check_in,a.check_in_dtm,a.check_out,a.work_time,a.late_in,a.break_time,a.early_out,a.check_out_dtm,c.shift_name') as allcount FROM tbl_attendance as a 

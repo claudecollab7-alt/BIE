@@ -9,8 +9,10 @@ $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 // 2026-10-13 login + csrf + check - users holding the Sales Order in Accounts menu; verifier saved from _user_id
+// 2026-10-13 verifier from Task Settings (SALES_RECEIPT V) - was the Sales Order in Accounts menu
 fnAjaxGuard();
-if (!fnUserHasMenu($conn, 'lst_sales_receipt.php')) {
+$so_branch = $dbconn->GetSingleReconrd("tbl_sales_order", "bie_branch_id", "so_id", (int)$_POST["so_id"]);
+if (!fnTaskCan('SALES_RECEIPT', 'V', $so_branch)) {
 	fnAccessDenied(true);
 }
 
