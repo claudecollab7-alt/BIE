@@ -8,6 +8,7 @@ isAdmin();
 
 
 // 2026-10-13 deleted quotations (quo_status 0) left out, as the dashboard tile does
+// 2026-10-13 list limited to the branches the user approves for (QUO_APPROVE in task_queues.php), the same rule as its dashboard tile
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -144,7 +145,7 @@ if (isset($_REQUEST['id'])) {
                                     <tbody>
                                         <?php
 
-                                        $sql = "SELECT * FROM tbl_quotation WHERE quo_verify_status=1 AND quo_approve_status=0 AND quo_status=1";
+                                        $sql = "SELECT * FROM tbl_quotation WHERE quo_verify_status=1 AND quo_approve_status=0 AND quo_status=1" . fnQueueScopeSql('QUO_APPROVE');
                                         $searchRes1 = $conn->query($sql);
                                         $iSno = 1;
 

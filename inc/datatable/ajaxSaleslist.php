@@ -13,7 +13,7 @@ $dbconn = new dbhandler();
 
 
 // 2026-10-13 all branches for viewers in Task Settings (SALES_ORDER W) - was admin or head office
-// 2026-10-13 cancel link for approvers in Task Settings (SALES_ORDER A) - was admin
+// 2026-10-13 cancel link for Sales Order Cancel in Task Settings (SO_CANCEL A) - was admin
 // ini_set('display_errors', '1');
 //  ini_set('display_startup_errors', '1');
 //  error_reporting(E_ALL);
@@ -354,7 +354,7 @@ while ($row = $cusRecords->fetch()) {
     
     $so_refno = '<a data-toggle="modal" data-target="#modalSalesDets" href="" data-id="'.$row->so_id.'" data-popup="tooltip" title="Sales Details">'.$row->so_refno.'</a>';
 
-if (fnTaskCan('SALES_ORDER', 'A', $row->bie_branch_id)) {
+if (fnTaskCan('SO_CANCEL', 'A', $row->bie_branch_id)) {
 
         if($row->so_approve_status != 1 && ($row->so_status !=6  && $row->dc_status == 0 && $row->so_cancel_status == 0)){
             $reject_link = '<a data-toggle="modal" data-target="#modalRejectDets" href="" data-id="'.$row->so_id.'" data-popup="tooltip" title="Sales Details"><i class="icon-bin bg-delete px-2 mr-2"></i></a>';

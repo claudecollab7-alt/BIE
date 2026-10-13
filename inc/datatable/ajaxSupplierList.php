@@ -7,6 +7,7 @@ require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
 require_once("../common/access.php");
+require_once("../common/task_queues.php");
 
 $conn = new dbconnect();
 $dbconn= new dbhandler();
@@ -14,6 +15,7 @@ $dbconn= new dbhandler();
 
 // 2026-10-13 all branches for viewers in Task Settings (SUPPLIER W) - was admin or head office
 // 2026-10-13 supplier item mapping / delete for creators (SUPPLIER C, was head office), approve link for approvers (SUPPLIER A, was admin)
+// 2026-10-13 from the Supplier InApproval tile: pending suppliers of the branches the user approves for
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -46,7 +48,12 @@ if($searchByCode != ''){
 }
 
 if ($searchByStatus != '') {
-    $searchQuery .= " and (a.supp_approve_status = " . $searchByStatus . ") ";
+    $searchQuery .= " and (a.supp_approve_status = " . (int)$searchByStatus . ") ";
+}
+// opened from the Supplier InApproval tile: the branches the user approves for, as the tile counts
+$approve_tile = isset($_POST['approveTile']) && $_POST['approveTile'] == '1' && fnQueueVisible('SUPP_APPROVE');
+if ($approve_tile) {
+    $searchQuery .= fnQueueScopeSql('SUPP_APPROVE', 'a.');
 }
 if ($searchByBranch != '') {
     
@@ -60,7 +67,7 @@ if($app_user == $_SESSION['_user_id']){
 	$searchQuery .= " AND a.grn_status > 1 ";
 }
 */
-if (fnTaskCan('SUPPLIER', 'W'))
+if (fnTaskCan('SUPPLIER', 'W') || $approve_tile)
 {
 
 ## Total number of records without filtering

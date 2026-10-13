@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS tbl_task_assign (
 
 -- starting rows only go in on the first run, so later edits in Task Settings are not undone
 SET @fresh = (SELECT COUNT(*) = 0 FROM tbl_task_assign);
+-- second batch (sales order approve / payment confirm open to all, cancel split off) - once, also where the first batch already ran
+SET @fix2 = (SELECT COUNT(*) = 0 FROM mst_task WHERE task_code = 'SO_CANCEL');
 
 INSERT IGNORE INTO mst_task (task_code, task_name, task_module, task_roles, task_note, task_status, created_by, created_dtm) VALUES
 ('PURCHASE_ORDER', 'Purchase Order', 'Purchase', 'CAW', 'Creator: New PO button and edit links on the PO list. Approver: approve / reject on PO print, dashboard PO in approval. Viewer: PO list shows every branch.', 1, 1, NOW()),
@@ -44,11 +46,12 @@ INSERT IGNORE INTO mst_task (task_code, task_name, task_module, task_roles, task
 ('PO_PREPARE', 'Prepare Purchase Order', 'Purchase', 'W', 'Viewer: prepare PO list shows every branch.', 1, 1, NOW()),
 ('PURCHASE_RETURN', 'Purchase Return', 'Purchase', 'AW', 'Approver: approve / reject purchase return. Viewer: purchase return list shows every branch.', 1, 1, NOW()),
 ('QUOTATION', 'Quotation', 'Sales', 'AW', 'Approver: approve / reject on quotation print (for the branch given), dashboard quotation in approval. Viewer: quotation list shows every branch.', 1, 1, NOW()),
-('SALES_ORDER', 'Sales Order', 'Sales', 'AW', 'Approver: approve / reject on sales order print, cancel on the sales order list. Viewer: sales order list shows every branch.', 1, 1, NOW()),
+('SALES_ORDER', 'Sales Order', 'Sales', 'AW', 'Approver: approve / reject on sales order print, dashboard sales order in approval. Viewer: sales order list shows every branch.', 1, 1, NOW()),
+('SO_CANCEL', 'Sales Order Cancel', 'Sales', 'A', 'Approver: cancel link on the sales order list.', 1, 1, NOW()),
 ('CREDIT_SALES', 'Credit Sales Approval', 'Sales', 'A', 'Approver: approve credit sales orders, dashboard credit sales order in approval.', 1, 1, NOW()),
 ('DC', 'Delivery Challan', 'Sales', 'AW', 'Approver: approve / reject on DC print (for the branch given). Viewer: DC list shows every branch.', 1, 1, NOW()),
 ('INVOICE', 'Invoice', 'Sales', 'W', 'Viewer: invoice list shows every branch.', 1, 1, NOW()),
-('SALES_RECEIPT', 'Sales Order in Accounts', 'Accounts', 'VW', 'Verifier: confirm payment and mark as credit sales. Viewer: sales order in accounts list shows every branch.', 1, 1, NOW()),
+('SALES_RECEIPT', 'Sales Order in Accounts', 'Accounts', 'VW', 'Verifier: confirm payment and mark as credit sales, dashboard payment to confirm. Viewer: sales order in accounts list shows every branch.', 1, 1, NOW()),
 ('GRN', 'GRN', 'Stores', 'AW', 'Approver: cancel GRN. Viewer: GRN list shows every branch.', 1, 1, NOW()),
 ('GRN_PAYMENT', 'GRN Payment', 'Accounts', 'AW', 'Approver: edit paid amount on GRN payment, dashboard GRN payment pending. Viewer: GRN payment list shows every branch.', 1, 1, NOW()),
 ('STORE_INDENT', 'Store Indent', 'Stores', 'AW', 'Approver: shown as the send-to-purchase approver on new indents. Viewer: store indent list shows every branch.', 1, 1, NOW()),
@@ -102,6 +105,21 @@ INSERT IGNORE INTO tbl_task_assign (task_id, task_role, usr_id, branch_id, creat
 SELECT t.task_id, 'C', u.usr_id, 0, 1, NOW()
 FROM mst_task t JOIN tbl_user u ON u.usr_id = 9 AND u.usr_type <> 'A'
 WHERE @fresh = 1 AND t.task_code = 'STOCK_LOCATION';
+
+-- second batch: the sales order approve / reject buttons and the payment screen had no user check, and live
+-- data shows Kerala, Sales, Stores, Accounts approving and Purchase, Rajapalayam confirming - so every user:
+-- head office users (they see every branch's orders) for all branches, the others for their own branch
+INSERT IGNORE INTO tbl_task_assign (task_id, task_role, usr_id, branch_id, created_by, created_dtm)
+SELECT t.task_id, x.task_role, u.usr_id, IF(u.branch_id = 1, 0, u.branch_id), 1, NOW()
+FROM (SELECT 'SALES_ORDER' AS task_code, 'A' AS task_role UNION ALL SELECT 'SALES_RECEIPT', 'V') x
+JOIN mst_task t ON t.task_code = x.task_code
+JOIN tbl_user u ON u.usr_type <> 'A' AND u.branch_id > 0
+WHERE @fix2 = 1;
+
+UPDATE mst_task SET task_note = 'Approver: approve / reject on sales order print, dashboard sales order in approval. Viewer: sales order list shows every branch.'
+WHERE @fix2 = 1 AND task_code = 'SALES_ORDER';
+UPDATE mst_task SET task_note = 'Verifier: confirm payment and mark as credit sales, dashboard payment to confirm. Viewer: sales order in accounts list shows every branch.'
+WHERE @fix2 = 1 AND task_code = 'SALES_RECEIPT';
 
 -- menu: Settings > Task Settings (admin sees every menu)
 INSERT INTO mst_sub_menu (mm_id, sm_index, sm_name, sm_url, sm_show, sm_class)

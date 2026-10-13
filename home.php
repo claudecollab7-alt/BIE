@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-13 dashboard tiles for all-branch approvers in Task Settings - were the tbl_task_user ids
 // 2026-10-13 GRN Payment Pending tile counts what its page lists (bill and payment both not done)
+// 2026-10-13 a tile for every verify / approve job the user holds, any branch; count limited to their branches (task_queues.php)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -94,120 +95,29 @@ $dbconn = new dbhandler();
 				<div class="content pt-0">
 					<!-- Dashboard content -->
 					<div class="row">
+						<?php
+						// a tile for every verify / approve job the user holds; count limited to the branches they hold it for
+						$tile_no = 0;
+						foreach (fnTaskQueues() as $q_key => $q) {
+							if (!fnQueueVisible($q_key)) {
+								continue;
+							}
+							$tile_no++;
+						?>
 						<div class="col-md-3">
-							<!-- This Form UI Starts here --->
-						<?php if (fnTaskCan('PURCHASE_ORDER', 'A')) { ?>
-							<div class="card card-body bg-blue-400 has-bg-image">
+							<div class="card card-body <?php echo $tile_no % 2 ? 'bg-blue-400' : 'bg-purple-400'; ?> has-bg-image">
 								<div class="media">
 									<div class="media-body">
-										<h3 class="mb-0"><?php echo $dbconn->GetSingleReconrd("tbl_purchase_order","COUNT(po_id)","po_status",3); ?></h3>
-										<span class="text-uppercase font-size-xs">Purchase Order InApproval</span>
+										<h3 class="mb-0"><?php echo fnQueueCount($conn, $q_key); ?></h3>
+										<span class="text-uppercase font-size-xs"><?php echo $q['label']; ?></span>
 									</div>
 									<div class="ml-3 align-self-center">
-										<a href="lst_direct_po_approval.php"><i class="icon-file-text2 icon-3x opacity-75 text-white"></i></a>
+										<a href="<?php echo $q['page']; ?>"><i class="<?php echo $q['icon']; ?> opacity-75 text-white"<?php echo isset($q['icon_size']) ? ' style="font-size:' . $q['icon_size'] . '"' : ''; ?>></i></a>
 									</div>
 								</div>
 							</div>
-							<?php } ?>
-
-							<!-- End of This Form UI  --->
 						</div>
-
-						<div class="col-md-3">
-							<!-- This Form UI Starts here --->
-						<?php if (fnTaskCan('SUPPLIER', 'A')) { ?>
-							<div class="card card-body bg-purple-400 has-bg-image">
-								<div class="media">
-									<div class="media-body">
-										<h3 class="mb-0"><?php echo $dbconn->GetSingleReconrd("mst_supplier_new","COUNT(supp_id)","supp_status = '1' AND supp_type = 'S' AND supp_approve_status",0); ?></h3>
-										<span class="text-uppercase font-size-xs">Supplier InApproval</span>
-									</div>
-									<div class="ml-3 align-self-center">
-										<a href="lst_supplier.php?approve=0"><i class="icon-bag icon-3x opacity-75 text-white"></i></a>
-									</div>
-								</div>
-							</div>
-							<?php } ?>
-
-							<!-- End of This Form UI  --->
-						</div>
-						<div class="col-md-3">
-							<!-- This Form UI Starts here --->
-						<?php if (fnTaskCan('QUOTATION', 'A')) { ?>
-							<div class="card card-body bg-blue-400 has-bg-image">
-								<div class="media">
-									<div class="media-body">
-										<h3 class="mb-0"><?php echo $dbconn->GetSingleReconrd("tbl_quotation","COUNT(*)","quo_verify_status = '1' AND quo_approve_status = '0' AND quo_status",1); ?></h3>
-										<span class="text-uppercase font-size-xs">Quotation InApproval</span>
-									</div>
-									<div class="ml-3 align-self-center">
-										<a href="lst_quo_approval.php"><i class="icon-file-text2 icon-3x opacity-75 text-white"></i></a>
-									</div>
-								</div>
-							</div>
-							<?php } ?>
-
-							<!-- End of This Form UI  --->
-						</div>
-
-
-						<div class="col-md-3">
-							<!-- This Form UI Starts here --->
-						<?php if (fnTaskCan('CREDIT_SALES', 'A')) { ?>
-							<div class="card card-body bg-purple-400 has-bg-image">
-								<div class="media">
-									<div class="media-body">
-										<h3 class="mb-0"><?php echo $dbconn->GetSingleReconrd("tbl_sales_order","COUNT(*)","pay_status",3); ?></h3>
-										<span class="text-uppercase font-size-xs">Credit Sales Order InApproval </span>
-									</div>
-									<div class="ml-3 align-self-center">
-										<a href="lst_so_approval.php"><i class="icon-file-text2 icon-3x opacity-75 text-white"></i></a>
-									</div>
-								</div>
-							</div>
-							<?php } ?>
-
-							<!-- End of This Form UI  --->
-						</div>
-
-						<div class="col-md-3">
-							<!-- This Form UI Starts here --->
-							<?php if (fnTaskCan('ITEM', 'A')) { ?>
-								<div class="card card-body bg-blue-400 has-bg-image">
-									<div class="media">
-										<div class="media-body">
-											<h3 class="mb-0"><?php echo $dbconn->GetSingleReconrd("tbl_item_details","COUNT(*)","branch_status",0); ?></h3>
-										<span class="text-uppercase font-size-xs">New Item InApproval </span>
-									</div>
-									<div class="ml-3 align-self-center">
-										<a href="lst_item_approval.php"><i class="fas fa-database opacity-75 text-white"></i></a>
-									</div>
-								</div>
-							</div>
-							<?php } ?>
-
-							<!-- End of This Form UI  --->
-						</div>
-						<div class="col-md-3">
-							<!-- This Form UI Starts here --->
-							<?php if (fnTaskCan('GRN_PAYMENT', 'A')) { ?>
-								<div class="card card-body bg-purple-400 has-bg-image">
-									<div class="media">
-										<div class="media-body">
-											<h3 class="mb-0"><?php echo $dbconn->GetSingleReconrd("tbl_grn", "COUNT(*) ", "grn_bill_status != '1' AND grn_pay_status != '1' AND grn_status", 2); ?></h3>
-										<span class="text-uppercase font-size-xs">GRN Payment Pending </span>
-									</div>
-									<div class="ml-3 align-self-center">
-										<a href="grn_payment_details_pending.php"><i class="fas fa-database opacity-75 text-white"></i></a>
-									</div>
-								</div>
-							</div>
-							<?php } ?>
-
-							<!-- End of This Form UI  --->
-						</div>
-
-
+						<?php } ?>
 					</div>
 					<!-- /dashboard content -->
 				</div>

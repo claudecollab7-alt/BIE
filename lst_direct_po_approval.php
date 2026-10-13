@@ -7,6 +7,7 @@ require_once("inc/common/userclass.php");
 isAdmin();
 
 
+// 2026-10-13 list limited to the branches the user approves for (PO_APPROVE in task_queues.php), the same rule as its dashboard tile
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -156,7 +157,7 @@ if (isset($_REQUEST['id'])) {
 
                                     <tbody>
                                         <?php
-                                            $sql = "SELECT * FROM tbl_purchase_order WHERE po_status IN (3)";
+                                            $sql = "SELECT * FROM tbl_purchase_order WHERE po_status IN (3)" . fnQueueScopeSql('PO_APPROVE');
                                             $searchRes1 = $conn->query($sql);
                                             $iSno = 1;
 

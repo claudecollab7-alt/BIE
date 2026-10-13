@@ -8,6 +8,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 approve / reject for approvers in Task Settings (SALES_ORDER A) - was admin
+// 2026-10-13 approve / reject buttons follow the same role - they showed to every user (every user holds it to begin with)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -953,7 +954,7 @@ if ($obj->branch_id > 0) {
                                     }
                                 } ?>
                             </div>
-                            <?php if (($obj->so_verify_status == 1) && $obj->so_status == 1) { ?>
+                            <?php if (($obj->so_verify_status == 1) && $obj->so_status == 1 && fnTaskCan('SALES_ORDER', 'A', $obj->bie_branch_id)) { ?>
                             <div class="card-footer text-center">
 
                                 <input type="hidden" name="so_id" id="so_id" value="<?php echo $_REQUEST['so_id']; ?>" />

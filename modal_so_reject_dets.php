@@ -20,7 +20,7 @@ $dbconn= new dbhandler();
 // 2026-10-06 loads its own csrf and txn helpers - opened on its own it died on csrf_fields()
 // 2026-10-13 session started when posted directly - every confirm failed the csrf check since 2026-10-01
 // 2026-10-13 cancel allowed only for the user who sees the cancel link (admin); cancelled-by is the user, was always 1
-// 2026-10-13 cancel for approvers in Task Settings (SALES_ORDER A)
+// 2026-10-13 cancel for Sales Order Cancel in Task Settings (SO_CANCEL A) - approving and cancelling are different people
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -31,7 +31,7 @@ if (isset($_POST['CONFIRM']))
 	if (!csrf_check('modal_so_reject_dets')) {
 		csrf_fail('lst_so_approval.php');
 	}
-	if (!fnTaskCan('SALES_ORDER', 'A', $dbconn->GetSingleReconrd("tbl_sales_order", "bie_branch_id", "so_id", (int)$_REQUEST['so_id']))) {
+	if (!fnTaskCan('SO_CANCEL', 'A', $dbconn->GetSingleReconrd("tbl_sales_order", "bie_branch_id", "so_id", (int)$_REQUEST['so_id']))) {
 		fnAccessDenied(false, 'lst_sales_order.php');
 	}
 
