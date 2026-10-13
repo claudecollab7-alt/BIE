@@ -7,9 +7,12 @@ require_once("inc/common/userclass.php");
 isAdmin();
 
 
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
+// 2026-10-13 csrf + approver check (admin - the only user shown the approve link)
+// 2026-10-13 approver from Task Settings (SUPPLIER A)
+
+// ini_set('display_errors', '1');
+// ini_set('display_startup_errors', '1');
+// error_reporting(E_ALL);
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
@@ -17,6 +20,12 @@ $dbconn = new dbhandler();
 
 if(isset($_POST['APPROVE']))
 {
+	if (!csrf_check('mst_supplier_approve')) {
+		csrf_fail('lst_supplier.php');
+	}
+	if (!fnTaskCan('SUPPLIER', 'A', $dbconn->GetSingleReconrd("mst_supplier_new", "company_branch_id", "supp_id", (int)$_REQUEST['supp_id']))) {
+		fnAccessDenied(false, 'lst_supplier.php');
+	}
     try
     {
 		$_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
@@ -156,6 +165,7 @@ if (isset($_REQUEST['supp_id']) && $_REQUEST['supp_id'] != "") {
                     <div class="col-md-12">
                         <!-- This Form UI Starts here --->
                         <form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="">
+                            <?php csrf_fields('mst_supplier_approve'); ?>
 
 
                             <div class="card">

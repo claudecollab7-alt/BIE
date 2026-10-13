@@ -12,6 +12,8 @@ $dbconn = new dbhandler();
 // 2026-09-22 stock row for a new item created via fnEnsureItemStockRow()
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-12 branch All option, principal code in dropdown, min/max discount on new item
+// 2026-10-13 _userid (never set at login) replaced by _user_id
+// 2026-10-13 price block check uses Task Settings (ITEM C) - was user 1; both branches show it
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL); 
 
@@ -420,7 +422,7 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 		}).change();
 
 		<?php
-		if ($_SESSION['_user_id'] == 1) { ?>
+		if (fnTaskCan('ITEM', 'C')) { ?>
 			$('.hide_price').show();
 		<?php	} else { ?>
 			$('.hide_price').show();
@@ -654,7 +656,7 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 						<!-- This Form UI Starts here --->
 						<form name='thisForm' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();" enctype="multipart/form-data">
 							<?php csrf_fields('mst_item_details'); ?>
-							<input type="hidden" name="session_user_id" value="<?php echo $_SESSION['_userid']; ?>">
+							<input type="hidden" name="session_user_id" value="<?php echo $_SESSION['_user_id']; ?>">
 							<div class="card">
 								<div class="card-header bg-pgheader text-white header-elements-inline">
 									<h6 class="card-title"> Item Details</h6>

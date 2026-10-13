@@ -6,11 +6,14 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-13 all branches for viewers in Task Settings (SALES_ORDER W) - was admin or head office
+// 2026-10-13 cancel link for approvers in Task Settings (SALES_ORDER A) - was admin
 // ini_set('display_errors', '1');
 //  ini_set('display_startup_errors', '1');
 //  error_reporting(E_ALL);
@@ -46,7 +49,7 @@ if ($searchByYear != '') {
     $searchQuery .= " and (a.so_finyr =".$searchByYear.") ";
 }
 
-if($_SESSION['_user_id']== 1 || $_SESSION['_user_branch'] == 1)
+if (fnTaskCan('SALES_ORDER', 'W'))
 {
 
     $sel = $conn->query("SELECT count(*) as allcount FROM tbl_sales_order as a
@@ -351,7 +354,7 @@ while ($row = $cusRecords->fetch()) {
     
     $so_refno = '<a data-toggle="modal" data-target="#modalSalesDets" href="" data-id="'.$row->so_id.'" data-popup="tooltip" title="Sales Details">'.$row->so_refno.'</a>';
 
-if($_SESSION['_user_id']== 1 ){
+if (fnTaskCan('SALES_ORDER', 'A', $row->bie_branch_id)) {
 
         if($row->so_approve_status != 1 && ($row->so_status !=6  && $row->dc_status == 0 && $row->so_cancel_status == 0)){
             $reject_link = '<a data-toggle="modal" data-target="#modalRejectDets" href="" data-id="'.$row->so_id.'" data-popup="tooltip" title="Sales Details"><i class="icon-bin bg-delete px-2 mr-2"></i></a>';

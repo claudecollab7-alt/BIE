@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 approve / reject for approvers in Task Settings (QUOTATION A) - was admin or the quotation's branch
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -879,7 +880,7 @@ if ($obj->quo_id > 0) {
                             
                                 <?php 
                                     if ($obj->quo_verify_status == 1 && $obj->quo_approve_status == 0) {
-                                        if ($_SESSION['_user_id'] == 1 || ($obj->bie_branch_id==$_SESSION['_user_branch'])) {
+                                        if (fnTaskCan('QUOTATION', 'A', $obj->bie_branch_id)) {
                                 ?>
                                        
                                         <br>
@@ -898,7 +899,7 @@ if ($obj->quo_id > 0) {
                             </div>
                                 <?php 
                                     if ($obj->quo_verify_status == 1 && $obj->quo_approve_status == 0) {
-                                        if ($_SESSION['_user_id'] == 1 || ($obj->bie_branch_id==$_SESSION['_user_branch'])) {
+                                        if (fnTaskCan('QUOTATION', 'A', $obj->bie_branch_id)) {
                                 ?>
                                         <div class="card-footer text-center">
                                             <input type="hidden" name="quo_id" id="quo_id" value="<?php echo $_REQUEST['quo_id']; ?>" />

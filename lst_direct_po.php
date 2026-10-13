@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 New PO button for creators and branch filter for viewers in Task Settings - were head office
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -278,7 +279,7 @@ $searchByYear=$dbconn->GetSingleReconrd("mst_finyear","finyr","finyr_active",1);
                                 <div class="header-elements">
                                     <div class="list-icons">
                                         <a class="list-icons-item" href="home.php" title="Home"><i class="icon-home2 mr-2"></i></a>
-                                        <?php if($_SESSION['_user_branch'] == '1'){ ?>
+                                        <?php if (fnTaskCan('PURCHASE_ORDER', 'C', $_SESSION['_user_branch'])) { ?>
                                         <a class="list-icons-item" href="direct_purchase_order.php" data-popup='tooltip' title="New Direct Purchase Order"><i class="icon-plus-circle2 mr-2"></i></a>
                                         <?php  } ?>
                                         <a class="list-icons-item" data-action="fullscreen"></a>
@@ -320,7 +321,7 @@ $searchByYear=$dbconn->GetSingleReconrd("mst_finyear","finyr","finyr_active",1);
                                             <script>document.getElementById('searchByStatus').value="<?php echo $searchByStatus; ?>";</script>
                                         </div>
                                     </div>
-                                    <?php if($_SESSION['_user_branch']==1){ ?>
+                                    <?php if (fnTaskCan('PURCHASE_ORDER', 'W')) { ?>
                                     <div class="col-md-2">
                                         <div class="form-group">
                                             <label>Branch</label>

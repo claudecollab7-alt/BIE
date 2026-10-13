@@ -7,6 +7,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 branch filter for viewers in Task Settings (EMPLOYEE W) - was head office
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -76,7 +77,7 @@ $dbconn = new dbhandler();
                                         </div>
                                     </div>
 
-                                    <?php if ($_SESSION['_user_branch'] == 1) { ?>
+                                    <?php if (fnTaskCan('EMPLOYEE', 'W')) { ?>
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label>Branch</label>

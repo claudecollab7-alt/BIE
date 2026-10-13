@@ -10,6 +10,7 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-13 approve / reject only for approvers in Task Settings (PURCHASE_RETURN A) - was anyone opening the page
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $grn_date = date("Y-m-d");
@@ -329,7 +330,7 @@ if (isset($_REQUEST['rtn_id']) && $_REQUEST['rtn_id'] != "") {
                                                         <!-- <p>
                                                             <b>GRN Note: </b><?php //echo $common_remarks; ?>
                                                         </p> -->
-                                                        <?php if ($rtn_verify_status == 1 && $rtn_approve_status == 0) { ?> 
+                                                        <?php if ($rtn_verify_status == 1 && $rtn_approve_status == 0 && fnTaskCan('PURCHASE_RETURN', 'A', $get->branch_id)) { ?> 
                                                         <div class="card-footer text-center">
                                                             <input type="hidden" name="rtn_id" id="rtn_id" value="<?php echo $_REQUEST['rtn_id']; ?>" />
                                                             <INPUT class="btn btn-custom" type="button" id="APPROVE" name="APPROVE" value="Approve">

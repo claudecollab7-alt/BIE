@@ -17,6 +17,7 @@ $dbconn = new dbhandler();
 // 2026-10-06 csrf token added to the multi uom form too - its save and update were always rejected
 // 2026-10-06 multi uom rows have no min / max discount field - bind the column default 0 instead of null
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-10-13 _userid (never set at login) replaced by _user_id
 
 //  ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -291,7 +292,7 @@ if(isset($_POST['UPDATE']))
 			if($_REQUEST['item_price'] != $obj->item_price || $_REQUEST['item_discount'] != $obj->item_discount || $_REQUEST['item_cost_price'] != $obj->item_cost_price || $_REQUEST['item_selling_price'] != $obj->item_selling_price || $_REQUEST['item_min_qty'] != $obj->item_min_qty || $_REQUEST['item_order_min_qty'] != $obj->item_order_min_qty || $_REQUEST['item_max_qty'] != $obj->item_max_qty)
 			{
 				$_REQUEST['updated_dtm'] = date('Y-m-d H:i:s');
-				$_REQUEST['updated_by'] = $_SESSION['_userid'];
+				$_REQUEST['updated_by'] = $_SESSION['_user_id'];
 				
 			
 				$stmt = null;				

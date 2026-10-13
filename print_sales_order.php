@@ -7,6 +7,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 approve / reject for approvers in Task Settings (SALES_ORDER A) - was admin
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -932,9 +933,8 @@ if ($obj->branch_id > 0) {
                                 </div>
                                 <?php if (($obj->so_verify_status == 1) && $obj->so_status == 1) {
 
-                                    $approve_user_dat = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 3);
 
-                                    if ($_SESSION['_user_id'] == 1) {
+                                    if (fnTaskCan('SALES_ORDER', 'A', $obj->bie_branch_id)) {
                                 ?>
                                         
                                         <br>

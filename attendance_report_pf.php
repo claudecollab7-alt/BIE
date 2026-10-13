@@ -11,6 +11,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 salary issue button for approvers in Task Settings (SALARY A) - was admin
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -425,7 +426,7 @@ if ($_REQUEST['month_id'] == '') {
 
                                                             $issueBtn = '';
 
-                                                            if ($_SESSION['_user_id'] == 1) {
+                                                            if (fnTaskCan('SALARY', 'A')) {
                                                                 // $issueBtn = '<input type="button" name="issue_salary" value = "Issue" class="issue_salary btn btn-primary" />';
                                                                 $issueBtn = '<a href="#" name="issue_salary"  class="  issue_salary badge btn  bg-warning" title="" data-original-title="Salary Issue">Issue</a>';
                                                             }

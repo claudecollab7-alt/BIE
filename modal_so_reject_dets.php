@@ -1,13 +1,16 @@
-<!-- Basic modal -->
 <?PHP
 
 ob_start();
-// session_start();
+// own session when the form posts here directly - included in a page it is already running
+if (session_status() === PHP_SESSION_NONE) {
+	session_start();
+}
 
 require_once("inc/common/dbconnect.php");
 require_once("inc/common/functions.php");
 require_once("inc/common/dbhandler.php");
 require_once("inc/common/csrf.php");
+require_once("inc/common/access.php");
 require_once("inc/common/db_txn.php");
 
 $conn = new dbconnect();
@@ -15,6 +18,9 @@ $dbconn= new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
 // 2026-10-06 loads its own csrf and txn helpers - opened on its own it died on csrf_fields()
+// 2026-10-13 session started when posted directly - every confirm failed the csrf check since 2026-10-01
+// 2026-10-13 cancel allowed only for the user who sees the cancel link (admin); cancelled-by is the user, was always 1
+// 2026-10-13 cancel for approvers in Task Settings (SALES_ORDER A)
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -24,6 +30,9 @@ if (isset($_POST['CONFIRM']))
 {
 	if (!csrf_check('modal_so_reject_dets')) {
 		csrf_fail('lst_so_approval.php');
+	}
+	if (!fnTaskCan('SALES_ORDER', 'A', $dbconn->GetSingleReconrd("tbl_sales_order", "bie_branch_id", "so_id", (int)$_REQUEST['so_id']))) {
+		fnAccessDenied(false, 'lst_sales_order.php');
 	}
 
 	try {
@@ -35,7 +44,7 @@ if (isset($_POST['CONFIRM']))
 		so_approve_status = :so_approve_status, so_cancel_status = :so_cancel_status, so_credit_days = :so_credit_days, accounts_status = :accounts_status, pay_status = :pay_status WHERE so_id = :so_id");
 		$data = array(
 			'so_id'=>$_REQUEST['so_id'],
-			':so_cancel_by' => '1',
+			':so_cancel_by' => $_SESSION['_user_id'],
 			':so_cancel_date_time' => date('Y-m-d H:i:s'),
 			':so_cancel_reason' => $_REQUEST['so_cancel_reason'],
 			':so_status' => '6',
@@ -66,6 +75,7 @@ if (isset($_POST['CONFIRM']))
 ?>
 <!-- Basic modal -->
 
+<!-- Basic modal -->
 <div id="modalRejectDets" class="modal fade" tabindex="-1" data-backdrop="false">
 		<div class="modal-dialog   modal-dialog-scrollable">
 			<div class="modal-content">

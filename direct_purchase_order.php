@@ -9,6 +9,7 @@ isAdmin();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-10-13 named approver from Task Settings (PURCHASE_ORDER A, else admin) - was tbl_task_user 1
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -28,7 +29,7 @@ if (isset($_POST['Draft'])) {
 
 		$_REQUEST['po_slno'] = $dbconn->GetMaxValue('tbl_purchase_order', 'po_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND 1 ', 1) + 1;
 		$_REQUEST['po_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
-		$po_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
+		$po_approve_id = fnTaskDefaultUser('PURCHASE_ORDER', 'A');
 		$_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
 
 		$_REQUEST['po_refno'] = 'PO/' . leadingZeros($_REQUEST['po_slno'], 4) . '/BIE/'.$_REQUEST['branch'].'/' . $_REQUEST['po_finyr'];
@@ -161,7 +162,7 @@ if (isset($_POST['UPDATE'])) {
 	try {
 		db_begin($conn);
 		$_REQUEST['po_date'] = date("Y-m-d", strtotime($_REQUEST['po_date']));
-		$po_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
+		$po_approve_id = fnTaskDefaultUser('PURCHASE_ORDER', 'A');
 		$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 		$_REQUEST['modify_by'] = $_SESSION['_user_id'];
 		$stmt = null;
@@ -284,7 +285,7 @@ if (isset($_POST['FINALIZE'])) {
 		try {
 			db_begin($conn);
 			$_REQUEST['po_date'] = date("Y-m-d", strtotime($_REQUEST['po_date']));
-			$po_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
+			$po_approve_id = fnTaskDefaultUser('PURCHASE_ORDER', 'A');
 			$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 			$_REQUEST['modify_by'] = $_SESSION['_user_id'];
 			$stmt = null;
@@ -405,7 +406,7 @@ if (isset($_POST['FINALIZE'])) {
 			$_REQUEST['po_slno'] = $dbconn->GetMaxValue('tbl_purchase_order', 'po_slno', 'branch_id="'.$_SESSION['_user_branch'].'" AND 1 ', 1) + 1;
 			$_REQUEST['po_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
 			$_REQUEST['branch'] = $dbconn->GetSingleReconrd("mst_branch", "branch_code", "branch_id='".$_SESSION['_user_branch']."' AND branch_status", 1);
-			$po_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
+			$po_approve_id = fnTaskDefaultUser('PURCHASE_ORDER', 'A');
 
 
 			$_REQUEST['po_refno'] = 'PO/' . leadingZeros($_REQUEST['po_slno'], 4) . '/BIE/'.$_REQUEST['branch'].'/' . $_REQUEST['po_finyr'];

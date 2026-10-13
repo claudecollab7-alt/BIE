@@ -7,6 +7,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 approve / reject for approvers in Task Settings (DC A) - was admin or the DC's branch
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -428,7 +429,7 @@ if($obj->cus_branch_id > 0){
 
                                 //$approve_user_dat = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 3);
 
-                                if ($_SESSION['_user_id'] == 1 || ($obj->branch_id==$_SESSION['_user_branch'])) {
+                                if (fnTaskCan('DC', 'A', $obj->branch_id)) {
                             ?>
 
                                     <br>
