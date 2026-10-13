@@ -296,7 +296,7 @@ if (isset($_REQUEST['principal_id']) && $_REQUEST['principal_id'] != "")
 												<div class="form-group row">
 													<label class="col-lg-3 col-form-label">Principal Code <span class="text-mandatory">*</span></label>
 													<div class="col-lg-9">
-														<input type="text" class="form-control text-uppercase" id="principal_code" name="principal_code" maxlength="4"
+														<input type="text" class="form-control text-uppercase" id="principal_code" name="principal_code" maxlength="10"
 														value="<?php echo $principal_code; ?>">
 													</div>
 												</div>														
