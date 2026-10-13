@@ -8,6 +8,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 branch filter for viewers in Task Settings (EMPLOYEE W) - was head office
+// 2026-10-13 list ajax url matches the file name case (ajaxEmployeelist.php) - it only worked on case-insensitive servers
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -254,7 +255,7 @@ $dbconn = new dbhandler();
 
 
             'ajax': {
-                'url': 'inc/datatable/ajaxEmployeeList.php',
+                'url': 'inc/datatable/ajaxEmployeelist.php',
                 'data': function(data) {
 
 

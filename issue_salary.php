@@ -12,9 +12,15 @@ $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
+// 2026-10-13 csrf + salary approver for the employee's branch (Task Settings SALARY A) - only the button was hidden before
+
+// ini_set('display_errors', '1');
+// ini_set('display_startup_errors', '1');
+// error_reporting(E_ALL);
+
+if (!csrf_check_ajax() || !fnTaskCan('SALARY', 'A', $dbconn->GetSingleReconrd("mst_employee", "branch_id", "emp_id", (int)(isset($_REQUEST['emp_id']) ? $_REQUEST['emp_id'] : 0)))) {
+	fnAccessDenied(true);
+}
 
 /*ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');

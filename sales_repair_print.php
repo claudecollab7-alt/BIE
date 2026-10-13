@@ -7,6 +7,7 @@ isAdmin();
 $conn  = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-10-13 send for approval (SALES_REPAIR V) and approve (SALES_REPAIR A) from Task Settings - were admin
+// 2026-10-13 buttons checked against the repair's branch (company_id)
 
 if (isset($_REQUEST['sal_repair_id']) && $_REQUEST['sal_repair_id'] != '') {
 
@@ -291,7 +292,7 @@ $(function() {
                                                             echo '<p>Send for Approval By</p>';
                                                             echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id", $obj->sal_repair_verify_by)
                                                                  . '<br/> On ' . date("d-m-Y", strtotime($obj->sal_repair_verify_date_time));
-                                                        } elseif (fnTaskCan('SALES_REPAIR', 'V')) { ?>
+                                                        } elseif (fnTaskCan('SALES_REPAIR', 'V', $obj->company_id)) { ?>
                                                             <a href="javascript:void(0)" id="sal_repair_verify"
                                                                data-id="<?php echo $obj->sal_repair_id; ?>">
                                                                 <span class="badge badge-warning">Send for Approval</span>
@@ -309,7 +310,7 @@ $(function() {
                                                                  . '<br/> On ' . date("d-m-Y", strtotime($obj->sal_repair_approve_date_time));
                                                         } elseif ($obj->sal_repair_verify_status == 1
                                                                && $obj->sal_repair_approve_status == 0
-                                                               && fnTaskCan('SALES_REPAIR', 'A')) { ?>
+                                                               && fnTaskCan('SALES_REPAIR', 'A', $obj->company_id)) { ?>
                                                             <a href="javascript:void(0)" id="sal_repair_approve"
                                                                data-id="<?php echo $obj->sal_repair_id; ?>">
                                                                 <span class="badge badge-warning">Approve Now</span>

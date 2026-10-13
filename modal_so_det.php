@@ -21,6 +21,7 @@ $dbconn= new dbhandler();
 // 2026-10-13 session started when posted directly - every confirm failed the csrf check since 2026-10-01
 // 2026-10-13 credit approval allowed only for the users on the credit-approval dashboard tile; approver saved as the user
 // 2026-10-13 credit approval for approvers in Task Settings (CREDIT_SALES A)
+// 2026-10-13 only a sales order waiting for credit approval (pay_status 3)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -40,7 +41,7 @@ if (isset($_POST['CONFIRM']))
 		$so_date = $dbconn->GetSingleReconrd("tbl_sales_order","so_date","so_id",$_REQUEST['so_id']);
 		$_REQUEST['so_credit_due_date'] = date('Y-m-d', strtotime($so_date. ' + '.$_REQUEST['so_credit_days'].' days')); 
 		$stmt = null;				
-		$stmt = $conn->prepare("UPDATE tbl_sales_order SET so_credit_approval_remarks = :so_credit_approval_remarks, so_credit_days = :so_credit_days, so_credit_due_date = :so_credit_due_date, so_approve_status = :so_approve_status, so_approve_by = :so_approve_by, pay_status = :pay_status ,so_approve_date_time = :so_approve_date_time WHERE so_id = :so_id");
+		$stmt = $conn->prepare("UPDATE tbl_sales_order SET so_credit_approval_remarks = :so_credit_approval_remarks, so_credit_days = :so_credit_days, so_credit_due_date = :so_credit_due_date, so_approve_status = :so_approve_status, so_approve_by = :so_approve_by, pay_status = :pay_status ,so_approve_date_time = :so_approve_date_time WHERE so_id = :so_id AND pay_status = 3");
 		$data = array(
 			'so_id'=>$_REQUEST['so_id'],
 			':so_credit_days' => $_REQUEST['so_credit_days'],
@@ -52,6 +53,9 @@ if (isset($_POST['CONFIRM']))
 			':so_approve_date_time' => date('Y-m-d H:i:s')
 		);
 		$stmt->execute($data);
+		if ($stmt->rowCount() == 0) {
+			throw new Exception("This sales order is not waiting for credit approval..!");
+		}
 		db_commit($conn);
 		header("location:lst_sales_receipt.php");	
 		die();

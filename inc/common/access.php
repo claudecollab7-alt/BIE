@@ -1,6 +1,7 @@
 <?php
 // 2026-10-13 access checks for approve / verify / reject actions
 // 2026-10-13 task roles from Task Settings (mst_task + tbl_task_assign) instead of user ids in the code
+// 2026-10-13 named approver also takes a holder for the document's branch
 
 // stop a call the user may not make - ajax gets 403, a page post goes back with a message
 function fnAccessDenied($ajax = true, $back = 'home.php')
@@ -86,14 +87,15 @@ function fnTaskBranches($code, $role)
 	return in_array(0, $branches, true) ? null : array_values(array_unique($branches));
 }
 
-// user saved as the named approver on a new document: first all-branch holder of the role, else the admin
-function fnTaskDefaultUser($code, $role)
+// user saved as the named approver on a new document: an all-branch holder of the role first,
+// then one for the document's branch, else the admin
+function fnTaskDefaultUser($code, $role, $branch_id = 0)
 {
 	try {
 		$db = new dbconnect();
 		$stmt = $db->prepare("SELECT a.usr_id FROM tbl_task_assign a JOIN mst_task t ON t.task_id = a.task_id AND t.task_status = 1
-							  WHERE t.task_code = :c AND a.task_role = :r AND a.branch_id = 0 ORDER BY a.assign_id LIMIT 1");
-		$stmt->execute(array(':c' => $code, ':r' => $role));
+							  WHERE t.task_code = :c AND a.task_role = :r AND a.branch_id IN (0, :b) ORDER BY a.branch_id, a.assign_id LIMIT 1");
+		$stmt->execute(array(':c' => $code, ':r' => $role, ':b' => (int)$branch_id));
 		$id = $stmt->fetchColumn();
 		if ($id) {
 			return $id;

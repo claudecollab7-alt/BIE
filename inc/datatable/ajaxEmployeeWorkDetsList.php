@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 
 
 // 2026-10-13 all branches for viewers in Task Settings (EMPLOYEE W) - was admin or head office
+// 2026-10-13 own branch only without the viewer role - the non-viewer queries had no branch filter, so every branch showed
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -75,18 +76,18 @@ $cusQuery ="SELECT b.emp_code,b.emp_id,a.attn_id,b.emp_name,a.work_date,a.check_
 
     $sel = $conn->query("SELECT count('b.emp_code,b.emp_id,a.attn_id,b.emp_name,a.work_date,a.check_in,a.check_in_dtm,a.check_out,a.work_time,a.late_in,a.break_time,a.early_out,a.check_out_dtm,c.shift_name') as allcount FROM tbl_attendance as a 
 LEFT JOIN  mst_employee as b ON a.emp_id = b.emp_id 
-LEFT JOIN mst_shifts as c ON c.shift_id = a.shift_id WHERE  a.status= 1" .$search);
+LEFT JOIN mst_shifts as c ON c.shift_id = a.shift_id WHERE  a.status= 1 AND b.branch_id = " . (int)$_SESSION['_user_branch'] . "" .$search);
 $records = $sel->fetch();
 $totalRecords = $records->allcount;
 
 $sel = $conn->query("SELECT count('b.emp_code,b.emp_id,a.attn_id,b.emp_name,a.work_date,a.check_in,a.check_in_dtm,a.check_out,a.work_time,a.late_in,a.break_time,a.early_out,a.check_out_dtm,c.shift_name') as allcount FROM tbl_attendance as a 
 LEFT JOIN  mst_employee as b ON a.emp_id = b.emp_id 
-LEFT JOIN mst_shifts as c ON c.shift_id = a.shift_id WHERE  a.status= 1 " .$search);
+LEFT JOIN mst_shifts as c ON c.shift_id = a.shift_id WHERE  a.status= 1 AND b.branch_id = " . (int)$_SESSION['_user_branch'] . " " .$search);
 $records = $sel->fetch();
 $totalRecordwithFilter = $records->allcount;
 
 
-$cusQuery ="SELECT b.emp_code,b.emp_id,a.attn_id,b.emp_name,a.work_date,a.check_in,a.check_out,a.check_in_dtm,a.work_time,a.late_in,a.break_time,a.early_out,a.check_out_dtm,c.shift_name FROM tbl_attendance as a LEFT JOIN mst_employee as b ON a.emp_id = b.emp_id LEFT JOIN mst_shifts as c ON c.shift_id = a.shift_id WHERE  a.status= 1 " .$search." order by ". $columnName. " " . $columnSortOrder . " limit " . $row . "," . $rowperpage;
+$cusQuery ="SELECT b.emp_code,b.emp_id,a.attn_id,b.emp_name,a.work_date,a.check_in,a.check_out,a.check_in_dtm,a.work_time,a.late_in,a.break_time,a.early_out,a.check_out_dtm,c.shift_name FROM tbl_attendance as a LEFT JOIN mst_employee as b ON a.emp_id = b.emp_id LEFT JOIN mst_shifts as c ON c.shift_id = a.shift_id WHERE  a.status= 1 AND b.branch_id = " . (int)$_SESSION['_user_branch'] . " " .$search." order by ". $columnName. " " . $columnSortOrder . " limit " . $row . "," . $rowperpage;
 
 }
 

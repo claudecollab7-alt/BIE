@@ -10,6 +10,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 new - Task Settings: tasks and who creates / verifies / approves / views each one, admin only
+// 2026-10-13 unknown user / branch ids refused; Item and Stock Location rows are always All branches (their screens are not per branch)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -20,10 +21,14 @@ if (!fnTaskIsAdmin()) {
 }
 
 $role_names = array('C' => 'Creator', 'V' => 'Verifier', 'A' => 'Approver', 'W' => 'Viewer');
+// tasks whose screens are not per branch (items, stock location) - their rows are always All branches
+$all_branch_tasks = array('ITEM', 'STOCK_LOCATION');
 
 // task row + its user rows from the posted form, inside the caller's transaction
-function fnSaveTaskUsers($conn, $task_id, $roles)
+function fnSaveTaskUsers($conn, $task_id, $roles, $all_only)
 {
+	$users = $conn->query("SELECT usr_id FROM tbl_user")->fetchAll(PDO::FETCH_COLUMN);
+	$branch_ids = $conn->query("SELECT branch_id FROM mst_branch WHERE branch_status = 1")->fetchAll(PDO::FETCH_COLUMN);
 	$conn->prepare("DELETE FROM tbl_task_assign WHERE task_id = :t")->execute(array(':t' => $task_id));
 	$ins = $conn->prepare("INSERT IGNORE INTO tbl_task_assign (task_id, task_role, usr_id, branch_id, created_by, created_dtm)
 						   VALUES (:t, :r, :u, :b, :by, :dtm)");
@@ -35,8 +40,11 @@ function fnSaveTaskUsers($conn, $task_id, $roles)
 		if ($usr <= 0 || strpos($roles, $role) === false || strlen($role) != 1) {
 			continue;
 		}
-		if ($role == 'W') {
+		if ($role == 'W' || $all_only) {
 			$branch = 0;	// viewers see every branch
+		}
+		if (!in_array($usr, $users) || ($branch != 0 && !in_array($branch, $branch_ids))) {
+			throw new Exception("User or branch not found - please reload the page and try again..!");
 		}
 		$ins->execute(array(':t' => $task_id, ':r' => $role, ':u' => $usr, ':b' => $branch, ':by' => $_SESSION['_user_id'], ':dtm' => date('Y-m-d H:i:s')));
 	}
@@ -84,7 +92,8 @@ if (isset($_POST['SAVE']) || isset($_POST['UPDATE'])) {
 								 ':status' => (isset($_REQUEST['task_status']) && $_REQUEST['task_status'] == '0') ? 0 : 1,
 								 ':by' => $_SESSION['_user_id'], ':dtm' => date('Y-m-d H:i:s'), ':id' => $task_id));
 		}
-		fnSaveTaskUsers($conn, $task_id, $roles);
+		$task_code = db_value($conn, "SELECT task_code FROM mst_task WHERE task_id = :id", array(':id' => $task_id));
+		fnSaveTaskUsers($conn, $task_id, $roles, in_array($task_code, $all_branch_tasks));
 		db_commit($conn);
 		$_SESSION['_msg'] = "Task successfully saved..!";
 	} catch (Exception $e) {
@@ -114,6 +123,7 @@ if (isset($_REQUEST['task_id']) && (int)$_REQUEST['task_id'] > 0) {
 	}
 }
 $task_roles = $task ? $task->task_roles : 'A';
+$all_only = $task && in_array($task->task_code, $all_branch_tasks);
 
 $users = $conn->query("SELECT u.usr_id, u.usr_name, u.usr_type, u.usr_status, b.branch_name FROM tbl_user u
 					   LEFT JOIN mst_branch b ON b.branch_id = u.branch_id ORDER BY u.usr_status DESC, u.usr_name")->fetchAll(PDO::FETCH_OBJ);
@@ -358,7 +368,7 @@ $h = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES); };
 
 		// viewers always see every branch
 		$('#add_role').change(function() {
-			if ($(this).val() == 'W') {
+			if ($(this).val() == 'W' || <?php echo $all_only ? 'true' : 'false'; ?>) {
 				$('#add_branch').val('0').prop('disabled', true);
 			} else {
 				$('#add_branch').prop('disabled', false);
@@ -371,7 +381,7 @@ $h = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES); };
 				alert('Tick ' + roleNames[role] + ' under Roles Used first..!');
 				return;
 			}
-			var branch = role == 'W' ? '0' : $('#add_branch').val();
+			var branch = (role == 'W' || <?php echo $all_only ? 'true' : 'false'; ?>) ? '0' : $('#add_branch').val();
 			var branchName = branch == '0' ? 'All Branches' : $('#add_branch option:selected').text();
 			var picked = $('#add_users').val() || [];
 			if (picked.length == 0) {
