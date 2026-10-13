@@ -12,6 +12,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-10-13 mark as credit button for verifiers in Task Settings (SALES_RECEIPT V) - showed to every user (every user holds it to begin with)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -343,7 +344,7 @@ if (isset($_REQUEST['so_id'])) {
                                         <INPUT class="btn btn-custom mr-2" type="submit" name="SAVE" value="SAVE">
                                         <INPUT class="btn btn-light mr-2" type="button" name="cancel" value="Cancel" onClick="javascript:window.location.href='lst_sales_receipt.php'">
                                         <?php } ?>
-                                    <?php if($obj->pay_status == 0 && $obj->accounts_status){ ?>
+                                    <?php if($obj->pay_status == 0 && $obj->accounts_status && fnTaskCan('SALES_RECEIPT', 'V', $obj->bie_branch_id)){ ?>
             
                                       	<span class="btn btn-warning mr-2" id="Credit">Mark as Credit Sales</span>                             
                                       <?php } ?>

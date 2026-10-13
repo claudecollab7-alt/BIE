@@ -72,6 +72,20 @@ function fnTaskCan($code, $role, $branch_id = null)
 	return $branch_id !== null && $branch_id !== '' && in_array((int)$branch_id, $branches, true);
 }
 
+// branches the user holds the role for: null = every branch (admin or an All row), list of ids, empty = none
+function fnTaskBranches($code, $role)
+{
+	if (empty($_SESSION['_user_id'])) {
+		return array();
+	}
+	if (fnTaskIsAdmin()) {
+		return null;
+	}
+	$rows = fnTaskRows();
+	$branches = isset($rows[$code][$role]) ? $rows[$code][$role] : array();
+	return in_array(0, $branches, true) ? null : array_values(array_unique($branches));
+}
+
 // user saved as the named approver on a new document: first all-branch holder of the role, else the admin
 function fnTaskDefaultUser($code, $role)
 {

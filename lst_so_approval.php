@@ -8,6 +8,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 list limited to the branches the user approves for (CREDIT_APPROVE in task_queues.php), the same rule as its dashboard tile
     ini_set('display_errors', '1');
     ini_set('display_startup_errors', '1');
     error_reporting(E_ALL);
@@ -92,7 +93,7 @@ $dbconn = new dbhandler();
 
                                     <tbody>
                                         <?php
-                                        $sql = "SELECT * FROM tbl_sales_order WHERE pay_status IN (3)";
+                                        $sql = "SELECT * FROM tbl_sales_order WHERE pay_status IN (3)" . fnQueueScopeSql('CREDIT_APPROVE');
                                         $searchRes1 = $conn->query($sql);
                                         $iSno = 1;
                                         if ($searchRes1->rowCount() > 0) {

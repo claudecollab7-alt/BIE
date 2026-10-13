@@ -8,6 +8,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 list limited to the branches the user approves for (GRN_PAY in task_queues.php), the same rule as its dashboard tile
     // ini_set('display_errors', '1');
     // ini_set('display_startup_errors', '1');
     // error_reporting(E_ALL);
@@ -94,7 +95,7 @@ $dbconn = new dbhandler();
                                     <tbody>
                             
                                         <?php 									
-                                            $SQL = "SELECT * FROM tbl_grn WHERE grn_status = '2' AND grn_bill_status != '1' AND grn_pay_status != '1' ";
+                                            $SQL = "SELECT * FROM tbl_grn WHERE grn_status = '2' AND grn_bill_status != '1' AND grn_pay_status != '1' " . fnQueueScopeSql('GRN_PAY');
                                             
                                             $SQL .= " ORDER BY grn_id DESC";
 

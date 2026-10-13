@@ -8,6 +8,56 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-13 - A dashboard tile for every verify / approve job, counted for the user's branches
+
+Rule: whoever is set in Task Settings to verify or approve something gets its tile, with the count of the
+branches they hold it for, and the tile opens the list of exactly those documents. Tiles, counts and the
+pages they open are defined once in `inc/common/task_queues.php`, so a tile and its page cannot differ.
+
+| Tile | Task / role | Opens |
+|---|---|---|
+| Purchase Order InApproval | Purchase Order - approver | `lst_direct_po_approval.php` |
+| Supplier InApproval | Supplier - approver | `lst_supplier.php?approve=0` |
+| Quotation InApproval | Quotation - approver | `lst_quo_approval.php` |
+| Sales Order InApproval (new) | Sales Order - approver | `lst_pending.php?q=SO_APPROVE` |
+| Credit Sales Order InApproval | Credit Sales - approver | `lst_so_approval.php` |
+| Sales Order Payment to Confirm (new) | Sales Order in Accounts - verifier | `lst_pending.php?q=PAY_CONFIRM` |
+| Delivery Challan InApproval (new) | DC - approver | `lst_pending.php?q=DC_APPROVE` |
+| Purchase Return InApproval (new) | Purchase Return - approver | `lst_pending.php?q=PR_APPROVE` |
+| Sales Repair to Send for Approval (new) | Sales Repair - verifier | `lst_pending.php?q=REPAIR_SEND` |
+| Sales Repair InApproval (new) | Sales Repair - approver | `lst_pending.php?q=REPAIR_APPROVE` |
+| New Item InApproval | Item - approver | `lst_item_approval.php` |
+| GRN Payment Pending | GRN Payment - approver | `grn_payment_details_pending.php` |
+
+`lst_pending.php` (new) lists the waiting documents with an Open link to the screen where the job is
+done. The existing approval lists now show only the branches the user approves for.
+
+**Correction to the earlier entries.** Checking the live data for who really approves showed that the
+sales order Approve / Reject buttons and the payment screen had **no user check** - only the remarks box
+was admin-only. Kerala and Sales approve sales orders daily (301 and 294 so far), Purchase and Rajapalayam
+have confirmed payments. The server check added earlier today would have stopped them. Now:
+
+- Sales Order approver and Sales Order in Accounts verifier start with **every user** - head office users
+  for all branches (they see every branch's orders), the others for their own branch. The buttons follow
+  the same role, so a user removed in Task Settings no longer sees buttons that would be refused.
+- **Sales Order Cancel** is its own task (admin), because cancel was admin-only while approve was open.
+- `db/post_upload_131026.sql` has a second block for this; it runs once, also where the first version
+  of the script was already run.
+
+With the starting settings: admin sees all 12 tiles; Kerala, Rajapalayam and the head office users see
+Quotation, Sales Order, Payment to Confirm and DC, counted for their branch (head office users: Sales
+Order and Payment for every branch).
+
+Checked on PHP 7.4 and 8, 12-10-26 live data plus test documents: for all 7 users every tile count equals
+the rows on the page it opens and equals the count worked out in sql; Kerala opened the DC tile, opened
+the DC, approved it and the tile went to 0; Accounts opened a payment from its tile; Sales was sent back
+from a list that is not theirs and sees no rows on the PO approval list. Each action by each user: sales
+order approve and payment confirm allowed for admin and head office users on a head office order,
+cancel admin only, the rest unchanged. The script gives the same rows on a fresh copy of live and on a
+copy where the first version had run, and adds nothing when run again.
+
+---
+
 ## 2026-10-13 - Dashboard tiles checked: count = rows on the page it opens
 
 Checked each tile as each of the 7 users on PHP 7.4 and 8 against the 12-10-26 live data: who sees it,
@@ -59,11 +109,12 @@ Admin users (type A) can do every task and need no rows. Any one approver is eno
 | Prepare Purchase Order | W - list | head office |
 | Purchase Return | A - approve / reject; W - list | W: head office. A: admin |
 | Quotation | A - approve / reject, tile; W - list | A: every user for their own branch. W: head office |
-| Sales Order | A - approve / reject / cancel; W - list | W: head office. A: admin |
+| Sales Order | A - approve / reject, tile; W - list | A: every user - head office for all branches, others their own (*corrected, see the tiles entry*). W: head office |
+| Sales Order Cancel | A - cancel on the sales order list | admin |
 | Credit Sales Approval | A - approve credit SO, tile | admin |
 | Delivery Challan | A - approve / reject; W - list | A: every user for their own branch. W: head office |
 | Invoice | W - list | head office |
-| Sales Order in Accounts | V - confirm payment, mark credit; W - list | V: Accounts. W: head office |
+| Sales Order in Accounts | V - confirm payment, mark credit, tile; W - list | V: every user - head office for all branches, others their own (*corrected*). W: head office |
 | GRN | A - cancel GRN; W - list | head office |
 | GRN Payment | A - edit paid amount, tile; W - list | W: head office. A: admin |
 | Store Indent | A - named approver on new indents; W - list | W: head office. A: admin |
@@ -106,11 +157,11 @@ return ones pasted the remarks straight into the sql.
 |---|---|---|
 | PO approve / reject | admin | `inc/cis_ajax/jquery_po_approval.php` |
 | Quotation approve / reject | admin, or a user of the quotation's branch | `inc/cis_ajax/jquery_quo_approval.php` |
-| Sales order approve / reject | admin | `inc/cis_ajax/jquery_so_approval.php` |
+| Sales order approve / reject | see Task Settings - *corrected below: the buttons had no check, every user approves* | `inc/cis_ajax/jquery_so_approval.php` |
 | DC approve / reject | admin, or a user of the DC's branch | `inc/cis_ajax/jquery_dc_approval.php` |
 | Purchase return approve / reject | admin (the list is an admin-only menu) | `inc/cis_ajax/jquery_purchase_return_approval.php` |
 | Sales repair send / approve | admin | `inc/cis_ajax/jquery_sales_repair_status.php` |
-| Mark credit, confirm payment | users with the Sales Order in Accounts menu (accounts) | `jquery_so_pay_status.php`, `so_verify.php` |
+| Mark credit, confirm payment | see Task Settings - *corrected below: the screen had no check, every user confirms* | `jquery_so_pay_status.php`, `so_verify.php` |
 | Supplier approve | admin | `mst_supplier_approve.php` |
 | Credit SO approve | users of the credit-approval dashboard tile (admin) | `modal_so_det.php` |
 | SO cancel | admin | `modal_so_reject_dets.php` |

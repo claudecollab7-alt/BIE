@@ -8,6 +8,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 list limited to the branches the user approves for (ITEM_APPROVE in task_queues.php), the same rule as its dashboard tile
     // ini_set('display_errors', '1');
     // ini_set('display_startup_errors', '1');
     // error_reporting(E_ALL);
@@ -91,7 +92,7 @@ $dbconn = new dbhandler();
 
                                     <tbody>
                                         <?php
-                                        $sql = "SELECT * FROM tbl_item_details WHERE branch_status IN (0)";
+                                        $sql = "SELECT * FROM tbl_item_details WHERE branch_status IN (0)" . fnQueueScopeSql('ITEM_APPROVE');
                                         $searchRes1 = $conn->query($sql);
                                         $iSno = 1;
                                         if ($searchRes1->rowCount() > 0) {
