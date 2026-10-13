@@ -8,6 +8,36 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-13 - Dashboard tiles checked: count = rows on the page it opens
+
+Checked each tile as each of the 7 users on PHP 7.4 and 8 against the 12-10-26 live data: who sees it,
+its count, where the link lands and how many rows that page lists.
+
+| Tile | Shown to | Opens | Today |
+|---|---|---|---|
+| Purchase Order InApproval | Purchase Order approvers (All branches) | `lst_direct_po_approval.php` | 2 = 2 |
+| Supplier InApproval | Supplier approvers | `lst_supplier.php?approve=0` | 1 = 1 |
+| Quotation InApproval | Quotation approvers (All branches) | `lst_quo_approval.php` | 13 = 13 |
+| Credit Sales Order InApproval | Credit Sales approvers | `lst_so_approval.php` | 1 = 1 |
+| New Item InApproval | Item approvers | `lst_item_approval.php` | 9 = 9 |
+| GRN Payment Pending | GRN Payment approvers | `grn_payment_details_pending.php` | 498 = 498 |
+
+With today's settings only admin sees them, as before. Branch-only approvers (the quotation and DC
+approvers of their own branch) do not get the tiles, which count every branch.
+
+Three places where the tile and its page used different rules, fixed so they always agree:
+
+- **Supplier** - the list opened at head office only, so a pending Kerala supplier was counted but not
+  shown. Opened from the tile it now starts at All branches; opened from the menu it is unchanged.
+- **Quotation** - the tile left out deleted quotations, the page did not. The page now leaves them out.
+- **GRN Payment Pending** - the tile counted bill not done; the page lists bill and payment both not
+  done. The tile now uses the page's rule.
+
+Checked with a pending Kerala supplier, a deleted pending quotation and a GRN paid without a bill: 2 = 2,
+13 = 13, 498 = 498.
+
+---
+
 ## 2026-10-13 - Task Settings: who creates, verifies, approves and views, in one screen
 
 **Run `db/post_upload_131026.sql` with these files.** It creates `mst_task` and `tbl_task_assign`,
