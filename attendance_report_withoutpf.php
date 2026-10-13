@@ -13,6 +13,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 salary issue button for approvers in Task Settings (SALARY A) - was admin
+// 2026-10-13 issue button checked against the employee's branch - a branch-only salary approver never saw it
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -463,7 +464,7 @@ if ($_REQUEST['month_id'] == '') {
 
                                                                 $issueBtn = '';
 
-                                                                if (fnTaskCan('SALARY', 'A')) {
+                                                                if (fnTaskCan('SALARY', 'A', $obj->branch_id)) {
                                                              
                                                                 $issueBtn = '<a href="#" name="issue_salary"  class="  issue_salary badge btn  bg-warning" title="" data-original-title="Salary Issue">Issue</a>';
                                                                 }

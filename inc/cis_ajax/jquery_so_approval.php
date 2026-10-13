@@ -14,6 +14,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-13 login + csrf + approver check (same rule as the approve button)
 // 2026-10-13 approver from Task Settings (SALES_ORDER A)
+// 2026-10-13 only a verified sales order still waiting (as the buttons)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -33,7 +34,7 @@ $remarks = $_POST["remarks"];
 
 $stmt = null;
 $stmt = $conn->prepare("UPDATE tbl_sales_order set  so_approve_status = :so_approve_status, so_approve_by = :so_approve_by, so_approve_date_time = :so_approve_date_time,
-	so_remarks = :so_remarks, so_status = :so_status WHERE so_id = :so_id");
+	so_remarks = :so_remarks, so_status = :so_status WHERE so_id = :so_id AND so_verify_status = 1 AND so_status = 1");
 
 
 
@@ -67,4 +68,11 @@ if ($task == 'SO_REJ') {
 
 
 	$_SESSION['_msg'] = "Sales Rejected..!";
+}// nothing changed: the document was already approved / rejected or is not waiting for this step
+if (isset($stmt) && $stmt instanceof PDOStatement && $stmt->rowCount() == 0) {
+	$_SESSION['_msg'] = '';
+	$_SESSION['_msg_err'] = "Not waiting for approval - it may already be approved or rejected..!";
+	http_response_code(409);
 }
+
+

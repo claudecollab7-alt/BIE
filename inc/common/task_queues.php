@@ -1,5 +1,6 @@
 <?php
 // 2026-10-13 dashboard tiles - one queue per verify / approve job; the tile count and the page it opens use the same rule
+// 2026-10-13 sales repair queues counted by the repair's branch (company_id)
 
 // table, waiting rule, branch column (null = not per branch), page the tile opens, and for the shared
 // pending page: id / ref / date / value columns and the screen where the job is done
@@ -27,10 +28,10 @@ function fnTaskQueues()
 			'table' => 'tbl_purchase_return', 'where' => "rtn_verify_status = 1 AND rtn_approve_status = 0", 'branch' => 'branch_id', 'page' => 'lst_pending.php?q=PR_APPROVE',
 			'id' => 'rtn_id', 'ref' => 'rtn_refno', 'date' => 'rtn_date', 'value' => '', 'open' => 'purchase_return_view.php?rtn_id='),
 		'REPAIR_SEND' => array('task' => 'SALES_REPAIR', 'role' => 'V', 'label' => 'Sales Repair to Send for Approval', 'icon' => 'icon-hammer-wrench icon-3x',
-			'table' => 'tbl_sales_repair', 'where' => "sal_repair_status = '1' AND sal_repair_verify_status = 0", 'branch' => null, 'page' => 'lst_pending.php?q=REPAIR_SEND',
+			'table' => 'tbl_sales_repair', 'where' => "sal_repair_status = '1' AND sal_repair_verify_status = 0", 'branch' => 'company_id', 'page' => 'lst_pending.php?q=REPAIR_SEND',
 			'id' => 'sal_repair_id', 'ref' => 'sal_repair_slno', 'date' => 'sal_repair_date', 'value' => 'sal_repair_value', 'open' => 'sales_repair_print.php?sal_repair_id='),
 		'REPAIR_APPROVE' => array('task' => 'SALES_REPAIR', 'role' => 'A', 'label' => 'Sales Repair InApproval', 'icon' => 'icon-hammer-wrench icon-3x',
-			'table' => 'tbl_sales_repair', 'where' => "sal_repair_status = '1' AND sal_repair_verify_status = 1 AND sal_repair_approve_status = 0", 'branch' => null, 'page' => 'lst_pending.php?q=REPAIR_APPROVE',
+			'table' => 'tbl_sales_repair', 'where' => "sal_repair_status = '1' AND sal_repair_verify_status = 1 AND sal_repair_approve_status = 0", 'branch' => 'company_id', 'page' => 'lst_pending.php?q=REPAIR_APPROVE',
 			'id' => 'sal_repair_id', 'ref' => 'sal_repair_slno', 'date' => 'sal_repair_date', 'value' => 'sal_repair_value', 'open' => 'sales_repair_print.php?sal_repair_id='),
 		'ITEM_APPROVE' => array('task' => 'ITEM', 'role' => 'A', 'label' => 'New Item InApproval', 'icon' => 'fas fa-database', 'icon_size' => '36px',
 			'table' => 'tbl_item_details', 'where' => "branch_status = 0", 'branch' => null, 'page' => 'lst_item_approval.php'),

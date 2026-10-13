@@ -14,6 +14,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-13 login + csrf + approver check - same rule as the approve button (admin or the dc's branch)
 // 2026-10-13 approver from Task Settings (DC A, per branch)
+// 2026-10-13 only a DC sent for approval and not yet decided
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -33,7 +34,7 @@ $remarks = $_POST["remarks"];
 
 $stmt = null;
 $stmt = $conn->prepare("UPDATE tbl_dc set  dc_approve_status = :dc_approve_status, dc_approve_by = :dc_approve_by, dc_approve_date_time = :dc_approve_date_time,
-dc_remarks = :dc_remarks WHERE dc_id = :dc_id");
+dc_remarks = :dc_remarks WHERE dc_id = :dc_id AND dc_verify_status = 1 AND dc_approve_status = 0");
 
 
 if ($task == 'DC_APP') {
@@ -64,4 +65,11 @@ if ($task == 'DC_REJ') {
 
     $stmt->execute($data);
     $_SESSION['_msg'] = "Delivery Challan Rejected..!";
+}// nothing changed: the document was already approved / rejected or is not waiting for this step
+if (isset($stmt) && $stmt instanceof PDOStatement && $stmt->rowCount() == 0) {
+	$_SESSION['_msg'] = '';
+	$_SESSION['_msg_err'] = "Not waiting for approval - it may already be approved or rejected..!";
+	http_response_code(409);
 }
+
+

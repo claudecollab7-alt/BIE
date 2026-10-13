@@ -8,6 +8,46 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-13 - Fixes from the independent test report (critical and main only)
+
+**Critical (in the code before Task Settings):** `inc/cis_ajax/jquery_delete_records.php` took the table,
+column and value from the post with no login, so anyone reaching the site could change any value in any
+table. It now needs a login and the csrf token, accepts only the 24 table / column pairs the delete links
+use, always sets the status to 0 and binds the id. Every delete link still works.
+
+Task Settings fixes:
+
+- **Branch-only roles now work everywhere.** Sales repair checks its branch (`company_id`) on the buttons,
+  the action and the dashboard count; salary Issue checks the employee's branch on the reports and now also
+  on the server (`issue_salary.php` only hid the button before, and had no csrf check).
+- **Named approver** on new POs, store indents and quotations takes an All-branch holder first, then a holder
+  for the document's branch, else admin - a branch-only holder was ignored.
+- **Task Settings** refuses user or branch ids that do not exist, and keeps Item and Stock Location rows at
+  All branches (those screens are not per branch, so a branch row could never take effect).
+
+Main fixes:
+
+- **Approve / reject / verify only on a document that is waiting** - PO in approval, quotation / DC / purchase
+  return sent and not decided, sales order verified and open, repair not yet sent / sent and not approved,
+  credit SO waiting for credit approval. Otherwise nothing changes and the user is told it is not waiting.
+- **Attendance work details** - users without the Employee viewer role now see only their own branch; the
+  query had no branch filter, so every branch showed.
+- **Employee list** called `ajaxEmployeeList.php` while the file is `ajaxEmployeelist.php` - fine on Windows,
+  broken on a case-sensitive server. The url now matches.
+
+Not changed, by agreement: edit screens that are protected only by hiding the button, repeat stock posting
+on finalize, salary repeat issue, input validation and GRN-cancel stock reversal.
+
+Checked on PHP 7.4 and 8, every task one by one for all 7 users, with the starting settings and again with
+extra branch-only rows (Kerala as PO / repair / salary / credit / cancel / supplier / return / GRN approver for
+Kerala, Stores as Item creator, viewers added and removed): every approve / verify / cancel action allowed
+exactly when the settings say so for the document's branch, every button and list link shown exactly then,
+viewer lists all-branch or own-branch as set; delete endpoint refuses no login, no token and other
+columns while the colour master delete works; approving twice is refused; an inactive task stops
+non-admins and its tile; named approver order and Task Settings validation as above.
+
+---
+
 ## 2026-10-13 - A dashboard tile for every verify / approve job, counted for the user's branches
 
 Rule: whoever is set in Task Settings to verify or approve something gets its tile, with the count of the

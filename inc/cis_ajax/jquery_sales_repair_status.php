@@ -10,8 +10,11 @@ $dbconn= new dbhandler();
 
 // 2026-10-13 login + csrf + check - send for approval and approve are admin-only buttons
 // 2026-10-13 send for approval / approve from Task Settings (SALES_REPAIR V / A)
+// 2026-10-13 repair's branch (company_id) passed - a branch-only verifier / approver was always refused
+// 2026-10-13 send for approval only when not sent yet, approve only when sent and not approved
 fnAjaxGuard();
-if (!fnTaskCan('SALES_REPAIR', (isset($_POST['mode']) && $_POST['mode'] == 'verify') ? 'V' : 'A')) {
+$repair_branch = $dbconn->GetSingleReconrd("tbl_sales_repair", "company_id", "sal_repair_id", (int)(isset($_POST["id"]) ? $_POST["id"] : 0));
+if (!fnTaskCan('SALES_REPAIR', (isset($_POST['mode']) && $_POST['mode'] == 'verify') ? 'V' : 'A', $repair_branch)) {
 	fnAccessDenied(true);
 }
 
@@ -23,7 +26,7 @@ if ($sal_repair_id && $mode == 'verify')
 	{
 		$stmt = null;				
 		$stmt = $conn->prepare("UPDATE  tbl_sales_repair SET sal_repair_verify_status = :sal_repair_verify_status, sal_repair_verify_by = :sal_repair_verify_by, sal_repair_verify_date_time = :sal_repair_verify_date_time
-				WHERE sal_repair_id = :sal_repair_id");		
+				WHERE sal_repair_id = :sal_repair_id AND sal_repair_verify_status = 0");		
 		$data = array(				
 			':sal_repair_id' => $sal_repair_id,
 			':sal_repair_verify_status' => 1,
@@ -47,7 +50,7 @@ if ($sal_repair_id && $mode == 'approve')
 	{
 		$stmt = null;				
 		$stmt = $conn->prepare("UPDATE  tbl_sales_repair SET sal_repair_approve_status = :sal_repair_approve_status, sal_repair_approve_by = :sal_repair_approve_by, sal_repair_approve_date_time = :sal_repair_approve_date_time
-				WHERE sal_repair_id = :sal_repair_id");		
+				WHERE sal_repair_id = :sal_repair_id AND sal_repair_verify_status = 1 AND sal_repair_approve_status = 0");		
 		$data = array(				
 			':sal_repair_id' => $sal_repair_id,
 			':sal_repair_approve_status' => 1,
@@ -106,4 +109,11 @@ if ($sal_repair_id && $mode == 'approve')
 		$_SESSION['_msg_err'] = $str;			
 	}	
 }	
+// nothing changed: the document was already approved / rejected or is not waiting for this step
+if (isset($stmt) && $stmt instanceof PDOStatement && $stmt->rowCount() == 0) {
+	$_SESSION['_msg'] = '';
+	$_SESSION['_msg_err'] = "Not waiting for approval - it may already be approved or rejected..!";
+	http_response_code(409);
+}
+
 ?>

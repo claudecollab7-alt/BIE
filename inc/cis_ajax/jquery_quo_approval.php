@@ -14,6 +14,7 @@ $dbconn= new dbhandler();
 
 // 2026-10-13 login + csrf + approver check - same rule as the approve button (admin or the quotation's branch)
 // 2026-10-13 approver from Task Settings (QUOTATION A, per branch)
+// 2026-10-13 only a quotation sent for approval and not yet decided
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -33,7 +34,7 @@ if (!fnTaskCan('QUOTATION', 'A', $quo_branch)) {
 		
 	$stmt = null;
 	$stmt = $conn->prepare("UPDATE tbl_quotation set  quo_approve_status = :quo_approve_status, quo_approve_id = :quo_approve_id, quo_approve_date_time= :quo_approve_date_time,
-		quo_approve_remarks= :quo_approve_remarks WHERE quo_id = :quo_id");
+		quo_approve_remarks= :quo_approve_remarks WHERE quo_id = :quo_id AND quo_verify_status = 1 AND quo_approve_status = 0");
 
 	if ($task == 'QUO_APP') 
 	{
@@ -62,4 +63,11 @@ if (!fnTaskCan('QUOTATION', 'A', $quo_branch)) {
 		$_SESSION['_msg'] = "Quotation Rejected..!";
 	}
 	
+// nothing changed: the document was already approved / rejected or is not waiting for this step
+if (isset($stmt) && $stmt instanceof PDOStatement && $stmt->rowCount() == 0) {
+	$_SESSION['_msg'] = '';
+	$_SESSION['_msg_err'] = "Not waiting for approval - it may already be approved or rejected..!";
+	http_response_code(409);
+}
+
 ?>
