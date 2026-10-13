@@ -11,6 +11,8 @@ $dbconn = new dbhandler();
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
 // 2026-10-06 paid total read on $conn - it left out the payment being saved, so a grn never showed fully paid
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-10-13 _userid (never set at login) replaced by _user_id
+// 2026-10-13 edit paid amount for approvers in Task Settings (GRN_PAYMENT A) - was admin
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -39,7 +41,7 @@ if (isset($_POST['SAVE'])) {
 		db_begin($conn);
 
 		$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-		$_REQUEST['modify_by'] = $_SESSION['_userid'];
+		$_REQUEST['modify_by'] = $_SESSION['_user_id'];
 		//$last_id = $conn->lastInsertId();
 		$pay_type = "S";
 
@@ -398,7 +400,7 @@ if ($_REQUEST['grn_id'] != "") {
 									<div class="form-group row">
 										<div class="col-lg-12">
 											<center>
-												<?php if ($obj->grn_pay_amount > 0 && $obj->grn_pay_finished_status != 3 && $_SESSION['_userid'] == 1) { ?>
+												<?php if ($obj->grn_pay_amount > 0 && $obj->grn_pay_finished_status != 3 && fnTaskCan('GRN_PAYMENT', 'A', $obj->branch_id)) { ?>
 													<INPUT class="btn btn-info" type="button" name="edit_grn_amt" id="edit_grn_amt" value="Edit">
 													<INPUT class="btn btn-success" type="submit" name="SAVE" id="save_grn_amt" value="SAVE">
 													<INPUT class="btn btn-light" type="button" name="Cancel" id="cancel_edit" onClick="javascript:window.location.href='grn_payment_details.php'" value="Cancel">

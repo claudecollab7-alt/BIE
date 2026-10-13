@@ -8,6 +8,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 _userid (never set at login) replaced by _user_id
 //ini_set('display_errors', '1');
 //ini_set('display_startup_errors', '1');
 //error_reporting(E_ALL);
@@ -67,7 +68,7 @@ if (isset($_REQUEST['GEN_PO'])) {
 
 
                         $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-                        $_REQUEST['modify_by'] = $_SESSION['_userid'];
+                        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
 
                         $stmt = null;
                         $stmt = $conn->prepare("INSERT INTO tbl_purchase_order (po_finyr, po_slno, po_refno, po_date,po_prepare_id, branch_id, supp_id, po_type, po_remarks, modify_date_time, modify_by, po_status) VALUES (:po_finyr, :po_slno, :po_refno, :po_date, :po_prepare_id, :branch_id, :supp_id, :po_type, :po_remarks,  :modify_date_time, :modify_by, :po_status)");

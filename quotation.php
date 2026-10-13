@@ -12,6 +12,7 @@ $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8; package picker renamed so it cannot override the rows
+// 2026-10-13 named approver from Task Settings (QUOTATION A, else admin) - was tbl_task_user 1
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -374,7 +375,7 @@ if (isset($_POST['FINALIZE'])) {
 		$_REQUEST['quo_refno'] = leadingZeros($_REQUEST['quo_no'], 3) . '-' . $requote . '/BIE/' . $_REQUEST['branch'] . '/' . $supp_code . '/Q/' . $_REQUEST['quo_finyr'];
 		try {
 			db_begin($conn);
-			$quo_approve_id = $dbconn->GetSingleReconrd("tbl_task_user", "user_id", "task_id", 1);
+			$quo_approve_id = fnTaskDefaultUser('QUOTATION', 'A');
 			$stmt = null;
 			$stmt = $conn->prepare("INSERT INTO tbl_quotation (quo_finyr, quo_refno, quo_slno, quo_date, supp_id,quo_version, ref_phone_no, ref_email, show_all_image, branch_id, quo_value, created_by, created_dtm,terms_con, terms_con_id1, terms_con_id2, terms_con_id3, terms_con_id4, terms_con_id5, terms_con_id6, terms_con_id7, terms_con_id8, quo_verify_status, quo_verify_by, quo_verify_date_time,bie_branch_id) 
 							VALUES (:quo_finyr, :quo_refno, :quo_slno, :quo_date, :supp_id,:quo_version, :ref_phone_no, :ref_email, :show_all_image, :branch_id, :quo_value, :created_by, :created_dtm,:terms_con, :terms_con_id1, :terms_con_id2, :terms_con_id3, :terms_con_id4, :terms_con_id5, :terms_con_id6, :terms_con_id7, :terms_con_id8, :quo_verify_status, :quo_verify_by, :quo_verify_date_time,:bie_branch_id)");

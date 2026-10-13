@@ -2,9 +2,18 @@
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/csrf.php");
+require_once("../common/access.php");
 session_start();
 $conn = new dbconnect();
 $dbconn= new dbhandler();
+
+// 2026-10-13 login + csrf + check - send for approval and approve are admin-only buttons
+// 2026-10-13 send for approval / approve from Task Settings (SALES_REPAIR V / A)
+fnAjaxGuard();
+if (!fnTaskCan('SALES_REPAIR', (isset($_POST['mode']) && $_POST['mode'] == 'verify') ? 'V' : 'A')) {
+	fnAccessDenied(true);
+}
 
 $sal_repair_id = $_POST["id"];
 $mode = $_POST["mode"];

@@ -7,6 +7,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 branch filter for viewers in Task Settings (GRN_PAYMENT W) - was head office
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -74,7 +75,7 @@ $searchByYear = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active"
                                             <input type='text' class="form-control" id='searchByCode' name="searchByCode" placeholder='Grn No. / Supplier Name '>
                                         </div>
                                     </div>
-                                    <?php if ($_SESSION['_user_branch'] == 1) { ?>
+                                    <?php if (fnTaskCan('GRN_PAYMENT', 'W')) { ?>
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label>Branch</label>

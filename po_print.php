@@ -7,6 +7,7 @@ require_once("inc/common/userclass.php");
 isAdmin();
 
 
+// 2026-10-13 approve / reject for approvers in Task Settings (PURCHASE_ORDER A) - was admin
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $conn = new dbconnect();
@@ -409,7 +410,7 @@ if (isset($_REQUEST['po_id'])) {
                                 <?php } ?>
                             </div>
                             
-                            <?php if (($obj->po_approve_status == 0 || $obj->po_approve_status == 2) && $obj->po_status == 3 && $_SESSION['_user_id'] == 1) { ?> 
+                            <?php if (($obj->po_approve_status == 0 || $obj->po_approve_status == 2) && $obj->po_status == 3 && fnTaskCan('PURCHASE_ORDER', 'A', $obj->branch_id)) { ?> 
                             <div class="card-footer text-center">
                                 <input type="hidden" name="po_id" id="po_id" value="<?php echo $_REQUEST['po_id']; ?>" />
                                 <INPUT class="btn btn-custom" type="button" id="APPROVE" name="APPROVE" value="Approve">

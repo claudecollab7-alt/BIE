@@ -13,6 +13,8 @@ $dbconn = new dbhandler();
 //     $_REQUEST['branch_id'] = 2	;
 // }
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-13 update allowed for admin at head office (item list link) or the item-approval users; updated_by from _user_id
+// 2026-10-13 item creators and approvers from Task Settings (ITEM C / A)
 
 //  ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -22,6 +24,9 @@ $dbconn = new dbhandler();
 if (isset($_POST['UPDATE'])) {
 	if (!csrf_check('branch_wise_item_update')) {
 		csrf_fail('lst_item_details.php');
+	}
+	if (!(fnTaskCan('ITEM', 'C') || fnTaskCan('ITEM', 'A'))) {
+		fnAccessDenied(false, 'lst_item_details.php');
 	}
 	$update_id = $_REQUEST['txtHid'];
 	try {
@@ -42,7 +47,7 @@ if (isset($_POST['UPDATE'])) {
 		}
 
 		$_REQUEST['updated_dtm'] = date('Y-m-d H:i:s');
-		$_REQUEST['updated_by'] = $_SESSION['_userid'];
+		$_REQUEST['updated_by'] = $_SESSION['_user_id'];
 
 
 		$stmt = null;

@@ -8,6 +8,135 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-13 - Dashboard tiles checked: count = rows on the page it opens
+
+Checked each tile as each of the 7 users on PHP 7.4 and 8 against the 12-10-26 live data: who sees it,
+its count, where the link lands and how many rows that page lists.
+
+| Tile | Shown to | Opens | Today |
+|---|---|---|---|
+| Purchase Order InApproval | Purchase Order approvers (All branches) | `lst_direct_po_approval.php` | 2 = 2 |
+| Supplier InApproval | Supplier approvers | `lst_supplier.php?approve=0` | 1 = 1 |
+| Quotation InApproval | Quotation approvers (All branches) | `lst_quo_approval.php` | 13 = 13 |
+| Credit Sales Order InApproval | Credit Sales approvers | `lst_so_approval.php` | 1 = 1 |
+| New Item InApproval | Item approvers | `lst_item_approval.php` | 9 = 9 |
+| GRN Payment Pending | GRN Payment approvers | `grn_payment_details_pending.php` | 498 = 498 |
+
+With today's settings only admin sees them, as before. Branch-only approvers (the quotation and DC
+approvers of their own branch) do not get the tiles, which count every branch.
+
+Three places where the tile and its page used different rules, fixed so they always agree:
+
+- **Supplier** - the list opened at head office only, so a pending Kerala supplier was counted but not
+  shown. Opened from the tile it now starts at All branches; opened from the menu it is unchanged.
+- **Quotation** - the tile left out deleted quotations, the page did not. The page now leaves them out.
+- **GRN Payment Pending** - the tile counted bill not done; the page lists bill and payment both not
+  done. The tile now uses the page's rule.
+
+Checked with a pending Kerala supplier, a deleted pending quotation and a GRN paid without a bill: 2 = 2,
+13 = 13, 498 = 498.
+
+---
+
+## 2026-10-13 - Task Settings: who creates, verifies, approves and views, in one screen
+
+**Run `db/post_upload_131026.sql` with these files.** It creates `mst_task` and `tbl_task_assign`,
+adds the tasks below with starting rows that give every user exactly the access the code gave them,
+and adds the menu Settings > Task Settings. Safe to run again (starting rows only go in once).
+
+Before, these rules were typed into 70 files as user ids (`user_id == 1`, `== 9`), "head office"
+(`branch == 1`) and the three `tbl_task_user` rows. Now every screen asks `fnTaskCan(task, role, branch)`
+and the answer comes from Task Settings.
+
+Roles: **Creator** creates / edits, **Verifier** sends for approval or confirms, **Approver** approves,
+rejects and cancels, **Viewer** sees every branch on the lists. Each user row has a branch, or All.
+Admin users (type A) can do every task and need no rows. Any one approver is enough.
+
+| Task | Role - used for | Starting users (same as the old code) |
+|---|---|---|
+| Purchase Order | C - New PO button, edit links; A - approve / reject, dashboard tile; W - list | C, W: head office users. A: admin |
+| Supplier | C - item mapping, delete any; A - approve, tile; W - list | C, W: head office. A: admin |
+| Prepare Purchase Order | W - list | head office |
+| Purchase Return | A - approve / reject; W - list | W: head office. A: admin |
+| Quotation | A - approve / reject, tile; W - list | A: every user for their own branch. W: head office |
+| Sales Order | A - approve / reject / cancel; W - list | W: head office. A: admin |
+| Credit Sales Approval | A - approve credit SO, tile | admin |
+| Delivery Challan | A - approve / reject; W - list | A: every user for their own branch. W: head office |
+| Invoice | W - list | head office |
+| Sales Order in Accounts | V - confirm payment, mark credit; W - list | V: Accounts. W: head office |
+| GRN | A - cancel GRN; W - list | head office |
+| GRN Payment | A - edit paid amount, tile; W - list | W: head office. A: admin |
+| Store Indent | A - named approver on new indents; W - list | W: head office. A: admin |
+| Stock Location | C - update location | admin (user 9 in the old code does not exist) |
+| Item | C - edit / price / branch / delete links; A - approve branch items, tile | admin |
+| Sales Repair | V - send for approval; A - approve | admin |
+| Employee / Staff / Labour | W - the HR lists | head office |
+| Salary Issue | A - issue button on salary reports | admin |
+
+Dashboard tiles show for users holding the approver role for All branches (a tile counts every branch).
+
+Left as they are, on purpose: user-type checks (admin-only menus and user screen; the S / A checks on
+the masters, which every user passes), new items from head office going straight in without approval,
+and the stock column per branch on the stock list - these are about data, not people.
+`tbl_task_user` is no longer read and can be dropped later.
+
+One visible change: Purchase Return approve / reject now shows only to its approvers (admin); before,
+it showed to anyone who opened the page, though the list is an admin-only menu.
+
+Checked on PHP 7.4 and 8 against a copy of the 12-10-26 live data with the script run:
+- every screen above opened as each of the 7 users on the old and the new code - 273 user / screen
+  pairs, all the same apart from the three intended changes from the earlier entry (admin GRN amount
+  Edit, csrf fields on supplier approve, item form user id) and row order the old code already varies;
+- each approve / verify / cancel action called by each user - allowed exactly as before;
+- changing the settings takes effect: Purchase user added as PO approver gets the tile and the button
+  and can approve; Sales user's quotation viewer row removed shows only head office quotations;
+- Task Settings: add task, add many users per role, viewer locked to All branches, duplicate code
+  refused, non-admin sent back to the dashboard.
+
+---
+
+## 2026-10-13 - Approve / verify / reject checked on the server
+
+Who sees each Approve, Reject, Verify and Cancel button is unchanged. What changed is that the
+action behind the button now checks the same rule, so a user without the button cannot approve by
+calling the page directly. Before, none of these checked who was calling, and the PO and purchase
+return ones pasted the remarks straight into the sql.
+
+| Action | Allowed (same as the button) | File |
+|---|---|---|
+| PO approve / reject | admin | `inc/cis_ajax/jquery_po_approval.php` |
+| Quotation approve / reject | admin, or a user of the quotation's branch | `inc/cis_ajax/jquery_quo_approval.php` |
+| Sales order approve / reject | admin | `inc/cis_ajax/jquery_so_approval.php` |
+| DC approve / reject | admin, or a user of the DC's branch | `inc/cis_ajax/jquery_dc_approval.php` |
+| Purchase return approve / reject | admin (the list is an admin-only menu) | `inc/cis_ajax/jquery_purchase_return_approval.php` |
+| Sales repair send / approve | admin | `inc/cis_ajax/jquery_sales_repair_status.php` |
+| Mark credit, confirm payment | users with the Sales Order in Accounts menu (accounts) | `jquery_so_pay_status.php`, `so_verify.php` |
+| Supplier approve | admin | `mst_supplier_approve.php` |
+| Credit SO approve | users of the credit-approval dashboard tile (admin) | `modal_so_det.php` |
+| SO cancel | admin | `modal_so_reject_dets.php` |
+| GRN cancel | admin or head office | `modal_grn_reject_dets.php` |
+| Branch item update | admin at head office, or item-approval users | `branch_wise_item_update.php` |
+
+Fixed on the way - these were broken before:
+
+- **SO cancel, GRN cancel and credit SO approval never saved** since 2026-10-01. The modal forms post
+  to themselves, the modal files had `session_start()` commented out, so the csrf check always
+  failed. They now start the session when posted directly.
+- **Ajax posts with their own `beforeSend`** (the approve buttons on PO, quotation and DC print, and
+  others) sent no csrf token - the page's `beforeSend` replaced the global one. The token is now
+  attached in `$.ajaxPrefilter`, which every ajax post goes through.
+- **`$_SESSION['_userid']` is never set at login** (login sets `_user_id`). So DC verify-by, SO
+  accounts verify-by, PO prepare / price history / GRN payment modified-by were saved empty, the
+  admin Edit amount button on GRN payment never showed, and the admin price-required check on the
+  item form never ran. Replaced by `_user_id`; admin now sees the GRN amount Edit button.
+- Cancelled-by on SO and GRN, and approved-by on credit SO, were always saved as 1; now the user.
+
+Checked on PHP 7.4 and 8 with users 1-7 calling each action: allowed exactly as listed above, a
+post without the csrf token is refused; clicking the real buttons as an allowed user still works
+(PO as admin, quotation and DC as Kerala, mark credit as accounts, credit SO approve as admin).
+
+---
+
 ## 2026-10-12 - SPAC price list import
 
 `db/import_spac_price_list_121026.sql` - run once in phpMyAdmin on the bie database. It adds the

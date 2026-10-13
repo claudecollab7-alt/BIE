@@ -5,10 +5,12 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-13 edit / price / branch / delete links for creators in Task Settings (ITEM C) - was admin at head office
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -119,7 +121,7 @@ while ($row = $itemRecords->fetch()) {
         $view_link = '<a data-toggle="modal" data-target="#viewLink" href="" data-id="' . $row->item_id . '" data-popup="tooltip" title="Item View"><i class="icon-file-eye2 mr-2"></i></a>';
         // $edit_link = '<a href="mst_item_details.php?item_id='.$row->item_id.'" data-popup="tooltip" title="Edit" data-original-title="Edit" ><i class="icon-pencil5 mr-2"></i></a>';
 
-        if ($_SESSION['_user_branch'] == '1' && $_SESSION['_user_id'] == '1') {
+        if (fnTaskCan('ITEM', 'C')) {
             $edit_link = '<a href="mst_item_details.php?item_id=' . $row->item_id . '" data-popup="tooltip" title="Edit" data-original-title="Edit" ><i class="icon-pencil5 mr-2"></i></a>';
             $price_history_link = '<a href="mst_itemprice_history.php?item_id=' . $row->item_id . '" class="tip" title="Update Price History" data-original-title="Item Price Update"><i class="fa fa-history mr-2"></i></a>';
             $branch_wise_link = '<a href="branch_wise_item_update.php?item_id=' . $row->item_id . '" class="tip" title="Branch Wise Item Update" data-original-title="Item Price Update"><i class="icon-pencil4 mr-2"></i></a>';

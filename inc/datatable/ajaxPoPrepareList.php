@@ -6,11 +6,13 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-13 all branches for viewers in Task Settings (PO_PREPARE W) - was admin or head office
     // ini_set('display_errors', '1');
     // ini_set('display_startup_errors', '1');
     // error_reporting(E_ALL);
@@ -56,7 +58,7 @@ if ($searchByYear != '') {
 }
 
 ## Fetch records
-if($_SESSION['_user_id']==1 || $_SESSION['_user_branch']==1)
+if (fnTaskCan('PO_PREPARE', 'W'))
 {
     ## Total number of records without filtering
     $sel = $conn->query("SELECT count(*) as allcount FROM tbl_store_indent WHERE send_purchase_status > 0" . $searchQuery);

@@ -11,6 +11,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-13 branch filter for viewers in Task Settings (INVOICE W) - was head office
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -235,7 +236,7 @@ $searchByYear=$dbconn->GetSingleReconrd("mst_finyear","finyr","finyr_active",1);
                                             <script>document.getElementById('searchByInv').value="<?php echo $searchByInv; ?>";</script>
                                         </div>
                                     </div>
-                                    <?php if($_SESSION['_user_branch']==1){ ?>
+                                    <?php if (fnTaskCan('INVOICE', 'W')) { ?>
                                     <div class="col-md-2">
                                         <div class="form-group">
                                             <label>Branch</label>

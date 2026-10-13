@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-06 prepared qty read on $conn - it left out the lines just saved, so a complete po went to admin as partial
+// 2026-10-13 _userid (never set at login) replaced by _user_id
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 $po_pre_date = date("Y-m-d");
@@ -28,7 +29,7 @@ if (isset($_POST['SAVE'])) {
 
         $_REQUEST['po_prepare_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
         $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-        $_REQUEST['modify_by'] = $_SESSION['_userid'];
+        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
 
         $stmt = null;
         $stmt = $conn->prepare("INSERT INTO tbl_po_prepare (po_prepare_date, po_prepare_finyr,si_id, po_prepare_remarks, company_id, modify_date_time, modify_by, send_to_admin_status) VALUES (:po_prepare_date, :po_prepare_finyr,:si_id, :po_prepare_remarks, :company_id, :modify_date_time, :modify_by, :send_to_admin_status)");
@@ -118,7 +119,7 @@ if (isset($_POST['UPDATE'])) {
 
         $_REQUEST['po_prepare_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
         $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-        $_REQUEST['modify_by'] = $_SESSION['_userid'];
+        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
 
         $stmt = null;
         $stmt = $conn->prepare("UPDATE tbl_po_prepare SET po_prepare_date=:po_prepare_date, po_prepare_finyr=:po_prepare_finyr,si_id=:si_id, po_prepare_remarks=:po_prepare_remarks, company_id=:company_id, modify_date_time=:modify_date_time, modify_by=:modify_by, send_to_admin_status=:send_to_admin_status  WHERE po_prepare_id = :po_prepare_id ");
@@ -209,7 +210,7 @@ if (isset($_POST['send_to_admin'])) {
 
         $_REQUEST['po_prepare_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
         $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
-        $_REQUEST['modify_by'] = $_SESSION['_userid'];
+        $_REQUEST['modify_by'] = $_SESSION['_user_id'];
 
         $stmt = null;
         $stmt = $conn->prepare("UPDATE tbl_po_prepare SET po_prepare_date=:po_prepare_date, po_prepare_finyr=:po_prepare_finyr,si_id=:si_id, po_prepare_remarks=:po_prepare_remarks, company_id=:company_id, modify_date_time=:modify_date_time, modify_by=:modify_by, send_to_admin_status=:send_to_admin_status  WHERE po_prepare_id = :po_prepare_id ");
