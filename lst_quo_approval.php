@@ -7,6 +7,7 @@ require_once("inc/common/userclass.php");
 isAdmin();
 
 
+// 2026-10-13 deleted quotations (quo_status 0) left out, as the dashboard tile does
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -143,7 +144,7 @@ if (isset($_REQUEST['id'])) {
                                     <tbody>
                                         <?php
 
-                                        $sql = "SELECT * FROM tbl_quotation WHERE quo_verify_status=1 AND quo_approve_status=0";
+                                        $sql = "SELECT * FROM tbl_quotation WHERE quo_verify_status=1 AND quo_approve_status=0 AND quo_status=1";
                                         $searchRes1 = $conn->query($sql);
                                         $iSno = 1;
 

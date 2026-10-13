@@ -9,11 +9,12 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-10-13 branch filter for viewers in Task Settings (SUPPLIER W) - was head office
+// 2026-10-13 opened from the Supplier InApproval tile the branch filter starts at All - it showed head office only, fewer than the tile
 
 if(isset($_REQUEST['approve']) && $_REQUEST['approve'] == 0)
     $searchByStatus = 0;
 
-$searchByBranch='1';
+$searchByBranch = (isset($_REQUEST['approve']) && $_REQUEST['approve'] == 0) ? '' : '1';	// from the dashboard tile: every branch, as the tile counts
 
 ?>
 <!DOCTYPE html>

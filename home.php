@@ -10,6 +10,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 dashboard tiles for all-branch approvers in Task Settings - were the tbl_task_user ids
+// 2026-10-13 GRN Payment Pending tile counts what its page lists (bill and payment both not done)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -193,7 +194,7 @@ $dbconn = new dbhandler();
 								<div class="card card-body bg-purple-400 has-bg-image">
 									<div class="media">
 										<div class="media-body">
-											<h3 class="mb-0"><?php echo $dbconn->GetSingleReconrd("tbl_grn", "COUNT(*) ", "grn_bill_status = '0' AND grn_status", 2); ?></h3>
+											<h3 class="mb-0"><?php echo $dbconn->GetSingleReconrd("tbl_grn", "COUNT(*) ", "grn_bill_status != '1' AND grn_pay_status != '1' AND grn_status", 2); ?></h3>
 										<span class="text-uppercase font-size-xs">GRN Payment Pending </span>
 									</div>
 									<div class="ml-3 align-self-center">
