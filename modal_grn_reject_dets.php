@@ -1,13 +1,16 @@
-<!-- Basic modal -->
 <?PHP
 
 ob_start();
-// session_start();
+// own session when the form posts here directly - included in a page it is already running
+if (session_status() === PHP_SESSION_NONE) {
+	session_start();
+}
 
 require_once("inc/common/dbconnect.php");
 require_once("inc/common/functions.php");
 require_once("inc/common/dbhandler.php");
 require_once("inc/common/csrf.php");
+require_once("inc/common/access.php");
 require_once("inc/common/db_txn.php");
 
 $conn = new dbconnect();
@@ -15,6 +18,8 @@ $dbconn= new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
 // 2026-10-06 loads its own csrf and txn helpers - opened on its own it died on csrf_fields()
+// 2026-10-13 session started when posted directly - every confirm failed the csrf check since 2026-10-01
+// 2026-10-13 cancel allowed only for users who see the cancel link (admin or head office); cancelled-by is the user, was always 1
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -24,6 +29,9 @@ if (isset($_POST['CONFIRM']))
 {
 	if (!csrf_check('modal_grn_reject_dets')) {
 		csrf_fail('grn_list.php');
+	}
+	if (!($_SESSION['_user_id'] == 1 || $_SESSION['_user_branch'] == 1)) {
+		fnAccessDenied(false, 'grn_list.php');
 	}
 
 	try {
@@ -35,7 +43,7 @@ if (isset($_POST['CONFIRM']))
 		grn_approve_status = :grn_approve_status, grn_cancel_status = :grn_cancel_status WHERE grn_id = :grn_id");
 		$data = array(
 			'grn_id'=>$_REQUEST['grn_id'],
-			':grn_cancel_by' => '1',
+			':grn_cancel_by' => $_SESSION['_user_id'],
 			':grn_cancel_date_time' => date('Y-m-d H:i:s'),
 			':grn_cancel_reason' => $_REQUEST['grn_cancel_reason'],
 			':grn_status' => '3',
@@ -63,6 +71,7 @@ if (isset($_POST['CONFIRM']))
 ?>
 <!-- Basic modal -->
 
+<!-- Basic modal -->
 <div id="modalRejectGrnDets" class="modal fade" tabindex="-1" data-backdrop="false">
 		<div class="modal-dialog   modal-dialog-scrollable">
 			<div class="modal-content">

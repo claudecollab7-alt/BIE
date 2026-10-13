@@ -8,6 +8,48 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-13 - Approve / verify / reject checked on the server
+
+Who sees each Approve, Reject, Verify and Cancel button is unchanged. What changed is that the
+action behind the button now checks the same rule, so a user without the button cannot approve by
+calling the page directly. Before, none of these checked who was calling, and the PO and purchase
+return ones pasted the remarks straight into the sql.
+
+| Action | Allowed (same as the button) | File |
+|---|---|---|
+| PO approve / reject | admin | `inc/cis_ajax/jquery_po_approval.php` |
+| Quotation approve / reject | admin, or a user of the quotation's branch | `inc/cis_ajax/jquery_quo_approval.php` |
+| Sales order approve / reject | admin | `inc/cis_ajax/jquery_so_approval.php` |
+| DC approve / reject | admin, or a user of the DC's branch | `inc/cis_ajax/jquery_dc_approval.php` |
+| Purchase return approve / reject | admin (the list is an admin-only menu) | `inc/cis_ajax/jquery_purchase_return_approval.php` |
+| Sales repair send / approve | admin | `inc/cis_ajax/jquery_sales_repair_status.php` |
+| Mark credit, confirm payment | users with the Sales Order in Accounts menu (accounts) | `jquery_so_pay_status.php`, `so_verify.php` |
+| Supplier approve | admin | `mst_supplier_approve.php` |
+| Credit SO approve | users of the credit-approval dashboard tile (admin) | `modal_so_det.php` |
+| SO cancel | admin | `modal_so_reject_dets.php` |
+| GRN cancel | admin or head office | `modal_grn_reject_dets.php` |
+| Branch item update | admin at head office, or item-approval users | `branch_wise_item_update.php` |
+
+Fixed on the way - these were broken before:
+
+- **SO cancel, GRN cancel and credit SO approval never saved** since 2026-10-01. The modal forms post
+  to themselves, the modal files had `session_start()` commented out, so the csrf check always
+  failed. They now start the session when posted directly.
+- **Ajax posts with their own `beforeSend`** (the approve buttons on PO, quotation and DC print, and
+  others) sent no csrf token - the page's `beforeSend` replaced the global one. The token is now
+  attached in `$.ajaxPrefilter`, which every ajax post goes through.
+- **`$_SESSION['_userid']` is never set at login** (login sets `_user_id`). So DC verify-by, SO
+  accounts verify-by, PO prepare / price history / GRN payment modified-by were saved empty, the
+  admin Edit amount button on GRN payment never showed, and the admin price-required check on the
+  item form never ran. Replaced by `_user_id`; admin now sees the GRN amount Edit button.
+- Cancelled-by on SO and GRN, and approved-by on credit SO, were always saved as 1; now the user.
+
+Checked on PHP 7.4 and 8 with users 1-7 calling each action: allowed exactly as listed above, a
+post without the csrf token is refused; clicking the real buttons as an allowed user still works
+(PO as admin, quotation and DC as Kerala, mark credit as accounts, credit SO approve as admin).
+
+---
+
 ## 2026-10-12 - SPAC price list import
 
 `db/import_spac_price_list_121026.sql` - run once in phpMyAdmin on the bie database. It adds the

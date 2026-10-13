@@ -6,13 +6,23 @@ session_start();
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/csrf.php");
+require_once("../common/access.php");
 
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
+// 2026-10-13 login + csrf + approver check - same rule as the approve button (admin or the quotation's branch)
+
+// ini_set('display_errors', '1');
+// ini_set('display_startup_errors', '1');
+// error_reporting(E_ALL);
+
+fnAjaxGuard();
+$quo_branch = $dbconn->GetSingleReconrd("tbl_quotation", "bie_branch_id", "quo_id", (int)$_POST["id"]);
+if (!($_SESSION['_user_id'] == 1 || ($quo_branch != '' && $quo_branch == $_SESSION['_user_branch']))) {
+	fnAccessDenied(true);
+}
 
 
 	$update_id = $_POST["id"];

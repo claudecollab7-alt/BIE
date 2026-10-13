@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 // 2026-10-01 packing moved off tbl_package_box_details_temp - rides on the item row, box counts done in javascript
 // 2026-10-06 packing keeps its own box type and dispatch qty - editing a completed dc was zeroing them and the box counts
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-10-13 _userid (never set at login) replaced by _user_id
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -268,7 +269,7 @@ if (isset($_POST['FINALIZE']))
             ':dc_verify_status' => '1',
             ':dc_approve_status' => '0',
             ':dc_verify_date_time' => date('Y-m-d H:i:s'),
-            ':dc_verify_by' => $_SESSION['_userid']
+            ':dc_verify_by' => $_SESSION['_user_id']
         );
         
         $stmt->execute($data);

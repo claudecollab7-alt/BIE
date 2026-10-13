@@ -18,15 +18,13 @@
 	<!-- Core JS files -->
 	<script src="js/jquery.min.js"></script>
 	<script>
-		// attach csrf token to every ajax post
-		$.ajaxSetup({
-			beforeSend: function (xhr, settings) {
-				var t = $('meta[name="csrf-token"]').attr('content');
-				if (t && settings.type && settings.type.toUpperCase() === 'POST') {
-					xhr.setRequestHeader('X-CSRF-Token', t);
-					if (typeof settings.data === 'string' && settings.data.indexOf('csrf_token=') === -1) {
-						settings.data += (settings.data ? '&' : '') + 'csrf_token=' + encodeURIComponent(t);
-					}
+		// 2026-10-13 csrf token attached in a prefilter - a page's own beforeSend replaced the old ajaxSetup hook
+		$.ajaxPrefilter(function (settings, original, xhr) {
+			var t = $('meta[name="csrf-token"]').attr('content');
+			if (t && settings.type && settings.type.toUpperCase() === 'POST') {
+				xhr.setRequestHeader('X-CSRF-Token', t);
+				if (typeof settings.data === 'string' && settings.data.indexOf('csrf_token=') === -1) {
+					settings.data += (settings.data ? '&' : '') + 'csrf_token=' + encodeURIComponent(t);
 				}
 			}
 		});

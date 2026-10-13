@@ -2,9 +2,17 @@
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/csrf.php");
+require_once("../common/access.php");
 session_start();
 $conn = new dbconnect();
 $dbconn= new dbhandler();
+
+// 2026-10-13 login + csrf + check - send for approval and approve are admin-only buttons
+fnAjaxGuard();
+if ($_SESSION['_user_id'] != 1) {
+	fnAccessDenied(true);
+}
 
 $sal_repair_id = $_POST["id"];
 $mode = $_POST["mode"];

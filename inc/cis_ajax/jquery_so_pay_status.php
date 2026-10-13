@@ -2,9 +2,17 @@
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+require_once("../common/csrf.php");
+require_once("../common/access.php");
 session_start();
 $conn = new dbconnect();
 $dbconn= new dbhandler();
+
+// 2026-10-13 login + csrf + check - users holding the Sales Order in Accounts menu; verifier saved from _user_id
+fnAjaxGuard();
+if (!fnUserHasMenu($conn, 'lst_sales_receipt.php')) {
+	fnAccessDenied(true);
+}
 
 $so_id = $_POST["so_id"];
 $remarks = $_POST["remarks"];
@@ -22,7 +30,7 @@ if (isset($_REQUEST['so_id']))
 				':so_user_approve_by' => 'A',
 				':pay_remarks' => $remarks,
 				':so_verify_status' => 1,
-				':so_verify_by' => $_SESSION['_userid'],
+				':so_verify_by' => $_SESSION['_user_id'],
 				':so_verify_date_time' => date('Y-m-d H:i:s')
 			);
 			
@@ -48,7 +56,7 @@ if (isset($_REQUEST['so_id']))
 				':pay_status' => 3,
 				':so_user_approve_by' => 'E',
 				':accounts_verify_status' => 1,
-				':accounts_by' => $_SESSION['_userid'],
+				':accounts_by' => $_SESSION['_user_id'],
 				':accounts_date_time' => date('Y-m-d H:i:s')
 			);
 			$stmt->execute($data);

@@ -1,13 +1,16 @@
-<!-- Basic modal -->
 <?PHP
 
 ob_start();
-// session_start();
+// own session when the form posts here directly - included in a page it is already running
+if (session_status() === PHP_SESSION_NONE) {
+	session_start();
+}
 
 require_once("inc/common/dbconnect.php");
 require_once("inc/common/functions.php");
 require_once("inc/common/dbhandler.php");
 require_once("inc/common/csrf.php");
+require_once("inc/common/access.php");
 require_once("inc/common/db_txn.php");
 
 $conn = new dbconnect();
@@ -15,6 +18,8 @@ $dbconn= new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
 // 2026-10-06 loads its own csrf and txn helpers - opened on its own it died on csrf_fields()
+// 2026-10-13 session started when posted directly - every confirm failed the csrf check since 2026-10-01
+// 2026-10-13 credit approval allowed only for the users on the credit-approval dashboard tile; approver saved as the user
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -24,6 +29,9 @@ if (isset($_POST['CONFIRM']))
 {
 	if (!csrf_check('modal_so_det')) {
 		csrf_fail('lst_sales_receipt.php');
+	}
+	if (!fnTaskUserListed($conn, 3)) {
+		fnAccessDenied(false, 'lst_so_approval.php');
 	}
 
 	try {
@@ -38,7 +46,7 @@ if (isset($_POST['CONFIRM']))
 			':so_credit_due_date' => $_REQUEST['so_credit_due_date'],
 			':so_credit_approval_remarks' => $_REQUEST['so_credit_approval_remarks'],
 			':so_approve_status' => '3',
-			':so_approve_by' =>'1',
+			':so_approve_by' => $_SESSION['_user_id'],
 			':pay_status' =>'4',
 			':so_approve_date_time' => date('Y-m-d H:i:s')
 		);
@@ -57,6 +65,7 @@ if (isset($_POST['CONFIRM']))
 }
 ?>
 
+<!-- Basic modal -->
 <div id="modalSoDets" class="modal fade" tabindex="-1">
 	<div class="modal-dialog   modal-dialog-scrollable">
 		<div class="modal-content">
