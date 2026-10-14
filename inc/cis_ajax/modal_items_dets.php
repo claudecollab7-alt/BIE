@@ -7,6 +7,12 @@ require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
 
+// 2026-10-14 login needed - it answered without one and then read stock / price columns for an empty branch
+if (!fnIsLoggedIn()) {
+	http_response_code(403);
+	die('Session expired. Please log in again.');
+}
+
 $conn = new dbconnect();
 $dbconn= new dbhandler();
 

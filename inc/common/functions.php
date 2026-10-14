@@ -1,4 +1,5 @@
 <?php
+// 2026-10-14 isAdmin also needs the user id and branch - a session with only _user="crm_user" ran pages with no user or branch
 require_once(dirname(__FILE__) . '/error_log.php');
 ob_start();
 date_default_timezone_set('Asia/Calcutta');
@@ -6,11 +7,19 @@ date_default_timezone_set('Asia/Calcutta');
 $ip=$_SERVER['REMOTE_ADDR']; 
 
 
+// logged in to this app: the login sets the user and the branch - a session holding only _user
+// (for example from another app on the same server) is not a BIE login
+function fnIsLoggedIn()
+{
+	return isset($_SESSION['_user']) && $_SESSION['_user'] == "crm_user"
+		&& !empty($_SESSION['_user_id']) && !empty($_SESSION['_user_branch']);
+}
+
 function isAdmin()
 {
 	if(isset($_SESSION['_user']))
 	{
-	    if($_SESSION['_user'] != "crm_user")
+	    if(!fnIsLoggedIn())
 	    {			
 		    $_SESSION['_msg']="Session Expired. Please Relogin";	
 		    header("Location:index.php");		

@@ -8,6 +8,30 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-14 - Live error log (October): pages opened without a BIE login
+
+The October log from live had two real errors and some failed logins.
+
+**174 x `gen_so.php` and 7 x `modal_items_dets.php`: `SELECT  FROM tbl_item_stock ...` (empty column).**
+The column is the branch's stock field, read for `$_SESSION['_user_branch']`, and every one of these lines
+was logged with no user. Both times (09-10 15:51 and 12-10 18:37) it was Generate SO for quotation
+083/BIE/HO/C0946 (87 items - one error per item). A normal BIE login cannot do this: it always sets the user
+and the branch. What does is a session holding only `_user = "crm_user"` - the value another app built on
+the same framework sets (`inc/dashboard/actions_default.php` in this project comes from such an app and uses
+`_userid`). `isAdmin()` only checked `_user`, so such a session got into BIE pages with no user and no
+branch. Reproduced: with that session the old Generate SO page showed 91 sql errors; now it goes to login.
+
+- `isAdmin()` now also needs the user id and the branch (`fnIsLoggedIn()` in `functions.php`). Real BIE
+  logins are unaffected.
+- `inc/cis_ajax/modal_items_dets.php` had no login check at all (item prices and stock to anyone); it now
+  needs a BIE login.
+
+**Failed logins (33):** `admin@benzear.com`, `marketing`, `production`, `accounts1`, `ker` are not BIE users -
+most likely people of the other app on the same server. `accounts` (16) is a BIE user: wrong passwords - the
+stored hashes are clean and the login compares them the same way as before.
+
+---
+
 ## 2026-10-14 - Invoice report showed a customer branch the customer does not have
 
 `tbl_invoice` has two branch columns: `branch_id` is our branch that raised the invoice (1 = Head Office,
