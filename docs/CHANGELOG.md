@@ -8,6 +8,21 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-14 - Invoice report showed a customer branch the customer does not have
+
+`tbl_invoice` has two branch columns: `branch_id` is our branch that raised the invoice (1 = Head Office,
+2 = Kerala) and `cus_branch_id` is the customer's branch / delivery address (0 = none). Saving is correct -
+checked on PHP 7.4 and 8: a customer with no branches saves `cus_branch_id = 0`, a customer with a branch
+saves the chosen one, and `branch_id` is always our branch.
+
+`invoice_report.php` looked the customer branch up with `branch_id` instead of `cus_branch_id`, so every
+Head Office invoice showed "Branch Name: BIKERZ YAMAHA - MUDICHUR" (customer branch 1) and every Kerala
+invoice showed customer branch 2 - for customers like BENZEAR that have no branch at all. It now reads
+`cus_branch_id`: no branch line when the customer has none, the real branch when one was chosen.
+The invoice list, invoice prints and the other invoice screens already used `cus_branch_id`.
+
+---
+
 ## 2026-10-13 - Fixes from the independent test report (critical and main only)
 
 **Critical (in the code before Task Settings):** `inc/cis_ajax/jquery_delete_records.php` took the table,

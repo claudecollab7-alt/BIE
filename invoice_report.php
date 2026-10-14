@@ -8,6 +8,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-14 customer branch read from cus_branch_id - it used branch_id (our branch, 1 = head office), so every head office invoice showed customer branch #1
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -286,9 +287,9 @@ else
                                                     $buss_name = $dbconn->GetSingleReconrd("tbl_enquiry", "enq_buss_name", "enq_id", $obj->enq_id);
                                                 }
 
-                                                if ($obj->branch_id > 0) {
-                                                    $branch_name = $dbconn->GetSingleReconrd("mst_customer_branch", "branch_name", "branch_id", $obj->branch_id);
-                                                    $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_customer_branch", "branch_add2", "branch_id", $obj->branch_id);
+                                                if ($obj->cus_branch_id > 0) {
+                                                    $branch_name = $dbconn->GetSingleReconrd("mst_customer_branch", "branch_name", "branch_id", $obj->cus_branch_id);
+                                                    $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_customer_branch", "branch_add2", "branch_id", $obj->cus_branch_id);
                                                     $cus_details = $buss_name . '<br/><b>Branch Name: </b>' . $branch_name . $add2;
                                                 } else {
                                                     $cus_details = '<b>' . $buss_name . '</b>';
