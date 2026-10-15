@@ -8,6 +8,17 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-15 - SPAC items: item discount 28% to 30%
+
+`db/spac_discount_30_151026.sql` (run in phpMyAdmin, safe to run again - only rows still at 28% change).
+For every Shree Prayag Air Controls (SPAC) item, in each branch's prices (`tbl_item_stock`, HO / KL / RJPM) and the
+item master copy (`tbl_item_details`): discount 30, cost price = item price less 30%, margin % = (selling - cost) /
+cost x 100. Item price, selling price, min / max discount and stock stay as they are. One `tbl_itemprice_history`
+row per item per branch with the old and new values. Example: price 715, selling 715 - cost 514.80 -> 500.50,
+margin 38.89% -> 42.86%. Documents already made keep their own line prices.
+
+---
+
 ## 2026-10-15 - Revoke: undo an approve / verify done by mistake
 
 Customers kept asking to undo a wrong approval so the document can be corrected. Every task in Task Settings
