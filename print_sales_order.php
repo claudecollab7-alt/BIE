@@ -9,6 +9,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-13 approve / reject for approvers in Task Settings (SALES_ORDER A) - was admin
 // 2026-10-13 approve / reject buttons follow the same role - they showed to every user (every user holds it to begin with)
+// 2026-10-15 revoke button for Revokers (SALES_ORDER R) once approved - back to in approval
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -963,6 +964,13 @@ if ($obj->branch_id > 0) {
                                 
 
                             </div>
+                            <?php } ?>
+                            <?php if ($obj->so_status == 5 && $obj->so_approve_status == 1 && $obj->so_cancel_status == 0 && fnRevokeCan('SO', $obj->bie_branch_id)) { ?>
+                            <div class="card-footer text-center">
+                                <?php echo fnRevokeButton('SO', $obj->so_id, $obj->bie_branch_id); ?>
+                            </div>
+                            <?php } elseif ($obj->so_status == 1) { ?>
+                            <div class="text-center"><?php echo fnRevokeNote($conn, 'SO', $obj->so_id); ?></div>
                             <?php } ?>
                              
 

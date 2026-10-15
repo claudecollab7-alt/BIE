@@ -3,6 +3,7 @@ require_once("inc/common/stock_flow.php");	// central stock + tbl_stock_flow hel
 require_once("inc/common/csrf.php");		// csrf + form tokens
 require_once("inc/common/access.php");		// approve / verify access checks
 require_once("inc/common/task_queues.php");	// dashboard tiles / pending queues
+require_once("inc/common/revoke.php");		// revoke a wrong approve / verify
 require_once("inc/common/db_txn.php");		// transaction helpers
 require_once("inc/common/form_rows.php");	// shared table row renderers
 require_once("inc/common/error_log.php");	// fnLogError()include_once("inc/common/active_menu.php");include_once("inc/common/images.php");?>

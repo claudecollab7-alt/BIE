@@ -84,6 +84,7 @@
 	
 	<script language="javascript" type="text/javascript" src="inc/common/validate.js"></script>
 	<script language="javascript" type="text/javascript" src="js/tulips.js"></script>
+	<script src="js/revoke.js"></script>	<!-- 2026-10-15 revoke button on approve / verify screens -->
 	
 	<script type="text/javascript">
 	/*var session_time = 1440;	

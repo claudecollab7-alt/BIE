@@ -8,6 +8,7 @@ $conn  = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-10-13 send for approval (SALES_REPAIR V) and approve (SALES_REPAIR A) from Task Settings - were admin
 // 2026-10-13 buttons checked against the repair's branch (company_id)
+// 2026-10-15 revoke under send for approval (back to draft) and approve (back to in approval) for Revokers (SALES_REPAIR R)
 
 if (isset($_REQUEST['sal_repair_id']) && $_REQUEST['sal_repair_id'] != '') {
 
@@ -292,6 +293,9 @@ $(function() {
                                                             echo '<p>Send for Approval By</p>';
                                                             echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id", $obj->sal_repair_verify_by)
                                                                  . '<br/> On ' . date("d-m-Y", strtotime($obj->sal_repair_verify_date_time));
+                                                            if ($obj->sal_repair_approve_status == 0) {
+                                                                echo '<br/>' . fnRevokeButton('REPAIR_V', $obj->sal_repair_id, $obj->company_id, 'Revoke', 'badge badge-danger d-print-none');
+                                                            }
                                                         } elseif (fnTaskCan('SALES_REPAIR', 'V', $obj->company_id)) { ?>
                                                             <a href="javascript:void(0)" id="sal_repair_verify"
                                                                data-id="<?php echo $obj->sal_repair_id; ?>">
@@ -308,6 +312,7 @@ $(function() {
                                                             echo '<p>Approved By</p>';
                                                             echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id", $obj->sal_repair_approve_by)
                                                                  . '<br/> On ' . date("d-m-Y", strtotime($obj->sal_repair_approve_date_time));
+                                                            echo '<br/>' . fnRevokeButton('REPAIR_A', $obj->sal_repair_id, $obj->company_id, 'Revoke', 'badge badge-danger d-print-none');
                                                         } elseif ($obj->sal_repair_verify_status == 1
                                                                && $obj->sal_repair_approve_status == 0
                                                                && fnTaskCan('SALES_REPAIR', 'A', $obj->company_id)) { ?>

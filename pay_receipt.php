@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 // 2026-10-13 mark as credit button for verifiers in Task Settings (SALES_RECEIPT V) - showed to every user (every user holds it to begin with)
+// 2026-10-15 revoke payment confirm / mark as credit (SALES_RECEIPT R) and credit approval (CREDIT_SALES R)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -214,6 +215,7 @@ if (isset($_REQUEST['so_id'])) {
                                         <label class="col-lg-3 col-form-label" type="text" id="exissed_amount" name="exissed_amount" tabindex="-1" style="font-size:15px; border: none; text-align: left; color: blue; font-weight: bold;" value=""></label>
                                         <?php if ($obj->so_approve_status == 3 && $obj->pay_status == 4){ ?>
                                         <label class="col-lg-7 col-form-label" style="color:red;"><b>Credit Sales</b></label>
+                                        <?php if ($obj->so_status == 1 && $obj->so_cancel_status == 0) { echo fnRevokeButton('CREDIT', $obj->so_id, $obj->bie_branch_id, 'Revoke Credit Approval', 'btn btn-danger btn-sm'); } ?>
                                     <?php } elseif($obj->so_approve_status == 3 && $obj->so_status == 1 ){ ?>
                                         <label class="col-lg-7 col-form-label" style="color:red;"><b>Credit Sales Completed</b></label>
 										<?php } ?>
@@ -348,6 +350,11 @@ if (isset($_REQUEST['so_id'])) {
             
                                       	<span class="btn btn-warning mr-2" id="Credit">Mark as Credit Sales</span>                             
                                       <?php } ?>
+                                    <?php if ($obj->so_status == 1 && $obj->so_verify_status == 1 && in_array((int)$obj->pay_status, array(1, 2, 3)) && $obj->so_approve_status == 0 && $obj->so_cancel_status == 0) {
+                                        echo fnRevokeButton('PAY', $obj->so_id, $obj->bie_branch_id, $obj->pay_status == 3 ? 'Revoke Mark as Credit' : 'Revoke Payment Confirm');
+                                    } elseif ($obj->pay_status == 0) {
+                                        echo fnRevokeNote($conn, 'PAY', $obj->so_id);
+                                    } ?>
 
                                 
                                 </div>

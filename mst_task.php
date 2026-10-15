@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-13 new - Task Settings: tasks and who creates / verifies / approves / views each one, admin only
 // 2026-10-13 unknown user / branch ids refused; Item and Stock Location rows are always All branches (their screens are not per branch)
+// 2026-10-15 Revoker role (R) - undo a wrong approve / verify
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -20,7 +21,7 @@ if (!fnTaskIsAdmin()) {
 	fnAccessDenied(false, 'home.php');
 }
 
-$role_names = array('C' => 'Creator', 'V' => 'Verifier', 'A' => 'Approver', 'W' => 'Viewer');
+$role_names = array('C' => 'Creator', 'V' => 'Verifier', 'A' => 'Approver', 'R' => 'Revoker', 'W' => 'Viewer');
 // tasks whose screens are not per branch (items, stock location) - their rows are always All branches
 $all_branch_tasks = array('ITEM', 'STOCK_LOCATION');
 
@@ -50,11 +51,11 @@ function fnSaveTaskUsers($conn, $task_id, $roles, $all_only)
 	}
 }
 
-// roles ticked on the form, in C V A W order
+// roles ticked on the form, in C V A R W order
 function fnPostedRoles()
 {
 	$roles = '';
-	foreach (array('C', 'V', 'A', 'W') as $r) {
+	foreach (array('C', 'V', 'A', 'R', 'W') as $r) {
 		if (isset($_REQUEST['task_roles']) && is_array($_REQUEST['task_roles']) && in_array($r, $_REQUEST['task_roles'])) {
 			$roles .= $r;
 		}
@@ -117,7 +118,7 @@ if (isset($_REQUEST['task_id']) && (int)$_REQUEST['task_id'] > 0) {
 		$stmt = $conn->prepare("SELECT a.*, u.usr_name, b.branch_name FROM tbl_task_assign a
 								LEFT JOIN tbl_user u ON u.usr_id = a.usr_id
 								LEFT JOIN mst_branch b ON b.branch_id = a.branch_id
-								WHERE a.task_id = :id ORDER BY FIELD(a.task_role, 'C', 'V', 'A', 'W'), u.usr_name, a.branch_id");
+								WHERE a.task_id = :id ORDER BY FIELD(a.task_role, 'C', 'V', 'A', 'R', 'W'), u.usr_name, a.branch_id");
 		$stmt->execute(array(':id' => $task->task_id));
 		$assigns = $stmt->fetchAll(PDO::FETCH_OBJ);
 	}
@@ -214,7 +215,7 @@ $h = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES); };
 									</div>
 
 									<legend class="font-weight-semibold mt-3"><i class="icon-users mr-2"></i>Users</legend>
-									<p class="text-muted mb-2">Creator: creates / edits. Verifier: sends for approval or confirms. Approver: approves, rejects and cancels. Viewer: sees every branch on the lists.
+									<p class="text-muted mb-2">Creator: creates / edits. Verifier: sends for approval or confirms. Approver: approves, rejects and cancels. Revoker: revokes an approve / verify done by mistake. Viewer: sees every branch on the lists.
 										Branch All = every branch; a branch = only that branch's documents. Admin users can do every task and need no rows.</p>
 									<div class="form-group row">
 										<div class="col-lg-2">
@@ -296,6 +297,7 @@ $h = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES); };
 											<th>Creator</th>
 											<th>Verifier</th>
 											<th>Approver</th>
+											<th>Revoker</th>
 											<th>Viewer</th>
 											<th class="text-center">Status</th>
 											<th class="text-center">Edit</th>
@@ -324,7 +326,7 @@ $h = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES); };
 											echo '<td>' . $h($t->task_code) . '</td>';
 											echo '<td>' . $h($t->task_name) . '</td>';
 											echo '<td>' . $h($t->task_module) . '</td>';
-											foreach (array('C', 'V', 'A', 'W') as $role) {
+											foreach (array_keys($role_names) as $role) {
 												if (strpos($t->task_roles, $role) === false) {
 													echo '<td class="text-muted">-</td>';
 												} else {
@@ -336,7 +338,7 @@ $h = function ($v) { return htmlspecialchars((string)$v, ENT_QUOTES); };
 											echo '</tr>';
 										}
 										if (!$rows) {
-											echo '<tr><td colspan="9">No Records...</td></tr>';
+											echo '<tr><td colspan="10">No Records...</td></tr>';
 										}
 										?>
 									</tbody>
