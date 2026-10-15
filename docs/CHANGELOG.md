@@ -8,6 +8,41 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-15 - Revoke: undo an approve / verify done by mistake
+
+Customers kept asking to undo a wrong approval so the document can be corrected. Every task in Task Settings
+that has an approve / verify step now also has a **Revoker** role (R). Nobody is given it yet, so only admin
+users can revoke until users are added in Settings > Task Settings (per branch, like the other roles).
+
+Where an approved document showed its Approve / Verify button, a **Revoke** button now shows instead (only to
+Revokers of that document's branch). It asks for a reason, puts the document back and writes a row in
+`tbl_revoke_log` (old values, reason, who, when); the print page then shows "Revoked by ... on ... - reason".
+
+| Screen | Revoke takes it back to | Refused while |
+|---|---|---|
+| PO print | Draft - creator edits and sends again | a GRN is made against the PO (cancel the GRN first) |
+| Supplier approve | Not approved | the supplier is used in a PO, GRN or purchase return |
+| Purchase return view | Draft (a rejected return cannot be edited, so reject is no way back) | - |
+| Quotation print | Draft | a sales order, invoice, proforma or requote is made from it |
+| Sales order print | In approval (credit sales: back to credit approved) - approve again, or reject to send it back for editing | a DC or invoice is made |
+| Receipt screen - credit approval | Credit requested | the sales order is approved (revoke that first), a DC / invoice is made |
+| Receipt screen / receipt list - payment confirm, mark as credit | Payment pending | the sales order or the credit is approved (revoke those first), a DC / invoice is made |
+| DC print | Draft | the DC is invoiced |
+| Sales repair print - approve | In approval | - |
+| Sales repair print - send for approval | Draft | the repair is approved (revoke that first) |
+| Attendance reports - salary Issued | Not issued (Issue shows again); its accounts entry is deleted | - |
+
+**Stock:** no approve or verify step moves stock - stock moves only when a GRN is finalized and when an invoice
+is made. So a revoke never touches stock or the stock history; instead it is refused once a GRN, DC or invoice
+has been made on top of the approval, and says which one.
+
+Not given a revoke: GRN cancel, sales order cancel, GRN payment edit and the store indent approver are not
+approvals; an item's branches can be changed again any time with the branch-wise link on the item list.
+
+Run `db/post_upload_151026.sql` (after `post_upload_131026.sql`) before uploading the files.
+
+---
+
 ## 2026-10-14 - Live error log (October): pages opened without a BIE login
 
 The October log from live had two real errors and some failed logins.

@@ -9,6 +9,7 @@ isAdmin();
 
 // 2026-10-13 csrf + approver check (admin - the only user shown the approve link)
 // 2026-10-13 approver from Task Settings (SUPPLIER A)
+// 2026-10-15 revoke button for Revokers (SUPPLIER R) once approved - back to not approved
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -359,6 +360,11 @@ if (isset($_REQUEST['supp_id']) && $_REQUEST['supp_id'] != "") {
                                         <INPUT class="btn btn-custom" type="submit" id="APPROVE" name="APPROVE" value="Approve" onclick = "return fnValidate();">
                                         <INPUT class="btn btn-danger" type="submit" id="REJECT" name="REJECT" value="Reject" onclick = "return fnValidate1();">
                                         <?php } ?>
+                                        <?php if ($obj->supp_approve_status == 1) {
+                                            echo fnRevokeButton('SUPPLIER', $obj->supp_id, $obj->company_branch_id);
+                                        } else {
+                                            echo fnRevokeNote($conn, 'SUPPLIER', $obj->supp_id);
+                                        } ?>
                                     </div>
                             </div>
                         </form>

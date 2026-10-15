@@ -10,6 +10,7 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn= new dbhandler();
+// 2026-10-15 only issued salaries - a revoked one stays in the table with status 0
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -23,7 +24,7 @@ error_reporting(E_ALL);
 
 			$epf_file = fopen("ECRKYCUploadable-".$srch.".txt", "w") or die("Unable to open file!");	
 
-			$SQL = "SELECT * FROM tbl_emp_monthly_salary WHERE salary_for= '".$srch."' AND salary_type = 'WPF'  ORDER BY salary_for ASC";
+			$SQL = "SELECT * FROM tbl_emp_monthly_salary WHERE salary_for= '".$srch."' AND salary_type = 'WPF' AND salary_status = 1 ORDER BY salary_for ASC";
 
 			$result = $conn->query($SQL);
 			

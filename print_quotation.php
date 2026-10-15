@@ -10,6 +10,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 approve / reject for approvers in Task Settings (QUOTATION A) - was admin or the quotation's branch
+// 2026-10-15 revoke button for Revokers (QUOTATION R) once approved - back to draft
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -910,6 +911,13 @@ if ($obj->quo_id > 0) {
                                         }
                                     } 
                                 ?>
+                                <?php if ($obj->quo_status == 1 && $obj->quo_verify_status == 1 && $obj->quo_approve_status == 1 && fnRevokeCan('QUO', $obj->bie_branch_id)) { ?>
+                                        <div class="card-footer text-center">
+                                            <?php echo fnRevokeButton('QUO', $obj->quo_id, $obj->bie_branch_id); ?>
+                                        </div>
+                                <?php } elseif ($obj->quo_approve_status != 1) { ?>
+                                        <div class="text-center"><?php echo fnRevokeNote($conn, 'QUO', $obj->quo_id); ?></div>
+                                <?php } ?>
                         </div>
                         <div class="row">
                             <div class="text-left col-lg-6">

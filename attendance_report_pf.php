@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-13 salary issue button for approvers in Task Settings (SALARY A) - was admin
 // 2026-10-13 issue button checked against the employee's branch - a branch-only salary approver never saw it
+// 2026-10-15 revoke next to Issued for Revokers (SALARY R) - salary and its accounts entry removed, can be issued again
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -441,7 +442,7 @@ if ($_REQUEST['month_id'] == '') {
 
                                                                 $sign = '<span class="badge bg-grey">Signed</span>';
 
-                                                                $issueBtn = '<span style="font-size: 16px;color: blue ;font-weight:bold; ">Issued</span>';
+                                                                $issueBtn = '<span style="font-size: 16px;color: blue ;font-weight:bold; ">Issued</span>' . fnRevokeButton('SALARY', $issued_salary, $obj->branch_id, 'Revoke', 'badge badge-danger ml-1 d-print-none');
 
                                                                 
 

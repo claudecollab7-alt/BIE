@@ -8,6 +8,7 @@ require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
 require_once("../common/access.php");
 require_once("../common/task_queues.php");
+require_once("../common/revoke.php");
 
 $conn = new dbconnect();
 $dbconn= new dbhandler();
@@ -16,6 +17,7 @@ $dbconn= new dbhandler();
 // 2026-10-13 all branches for viewers in Task Settings (SUPPLIER W) - was admin or head office
 // 2026-10-13 supplier item mapping / delete for creators (SUPPLIER C, was head office), approve link for approvers (SUPPLIER A, was admin)
 // 2026-10-13 from the Supplier InApproval tile: pending suppliers of the branches the user approves for
+// 2026-10-15 approve page link also for Revokers (SUPPLIER R) on approved suppliers - the revoke button is there
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -173,7 +175,7 @@ while ($row = $cusRecords->fetch())
 
    
 
-    if (fnTaskCan('SUPPLIER', 'A', $row->company_branch_id)) {
+    if (fnTaskCan('SUPPLIER', 'A', $row->company_branch_id) || ($row->supp_approve_status == 1 && fnRevokeCan('SUPPLIER', $row->company_branch_id))) {
         $approve_link = '<a href="mst_supplier_approve.php?supp_id='.$row->supp_id.'" data-popup="tooltip" title="Edit" data-original-title="Edit" ><i class="icon-eye bg-edit mr-2"></i></a>';
         
     }

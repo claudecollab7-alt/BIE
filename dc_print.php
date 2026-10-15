@@ -8,6 +8,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 approve / reject for approvers in Task Settings (DC A) - was admin or the DC's branch
+// 2026-10-15 revoke button for Revokers (DC R) once approved - back to draft
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -449,6 +450,13 @@ if($obj->cus_branch_id > 0){
                             <?php
                                 }
                             } ?>
+                            <?php if ($obj->dc_status == 1 && $obj->dc_verify_status == 1 && $obj->dc_approve_status == 1 && fnRevokeCan('DC', $obj->branch_id)) { ?>
+                                    <div class="card-footer text-center">
+                                        <?php echo fnRevokeButton('DC', $obj->dc_id, $obj->branch_id); ?>
+                                    </div>
+                            <?php } elseif ($obj->dc_approve_status != 1) { ?>
+                                    <div class="text-center"><?php echo fnRevokeNote($conn, 'DC', $obj->dc_id); ?></div>
+                            <?php } ?>
                             
                             
                         </div>

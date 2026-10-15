@@ -8,6 +8,7 @@ isAdmin();
 
 
 // 2026-10-13 approve / reject for approvers in Task Settings (PURCHASE_ORDER A) - was admin
+// 2026-10-15 revoke button for Revokers (PURCHASE_ORDER R) once approved - back to draft
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $conn = new dbconnect();
@@ -416,6 +417,13 @@ if (isset($_REQUEST['po_id'])) {
                                 <INPUT class="btn btn-custom" type="button" id="APPROVE" name="APPROVE" value="Approve">
                                 <INPUT class="btn btn-danger" type="button" id="REJECT" name="REJECT" value="Reject">
                             </div>
+                            <?php } ?>
+                            <?php if ($obj->po_status == 5 && $obj->po_approve_status == 1 && fnRevokeCan('PO', $obj->branch_id)) { ?>
+                            <div class="card-footer text-center">
+                                <?php echo fnRevokeButton('PO', $obj->po_id, $obj->branch_id); ?>
+                            </div>
+                            <?php } elseif ($obj->po_status != 5) { ?>
+                            <div class="text-center"><?php echo fnRevokeNote($conn, 'PO', $obj->po_id); ?></div>
                             <?php } ?>
                              
                         </div>

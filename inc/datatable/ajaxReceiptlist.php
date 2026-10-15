@@ -7,12 +7,14 @@ require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
 require_once("../common/access.php");
+require_once("../common/revoke.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
 // 2026-10-13 all branches for viewers in Task Settings (SALES_RECEIPT W) - was admin or head office
+// 2026-10-15 revoke next to a confirmed payment for Revokers (SALES_RECEIPT R) - branch read from the sales order, the join repeats bie_branch_id
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -125,6 +127,9 @@ while ($row = $cusRecords->fetch()) {
     }
     if($row->so_verify_status == 1 && $row->pay_status == 2){
         $so_link = '<a href="javascript:;" class="" title="Confirm payment"><i class="fa fa-plus bg-edit-disabled "></i></a>';
+        if ($row->so_status == 1 && $row->so_approve_status == 0 && $row->so_cancel_status == 0) {
+            $so_link .= fnRevokeButton('PAY', $row->so_id, $dbconn->GetSingleReconrd("tbl_sales_order", "bie_branch_id", "so_id", $row->so_id), 'Revoke', 'badge badge-danger ml-1');
+        }
         $pay_link = '<a href="pay_receipt.php?so_id=' . $row->so_id . '" data-popup="tooltip" title="Pay Receipt"><i class="fa fa-rupee mr-2" style="font-size:16px"></i></a>';
     }
     if ($row->so_status == 5  && $row->so_approve_status == 1) {

@@ -11,6 +11,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-10-13 approve / reject only for approvers in Task Settings (PURCHASE_RETURN A) - was anyone opening the page
+// 2026-10-15 revoke button for Revokers (PURCHASE_RETURN R) once approved - back to draft
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $grn_date = date("Y-m-d");
@@ -336,6 +337,13 @@ if (isset($_REQUEST['rtn_id']) && $_REQUEST['rtn_id'] != "") {
                                                             <INPUT class="btn btn-custom" type="button" id="APPROVE" name="APPROVE" value="Approve">
                                                             <INPUT class="btn btn-danger" type="button" id="REJECT" name="REJECT" value="Reject">
                                                         </div>
+                                                        <?php } ?>
+                                                        <?php if ($get->rtn_verify_status == 1 && $get->rtn_approve_status == 1 && fnRevokeCan('PR', $get->branch_id)) { ?>
+                                                        <div class="card-footer text-center">
+                                                            <?php echo fnRevokeButton('PR', $get->rtn_id, $get->branch_id); ?>
+                                                        </div>
+                                                        <?php } elseif ($get->rtn_approve_status != 1) { ?>
+                                                        <div class="text-center"><?php echo fnRevokeNote($conn, 'PR', $get->rtn_id); ?></div>
                                                         <?php } ?>
 
                                                         
