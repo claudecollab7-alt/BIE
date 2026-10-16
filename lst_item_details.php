@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-16 principal filter next to brand
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -61,10 +62,12 @@ $dbconn = new dbhandler();
                         // Read values
                         var supp = $('#searchByCode').val();
                         var Brand = $('#searchByBrand').val();
+                        var Principal = $('#searchByPrincipal').val();
 
                         // Append to data
                         data.searchByCode = supp;
                         data.searchByBrand = Brand;
+                        data.searchByPrincipal = Principal;
                     }
                 },
                 'columns': [{
@@ -117,7 +120,7 @@ $dbconn = new dbhandler();
             $('#searchByCode').keyup(function() {
                 dataTable.draw();
             });
-            $('#searchByBrand').change(function() {
+            $('#searchByBrand, #searchByPrincipal').change(function() {
                 dataTable.draw();
             });
             // $('#itemDetailsTable').DataTable({
@@ -307,7 +310,7 @@ $dbconn = new dbhandler();
 
                             <div class="card-body pt-2">
                                 <div class="form-group row pl-2">
-                                    <div class="col-md-6">
+                                    <div class="col-md-5">
                                         <div class="form-group">
                                             <input type='text' class="form-control" id='searchByCode' name="searchByCode" placeholder='Sale Code / Purchase Code / Description'>
                                         </div>
@@ -322,6 +325,14 @@ $dbconn = new dbhandler();
                                         <script>
                                             document.getElementById('searchByBrand').value = "<?php echo $_REQUEST['searchByBrand']; ?>";
                                         </script>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select name="searchByPrincipal" id="searchByPrincipal" class="form-control form-control-select2">
+                                            <option value="">-- All Principal --</option>
+                                            <?php foreach ($conn->query("SELECT principal_id, principal_name, principal_code FROM mst_principal WHERE principal_status = 1 ORDER BY principal_name")->fetchAll(PDO::FETCH_OBJ) as $pr) { ?>
+                                                <option value="<?php echo (int)$pr->principal_id; ?>"><?php echo htmlspecialchars($pr->principal_name . ($pr->principal_code != '' ? ' - ' . $pr->principal_code : '')); ?></option>
+                                            <?php } ?>
+                                        </select>
                                     </div>
 
                                 </div>

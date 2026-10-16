@@ -8,6 +8,18 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-16 - Loader on the price screens, branches line, principal filter on the item list
+
+- Bulk Discount / Margin and Item Price Update show a small "Please wait.." over the page while items load, a row or
+  the bulk change saves, and (bulk) while a big list redraws after the value is typed - the preview now redraws
+  300 ms after typing stops instead of on every key.
+- Bulk Discount / Margin: Branches moved to their own (third) line, full width.
+- Item Details list: Principal filter (name - code) next to Brand, works together with Brand and the search box.
+  The list call now takes brand / principal only as numbers and quotes the search text - they went into the sql as
+  typed, so a quote in the search broke the list.
+
+---
+
 ## 2026-10-16 - Item prices: margin on cost everywhere, Bulk Discount / Margin and Item Price Update screens
 
 **One rule on every screen** (`js/price_calc.js`, used by the item form, Item Price History and the two new screens):
