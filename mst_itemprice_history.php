@@ -18,6 +18,7 @@ $dbconn = new dbhandler();
 // 2026-10-06 multi uom rows have no min / max discount field - bind the column default 0 instead of null
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 // 2026-10-13 _userid (never set at login) replaced by _user_id
+// 2026-10-16 margin % on cost price (was on item price); selling price changes only when margin or selling is edited
 
 //  ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -468,6 +469,7 @@ if ($_REQUEST['item_id'] != "") {
 					$('#branch_new_moq').val(data[6]);
 					$('#branch_stock_field').val(data[7]);
 					$('#margin_percent').val(data[8]);
+					fnMainPrice();	// margin shown on cost for the loaded branch
 
 				});
 			}).trigger('change');
@@ -483,70 +485,8 @@ if ($_REQUEST['item_id'] != "") {
 			<?php	//}  
 			?>
 
-			$("#branch_new_price,#branch_new_discount,#margin_percent").keyup(function() {
-				var item_price = parseFloat($("#branch_new_price").val());
-				var item_discount = parseFloat($("#branch_new_discount").val());
-				var margin_percent = parseFloat($("#margin_percent").val());
-				console.log("item_price:", item_price, "item_discount:", item_discount, "margin_percent:", margin_percent);
-
-				if (item_price == '') {
-					item_price = 0;
-				}
-				if (item_discount == '') {
-					item_discount = 0;
-				}
-				if (margin_percent == '') {
-					margin_percent = 0;
-				}
-
-				if (isNaN(item_price)) {
-					item_price = 0;
-				}
-				if (isNaN(item_discount)) {
-					item_discount = 0;
-				}
-				if (isNaN(margin_percent)) {
-					margin_percent = 0;
-				}
-
-				var dis_amt = ((item_price * item_discount) / 100);
-				var cost_price = item_price - dis_amt;
-
-				var margin_per = ((item_price * margin_percent) / 100);
-				var margin_tot = item_price + margin_per;
-
-				$("#branch_new_cost_price").val(cost_price.toFixed(2));
-				$("#branch_new_selling_price").val(margin_tot.toFixed(2));
-
-			}).trigger('keyup');
-
-			$("#branch_new_selling_price").change(function() {
-				var item_price = parseFloat($("#branch_new_price").val());
-				var item_discount = parseFloat($("#branch_new_discount").val());
-				var selling_price = parseFloat($("#branch_new_selling_price").val());
-				var new_cost_price = parseFloat($("#branch_new_cost_price").val());
-
-				if (isNaN(item_price) || isNaN(item_discount) || isNaN(selling_price) || isNaN(new_cost_price)) {
-					console.error("Invalid numeric input detected. Please check your input fields.");
-					return;
-				}
-
-				console.log("Before calculation - selling_price:", selling_price, "new_cost_price:", item_price);
-
-				// Check if new_cost_price is zero to avoid division by zero
-				var selling_price_per = item_price !== 0 ? ((selling_price - item_price) / item_price) * 100 : 0;
-
-				console.log("After calculation - selling_price_per:", selling_price_per);
-
-				// Check if selling_price_per is NaN
-				if (isNaN(selling_price_per)) {
-					selling_price_per = 0;
-				}
-
-				console.log("After NaN check - selling_price_per:", selling_price_per);
-
-				$("#margin_percent").val(selling_price_per.toFixed(2));
-			}).trigger('change');
+			// 2026-10-16 margin on cost (was on item price); price / discount change cost and margin only
+			var fnMainPrice = fnPrice.link({ price: '#branch_new_price', discount: '#branch_new_discount', cost: '#branch_new_cost_price', margin: '#margin_percent', selling: '#branch_new_selling_price' });
 
 		});
 
@@ -957,72 +897,11 @@ if ($_REQUEST['item_id'] != "") {
 												$('#branch_new_cost_price<?php echo $x; ?>').val(data[2]);
 												$('#branch_new_selling_price<?php echo $x; ?>').val(data[3]);
 												$('#margin_percent<?php echo $x; ?>').val(data[4]);
+												fnUomPrice<?php echo $x; ?>();
 
 											});
 										}).trigger('change');
-										$("#branch_new_price<?php echo $x; ?>,#branch_new_discount<?php echo $x; ?>,#margin_percent<?php echo $x; ?>").keyup(function() {
-											var item_price = parseFloat($("#branch_new_price<?php echo $x; ?>").val());
-											var item_discount = parseFloat($("#branch_new_discount<?php echo $x; ?>").val());
-											var margin_percent = parseFloat($("#margin_percent<?php echo $x; ?>").val());
-
-											if (item_price == '') {
-												item_price = 0;
-											}
-											if (item_discount == '') {
-												item_discount = 0;
-											}
-											if (margin_percent == '') {
-												margin_percent = 0;
-											}
-
-											if (isNaN(item_price)) {
-												item_price = 0;
-											}
-											if (isNaN(item_discount)) {
-												item_discount = 0;
-											}
-											if (isNaN(margin_percent)) {
-												margin_percent = 0;
-											}
-
-											var dis_amt = ((item_price * item_discount) / 100);
-											var cost_price = item_price - dis_amt;
-
-											var margin_per = ((cost_price * margin_percent) / 100);
-											var margin_tot = cost_price + margin_per;
-
-											$("#branch_new_cost_price<?php echo $x; ?>").val(cost_price.toFixed(2));
-											$("#branch_new_selling_price<?php echo $x; ?>").val(margin_tot.toFixed(2));
-
-										}).trigger('keyup');
-
-										$("#branch_new_selling_price<?php echo $x; ?>").change(function() {
-											var item_price = parseFloat($("#branch_new_price<?php echo $x; ?>").val());
-											var item_discount = parseFloat($("#branch_new_discount<?php echo $x; ?>").val());
-											var selling_price = parseFloat($("#branch_new_selling_price<?php echo $x; ?>").val());
-											var new_cost_price = parseFloat($("#branch_new_cost_price<?php echo $x; ?>").val());
-
-											if (isNaN(item_price) || isNaN(item_discount) || isNaN(selling_price) || isNaN(new_cost_price)) {
-												console.error("Invalid numeric input detected. Please check your input fields.");
-												return;
-											}
-
-											console.log("Before calculation - selling_price:", selling_price, "new_cost_price:", new_cost_price);
-
-											// Check if new_cost_price is zero to avoid division by zero
-											var selling_price_per = new_cost_price !== 0 ? ((selling_price - new_cost_price) / new_cost_price) * 100 : 0;
-
-											console.log("After calculation - selling_price_per:", selling_price_per);
-
-											// Check if selling_price_per is NaN
-											if (isNaN(selling_price_per)) {
-												selling_price_per = 0;
-											}
-
-											console.log("After NaN check - selling_price_per:", selling_price_per);
-
-											$("#margin_percent<?php echo $x; ?>").val(selling_price_per.toFixed(2));
-										}).trigger('change');
+										var fnUomPrice<?php echo $x; ?> = fnPrice.link({ price: '#branch_new_price<?php echo $x; ?>', discount: '#branch_new_discount<?php echo $x; ?>', cost: '#branch_new_cost_price<?php echo $x; ?>', margin: '#margin_percent<?php echo $x; ?>', selling: '#branch_new_selling_price<?php echo $x; ?>' });
 									</script>
 								<?php } ?>
 

@@ -8,6 +8,35 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-16 - Item prices: margin on cost everywhere, Bulk Discount / Margin and Item Price Update screens
+
+**One rule on every screen** (`js/price_calc.js`, used by the item form, Item Price History and the two new screens):
+cost price = item price less discount; margin % = (selling - cost) / cost x 100. Changing item price or discount
+changes cost and margin only - the selling price changes only when margin or selling price is edited.
+Item Price History used margin on item price and both screens rewrote the selling price whenever price or discount
+was typed; both fixed. The margin shown after a branch is loaded is worked out on cost.
+
+**Item Masters > Bulk Discount / Margin** (`item_bulk_discount.php`): choose principal / brand / division / item
+type (any together) and branches (all by default); every matching item is listed per branch. Enter one discount %
+(cost and margin follow, selling stays) or one margin % (selling follows, cost stays); the list shows old and new
+values, rows can be removed, one Save changes them all in one transaction. Example: price 1000, selling 1000,
+discount 28 -> 30: cost 720 -> 700, margin 38.89 -> 42.86. 10,740 rows save in under a second.
+
+**Item Masters > Item Price Update** (`item_price_list.php`): same filters plus code / name search, one branch; each
+item shows item price, discount, cost, margin and selling as boxes with a Save button on the row (Enter saves too).
+Only that item in that branch is saved; the row turns green, unsaved rows yellow, negative margin red.
+
+Both screens: Item creator in Task Settings (ITEM C) or admin. Every change writes a `tbl_itemprice_history` row per
+item per branch (old and new). Head Office values are also kept in the item master copy (`tbl_item_details`), which
+GRN uses to value stock.
+
+`db/post_upload_161026.sql` (run before uploading): the two menus (given to Item creators - tick them in User Rights
+for anyone made an Item creator later), an index on `tbl_item_stock.item_id` (every item price / stock lookup scanned
+the whole table - a 10,740-row save went from 145 s to 0.7 s), and stored margins worked out again on cost (prices
+untouched; about 2,800 items held 0, some held margin on item price; no cost or no selling price = 0).
+
+---
+
 ## 2026-10-15 - SPAC items: item discount 28% to 30%
 
 `db/spac_discount_30_151026.sql` (run in phpMyAdmin, safe to run again - only rows still at 28% change).
