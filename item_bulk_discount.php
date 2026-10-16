@@ -1,6 +1,7 @@
 <?php
 // 2026-10-16 new screen - change item discount or margin % for a set of items in the chosen branches in one save
 // discount: cost and margin follow, selling stays; margin: selling follows, cost stays. Item creator (ITEM C) or admin
+// 2026-10-16 loader over the page while loading / redrawing / saving; branches on their own line
 ob_start();
 session_start();
 
@@ -61,8 +62,10 @@ $branches = $conn->query("SELECT branch_id, branch_name FROM mst_branch WHERE br
 					</div>
 					<div class="card-body">
 						<?php include("inc/common/item_price_filters.php"); ?>
+						</div>
+						<div class="form-group row">
 							<label class="col-lg-1 col-form-label">Branches</label>
-							<div class="col-lg-7">
+							<div class="col-lg-11">
 								<select id="f_branches" class="select item-filter" multiple data-placeholder="Choose branches..">
 									<?php foreach ($branches as $b) { ?>
 										<option value="<?php echo (int)$b->branch_id; ?>" selected><?php echo $h($b->branch_name); ?></option>
@@ -187,17 +190,23 @@ $branches = $conn->query("SELECT branch_id, branch_name FROM mst_branch WHERE br
 		function load() {
 			var data = { mode: 'list', branches: ($('#f_branches').val() || []).join(',') };
 			['principal', 'brand', 'division', 'item_type', 'search'].forEach(function(k) { data[k] = $('#f_' + k).val() || ''; });
+			fnPrice.busy(true);
 			$.ajax({ type: 'POST', url: 'inc/cis_ajax/jquery_item_price.php', dataType: 'json', data: data }).done(function(res) {
 				table.clear().rows.add(res.rows).draw();
 				count();
-			}).fail(function(x) { alert(x.status == 403 ? 'You are not allowed to change item prices..!' : 'Loading the items failed..!'); });
+			}).fail(function(x) { alert(x.status == 403 ? 'You are not allowed to change item prices..!' : 'Loading the items failed..!'); })
+			.always(function() { fnPrice.busy(false); });
 		}
 		var timer = null;
 		$('.item-filter').on('change', load);
 		$('#f_search').off('change').on('input', function() { clearTimeout(timer); timer = setTimeout(load, 400); });
-		// redraw on typing only - a redraw on blur would swallow a click on Remove
-		var redraw = function() { table.rows().invalidate('data').draw(false); };
-		$('#bulk_value').on('input', redraw);
+		// redraw on typing only - a redraw on blur would swallow a click on Remove; a big list shows the loader while it redraws
+		var redraw = function() {
+			fnPrice.busy(true);
+			setTimeout(function() { table.rows().invalidate('data').draw(false); fnPrice.busy(false); }, 20);
+		};
+		var redrawTimer = null;
+		$('#bulk_value').on('input', function() { clearTimeout(redrawTimer); redrawTimer = setTimeout(redraw, 300); });
 		$('input[name=what]').on('change', redraw);
 		$('#bulkTable').on('click', '.row-remove', function() { table.row($(this).closest('tr')).remove().draw(false); count(); });
 
@@ -213,9 +222,11 @@ $branches = $conn->query("SELECT branch_id, branch_name FROM mst_branch WHERE br
 			var rows = [];
 			table.rows().every(function() { var r = this.data(); rows.push(r.item_id + ':' + r.branch_id); });
 			$(this).prop('disabled', true).val('Saving..');
+			fnPrice.busy(true);
 			$.ajax({ type: 'POST', url: 'inc/cis_ajax/jquery_item_price.php', dataType: 'json', data: { mode: 'bulk', what: what, value: v, rows: rows.join(',') } })
 				.done(function() { window.location.reload(); })
 				.fail(function(x) {
+					fnPrice.busy(false);
 					$('#bulk_save').prop('disabled', false).val('Save');
 					alert(x.status == 403 ? 'You are not allowed to change item prices..!' : ((x.responseJSON && x.responseJSON.msg) || 'Save failed - please try again..!'));
 				});

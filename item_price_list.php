@@ -1,6 +1,7 @@
 <?php
 // 2026-10-16 new screen - item prices of one branch as a list, edited and saved one row at a time
 // price / discount change cost and margin; selling changes only from margin or selling. Item creator (ITEM C) or admin
+// 2026-10-16 loader over the page while loading and saving
 ob_start();
 session_start();
 
@@ -141,10 +142,12 @@ $branches = $conn->query("SELECT branch_id, branch_name FROM mst_branch WHERE br
 			if (dirty() && !confirm(dirty() + ' changed row(s) are not saved and will be lost. Continue?')) return;
 			var data = { mode: 'list', branches: $('#f_branches').val() || '' };
 			['principal', 'brand', 'division', 'item_type', 'search'].forEach(function(k) { data[k] = $('#f_' + k).val() || ''; });
+			fnPrice.busy(true);
 			$.ajax({ type: 'POST', url: 'inc/cis_ajax/jquery_item_price.php', dataType: 'json', data: data }).done(function(res) {
 				table.clear().rows.add(res.rows).draw();
 				$('#row_count').text(res.rows.length);
-			}).fail(function(x) { alert(x.status == 403 ? 'You are not allowed to change item prices..!' : 'Loading the items failed..!'); });
+			}).fail(function(x) { alert(x.status == 403 ? 'You are not allowed to change item prices..!' : 'Loading the items failed..!'); })
+			.always(function() { fnPrice.busy(false); });
 		}
 		var timer = null;
 		$('.item-filter').on('change', load);
@@ -156,6 +159,7 @@ $branches = $conn->query("SELECT branch_id, branch_name FROM mst_branch WHERE br
 			if (parseFloat(send.discount) > 100) { alert('Discount cannot be above 100..!'); return; }
 			if (parseFloat($('.p-margin', tr).val()) < 0 && !confirm('Cost price is above selling price (negative margin). Save anyway?')) return;
 			btn.prop('disabled', true).text('..');
+			fnPrice.busy(true);
 			$.ajax({ type: 'POST', url: 'inc/cis_ajax/jquery_item_price.php', dataType: 'json', data: send }).done(function(res) {
 				if (res.row) {
 					$.extend(r, res.row);
@@ -168,7 +172,7 @@ $branches = $conn->query("SELECT branch_id, branch_name FROM mst_branch WHERE br
 			}).fail(function(x) {
 				alert(x.status == 403 ? 'You are not allowed to change item prices..!' : ((x.responseJSON && x.responseJSON.msg) || 'Save failed - please try again..!'));
 				btn.text('Save');
-			}).always(function() { btn.prop('disabled', false); });
+			}).always(function() { btn.prop('disabled', false); fnPrice.busy(false); });
 		}
 		$('#priceTable').on('click', '.row-save', function() { save($(this).closest('tr')); });
 		$('#priceTable').on('keydown', 'input', function(e) {

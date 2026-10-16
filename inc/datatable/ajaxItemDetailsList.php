@@ -11,6 +11,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 edit / price / branch / delete links for creators in Task Settings (ITEM C) - was admin at head office
+// 2026-10-16 principal filter; brand / principal as numbers and the search text quoted - they went into the sql as typed
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -31,18 +32,23 @@ $searchValue = isset($_POST['search']['value']) ? $_POST['search']['value'] : ''
 
 ## Custom Field value
 $searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';
-$searchByBrand = isset($_POST['searchByBrand']) ? $_POST['searchByBrand'] : '';
+$searchByBrand = isset($_POST['searchByBrand']) && $_POST['searchByBrand'] !== '' ? (int)$_POST['searchByBrand'] : '';
+$searchByPrincipal = isset($_POST['searchByPrincipal']) && $_POST['searchByPrincipal'] !== '' ? (int)$_POST['searchByPrincipal'] : '';
 //$searchByCode = htmlspecialchars($searchByCode, ENT_QUOTES, 'UTF-8');
  //$searchByCode = $conn->quote($searchByCode);
 
 ## Search 
 $searchQuery = " ";
 if ($searchByCode != '') {
-    $searchQuery .= " AND (a.item_code LIKE '%" . $searchByCode . "%' OR a.item_purchase_code LIKE '%" . $searchByCode . "%' OR a.supp_item_code LIKE '%" . $searchByCode . "%' OR a.item_desciption LIKE '%" . $searchByCode . "%')";
+    $like = $conn->quote('%' . $searchByCode . '%');
+    $searchQuery .= " AND (a.item_code LIKE " . $like . " OR a.item_purchase_code LIKE " . $like . " OR a.supp_item_code LIKE " . $like . " OR a.item_desciption LIKE " . $like . ")";
 }
 
 if ($searchByBrand != '') {
     $searchQuery .= " and (a.item_brand_make =".$searchByBrand.") ";
+}
+if ($searchByPrincipal !== '') {
+    $searchQuery .= " AND a.item_principal = " . $searchByPrincipal . " ";
 }
 
 ## Total number of records without filtering
