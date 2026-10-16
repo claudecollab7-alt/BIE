@@ -14,6 +14,7 @@ $dbconn = new dbhandler();
 // 2026-10-12 branch All option, principal code in dropdown, min/max discount on new item
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 // 2026-10-13 price block check uses Task Settings (ITEM C) - was user 1; both branches show it
+// 2026-10-16 margin % on cost price; selling price changes only when margin or selling is edited
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL); 
 
@@ -343,71 +344,8 @@ if (isset($_REQUEST['item_id']) && $_REQUEST['item_id'] != "") {
 		}
 
 
-		$("#item_price,#item_discount,#margin_percent").keyup(function() {
-			var item_price = parseFloat($("#item_price").val());
-			var item_discount = parseFloat($("#item_discount").val());
-			var margin_percent = parseFloat($("#margin_percent").val());
-
-			if (item_price == '') {
-				item_price = 0;
-			}
-			if (item_discount == '') {
-				item_discount = 0;
-			}
-			if (margin_percent == '') {
-				margin_percent = 0;
-			}
-
-			if (isNaN(item_price)) {
-				item_price = 0;
-			}
-			if (isNaN(item_discount)) {
-				item_discount = 0;
-			}
-			if (isNaN(margin_percent)) {
-				margin_percent = 0;
-			}
-
-			var dis_amt = ((item_price * item_discount) / 100);
-			var cost_price = item_price - dis_amt;
-
-			var margin_per = ((cost_price * margin_percent) / 100);
-			var margin_tot = cost_price + margin_per;
-
-			$("#item_cost_price").val(cost_price.toFixed(2));
-			$("#item_selling_price").val(margin_tot.toFixed(2));
-
-		}).trigger('keyup');
-
-		$("#item_selling_price").change(function() {
-			var item_price = parseFloat($("#item_price").val());
-			var item_discount = parseFloat($("#item_discount").val());
-			var selling_price = parseFloat($("#item_selling_price").val());
-			var new_cost_price = parseFloat($("#item_cost_price").val());
-
-			// if(isNaN(item_price) || isNaN(item_discount) || isNaN(selling_price) || isNaN(new_cost_price)) {
-			// 	console.error("Invalid numeric input detected. Please check your input fields.");
-			// 	return;
-			// }
-			// alert(selling_price);
-
-
-			console.log("Before calculation - selling_price:", selling_price, "new_cost_price:", new_cost_price);
-
-			// Check if new_cost_price is zero to avoid division by zero
-			var selling_price_per = new_cost_price !== 0 ? ((selling_price - new_cost_price) / new_cost_price) * 100 : 0;
-
-			console.log("After calculation - selling_price_per:", selling_price_per);
-
-			// Check if selling_price_per is NaN
-			if (isNaN(selling_price_per)) {
-				selling_price_per = 0;
-			}
-
-			console.log("After NaN check - selling_price_per:", selling_price_per);
-
-			$("#margin_percent").val(selling_price_per.toFixed(2));
-		}).trigger('change');
+		// 2026-10-16 margin on cost; price / discount change cost and margin only, selling changes from margin or selling
+		fnPrice.link({ price: '#item_price', discount: '#item_discount', cost: '#item_cost_price', margin: '#margin_percent', selling: '#item_selling_price' });
 
 
 
