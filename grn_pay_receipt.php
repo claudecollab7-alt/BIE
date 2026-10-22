@@ -17,6 +17,7 @@ $dbconn = new dbhandler();
 // 2026-10-22 payment save: balance worked out here, not taken from the page
 // 2026-10-22 payments table balance: bill less all payments (it took only the first one), paise no longer rounded off
 // 2026-10-22 multiple grn bill: picked grns linked by supplier and branch (were only linked on the same PO), dropdown leaves out grns on another bill
+// 2026-10-22 no bill yet checked as amount 0, not the text '0.000' - with '0.00' the bill amount was locked and Save hidden
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -520,7 +521,7 @@ if ($_REQUEST['grn_id'] != "") {
 									</div>
 								</div>
 								<div class="card-footer text-center">
-									<?php if ($grn_pay_amount === '0.000' || $grn_pay_amount === '') { ?>
+									<?php if ((float)$grn_pay_amount <= 0) { ?>
 										<INPUT class="btn btn-custom mr-2" type="submit" name="SAVE" value="SAVE">
 										<INPUT class="btn btn-light mr-2" type="button" name="Cancel" value="Cancel" onClick="javascript:window.location.href='grn_payment_details.php'">
 										<input type="hidden" name="txtHid" id="txtHid" value="0">
@@ -779,7 +780,9 @@ if ($_REQUEST['grn_id'] != "") {
 
 
 
-			if (grn_pay_amount === '' || grn_pay_amount === '0.000') {
+			// no bill yet = amount 0, whatever the decimals ('0.000' only matched a 3-decimal column)
+			var bill_amt = parseFloat(grn_pay_amount) || 0;
+			if (bill_amt <= 0) {
 				// alert();
 				$('.hide_pay').hide();
 				$('#grn_pay_status').val("0");
@@ -790,7 +793,7 @@ if ($_REQUEST['grn_id'] != "") {
 				$('#grn_pay_status').val("1");
 
 			}
-			if (grn_pay_amount > 0 || grn_pay_amount !== '0.000') {
+			if (bill_amt > 0) {
 
 				// alert(grn_pay_amount);
 

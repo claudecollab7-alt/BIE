@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 // 2026-10-13 all branches for viewers in Task Settings (GRN_PAYMENT W) - was admin or head office
 // 2026-10-22 status from the saved status (exact amount matching sent some rows to Not Yet); paid shown as 0.00 when nothing is paid
 // 2026-10-22 filters and sort taken only as numbers / column names, search text quoted
+// 2026-10-22 Multiple rows: edit icon opens the main grn's payment page (it had none)
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -182,7 +183,8 @@ while ($obj = $cusRecords->fetch()) {
     if($obj->pay_type=='N'){
 
         $main_no=$dbconn->GetSingleReconrd("tbl_grn","grn_slno","grn_id",$obj->grn_ids);
-        $grn_pay_link = '';
+        // billed and paid on the main grn - the icon opens that one
+        $grn_pay_link = '<a href="grn_pay_receipt.php?grn_id='.(int)$obj->grn_ids.'" data-popup="tooltip" title="Billed on GRN '.$main_no.' - open its payment"><i class="icon-pencil5 bg-edit mr-2" style="font-size:16px"></i></a>';
         $pay_status = "<span class='badge bg-info'>Multiple</span><br/>".$main_no;
 
     }else{
