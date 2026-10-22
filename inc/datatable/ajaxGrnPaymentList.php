@@ -11,6 +11,8 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 all branches for viewers in Task Settings (GRN_PAYMENT W) - was admin or head office
+// 2026-10-22 status from the saved status (exact amount matching sent some rows to Not Yet); paid shown as 0.00 when nothing is paid
+// 2026-10-22 filters and sort taken only as numbers / column names, search text quoted
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -25,15 +27,21 @@ $columnSortOrder = $_POST['order'][0]['dir']; // asc or desc
 $searchValue = $_POST['search']['value']; // Search value
 
 $searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';
-$searchByBranch = isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '';
-$searchByYear = isset($_POST['searchByYear']) ? $_POST['searchByYear'] : '';
-$searchByStatus = isset($_POST['searchByStatus']) ? $_POST['searchByStatus'] : '';
+$searchByBranch = isset($_POST['searchByBranch']) && $_POST['searchByBranch'] !== '' ? (int)$_POST['searchByBranch'] : '';
+$searchByYear = isset($_POST['searchByYear']) && $_POST['searchByYear'] !== '' ? (int)$_POST['searchByYear'] : '';
+$searchByStatus = isset($_POST['searchByStatus']) && $_POST['searchByStatus'] !== '' ? (int)$_POST['searchByStatus'] : '';
+// sort column / direction only as a column name and asc / desc - they went into the sql as posted
+if (!preg_match('/^[a-z][a-z0-9_.]*$/i', (string)$columnName)) {
+    $columnName = 'a.grn_id';
+}
+$columnSortOrder = strtolower((string)$columnSortOrder) == 'asc' ? 'asc' : 'desc';
 
 $searchQuery = "";
 
 
 if ($searchByCode != '') {
-    $searchQuery .= " and (a.grn_slno like '%" . $searchByCode . "%' OR b.supp_name like '%" . $searchByCode . "%' OR a.grn_ref_code like '%" . $searchByCode . "%') ";
+    $like = $conn->quote('%' . $searchByCode . '%');
+    $searchQuery .= " and (a.grn_slno like " . $like . " OR b.supp_name like " . $like . " OR a.grn_ref_code like " . $like . ") ";
 }
 
 if ($searchByBranch != '') {
@@ -122,9 +130,10 @@ while ($obj = $cusRecords->fetch()) {
         }
     }
 
-    $pay_amount = $dbconn->GetSingleReconrd("tbl_grn_pay_receipt","sum(pay_amount)","grn_id",$obj->grn_id);
+    $pay_amount = number_format((float)$dbconn->GetSingleReconrd("tbl_grn_pay_receipt","sum(pay_amount)","grn_id",$obj->grn_id), 2, '.', '');
 
-    if(($obj->grn_pay_amount == $pay_amount) && $obj->grn_pay_finished_status == 3){
+    // status as saved - the bill and payment saves keep it in step with the payments
+    if($obj->grn_bill_status == 1 && $obj->grn_pay_amount > 0 && $obj->grn_pay_finished_status == 3){
 
         $next_dt = "<span class='badge bg-success'>". date("d-m-Y", strtotime($grn_due_date)) ."</span>";
         $pay_status = "<span class='badge bg-success'>Completed</span><br/>".$sub_grn_nos;
@@ -149,7 +158,7 @@ while ($obj = $cusRecords->fetch()) {
         }
 		 $paid_amt = $pay_amount;
 
-    }else if(($obj->grn_pay_amount != $pay_amount) && $obj->grn_pay_finished_status == 2){
+    }else if($obj->grn_bill_status == 1 && $obj->grn_pay_amount > 0 && $obj->grn_pay_finished_status == 2){
 
         $pay_status = "<span class='badge bg-warning'>Partial Payment</span><br/>".$sub_grn_nos;
 

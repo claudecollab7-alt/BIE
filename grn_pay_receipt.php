@@ -13,6 +13,10 @@ $dbconn = new dbhandler();
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 // 2026-10-13 edit paid amount for approvers in Task Settings (GRN_PAYMENT A) - was admin
+// 2026-10-22 bill amount save: balance and status from the payments made - it kept the old balance and set Pending even when part / fully paid
+// 2026-10-22 payment save: balance worked out here, not taken from the page
+// 2026-10-22 payments table balance: bill less all payments (it took only the first one), paise no longer rounded off
+// 2026-10-22 multiple grn bill: picked grns linked by supplier and branch (were only linked on the same PO), dropdown leaves out grns on another bill
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -29,7 +33,7 @@ if (isset($_POST['SAVE'])) {
 	$file_pre = str_replace('/', '', $_REQUEST['grn_id']);
 
 
-	if ($_FILES['grn_bill_copy']['name'] != "") {
+	if (isset($_FILES['grn_bill_copy']) && $_FILES['grn_bill_copy']['name'] != "") {
 		$ext = pathinfo($_FILES['grn_bill_copy']['name'], PATHINFO_EXTENSION);
 		$customfilename = $file_pre . '_grn_bill.' . $ext;
 		$_REQUEST['grn_bill_copy'] = post_img($customfilename, $_FILES['grn_bill_copy']['tmp_name'], "project_img/grn_payment/");
@@ -57,11 +61,31 @@ if (isset($_POST['SAVE'])) {
 			$grn_ids = '';
 		}
 
-		if (isset($_REQUEST['saved_grn_ids'])) {
-			if ($_REQUEST['saved_grn_ids'] != "") {
-				$reverse_multi_grn = $conn->prepare("UPDATE tbl_grn SET pay_type= 'S', grn_ids= NULL, grn_bill_copy= '', grn_pay_amount=0, grn_bal_value=0  WHERE grn_id IN (" . $_REQUEST['saved_grn_ids'] . ") AND po_id= '" . $_REQUEST['po_id'] . "' ");
-				$reverse_multi_grn->execute();
-			}
+		// grns on one bill: same supplier and branch as this grn, from any PO - they were only linked when on the same
+		// PO, so a grn picked from another PO stayed unbilled (Not Yet) though paid on this bill. Ids as numbers.
+		$main_id = (int)$_REQUEST['grn_id'];
+		$main = $conn->prepare("SELECT supp_id, branch_id FROM tbl_grn WHERE grn_id = :id");
+		$main->execute(array(':id' => $main_id));
+		$main = $main->fetch(PDO::FETCH_OBJ);
+		if ($grn_ids !== '') {
+			$grn_ids = implode(',', array_filter(array_map('intval', explode(',', $grn_ids))));
+		}
+		// release the grns this bill held before; the ones still picked are linked again below
+		$reverse_multi_grn = $conn->prepare("UPDATE tbl_grn SET pay_type= 'S', grn_ids= NULL, grn_bill_copy= '', grn_pay_amount=0, grn_bal_value=0  WHERE pay_type = 'N' AND grn_ids = :main_id");
+		$reverse_multi_grn->execute(array(':main_id' => (string)$main_id));
+
+		// paid so far on this grn: the status and balance follow the new bill amount
+		$bill_amount = round((float)$_REQUEST['grn_pay_amount'], 3);
+		$paid_sofar = round((float)db_value($conn, "SELECT IFNULL(SUM(pay_amount), 0) FROM tbl_grn_pay_receipt WHERE grn_id = :grn_id", array(':grn_id' => (int)$_REQUEST['grn_id'])), 3);
+		if ($bill_amount <= 0 || $bill_amount < $paid_sofar) {
+			throw new Exception("Bill amount must be more than 0 and not less than the paid amount " . $paid_sofar);
+		}
+		if ($paid_sofar <= 0) {
+			$finished_status = 1;			// bill entered, nothing paid
+		} elseif ($paid_sofar >= $bill_amount) {
+			$finished_status = 3;			// fully paid
+		} else {
+			$finished_status = 2;			// part paid
 		}
 
 		// print_r($grn_ids);
@@ -70,12 +94,12 @@ if (isset($_POST['SAVE'])) {
 		$data1 = array(
 			':grn_id' => $_REQUEST['grn_id'],
 			':grn_bill_copy' =>  $_REQUEST['grn_bill_copy'],
-			':grn_pay_amount' => $_REQUEST['grn_pay_amount'],
-			':grn_bal_value' => $_REQUEST['grn_bal_value'],
+			':grn_pay_amount' => $bill_amount,
+			':grn_bal_value' => $bill_amount - $paid_sofar,
 			':pay_type' => $pay_type,
 			':grn_ids' => $grn_ids,
 			':grn_bill_status' => 1,
-			':grn_pay_finished_status' => 1,
+			':grn_pay_finished_status' => $finished_status,
 			':modify_by' => $_REQUEST['modify_by'],
 			':modify_date_time' => $_REQUEST['modify_date_time']
 
@@ -84,11 +108,16 @@ if (isset($_POST['SAVE'])) {
 		$update_so->execute($data1);
 
 		if (isset($_REQUEST['grn_ids'])) {
-			if (fnRowCount('grn_ids') > 0) {
-				$update_multi_grn = $conn->prepare("UPDATE tbl_grn SET pay_type= 'N', grn_ids= '" . $_REQUEST['grn_id'] . "', grn_bill_copy= '" . $_REQUEST['grn_bill_copy'] . "', grn_pay_amount=0, grn_bal_value=0  WHERE grn_id IN (" . $grn_ids . ") AND po_id= '" . $_REQUEST['po_id'] . "' ");
-				$update_multi_grn->execute();
+			if (fnRowCount('grn_ids') > 0 && $grn_ids !== '') {
+				$update_multi_grn = $conn->prepare("UPDATE tbl_grn SET pay_type= 'N', grn_ids= :main_id, grn_bill_copy= :bill_copy, grn_pay_amount=0, grn_bal_value=0
+					WHERE grn_id IN (" . $grn_ids . ") AND grn_id <> :self AND supp_id = :supp AND branch_id = :branch AND grn_status = 2 AND pay_type = 'S' AND grn_pay_finished_status = 0");
+				$update_multi_grn->execute(array(':main_id' => (string)$main_id, ':self' => $main_id, ':bill_copy' => $_REQUEST['grn_bill_copy'], ':supp' => $main->supp_id, ':branch' => $main->branch_id));
 			}
 		}
+		// this bill lists only the grns actually linked to it
+		$linked = (string)db_value($conn, "SELECT GROUP_CONCAT(grn_id ORDER BY grn_id) FROM tbl_grn WHERE pay_type = 'N' AND grn_ids = :main_id", array(':main_id' => (string)$main_id));
+		$conn->prepare("UPDATE tbl_grn SET pay_type = :pt, grn_ids = :ids WHERE grn_id = :id")
+			->execute(array(':pt' => $linked !== '' ? 'M' : 'S', ':ids' => $linked, ':id' => $main_id));
 
 		$_SESSION['_msg'] = "GRN Payment succesfully saved..!";
 		db_commit($conn);
@@ -118,7 +147,7 @@ if (isset($_POST['UPDATE'])) {
 	$file_pre = str_replace('/', '', $_REQUEST['grn_id']);
 
 
-	if ($_FILES['grn_bill_copy']['name'] != "") {
+	if (isset($_FILES['grn_bill_copy']) && $_FILES['grn_bill_copy']['name'] != "") {
 		$ext = pathinfo($_FILES['grn_bill_copy']['name'], PATHINFO_EXTENSION);
 		$customfilename = $file_pre . '_grn_bill.' . $ext;
 		$_REQUEST['grn_bill_copy'] = post_img($customfilename, $_FILES['grn_bill_copy']['tmp_name'], "project_img/grn_payment/");
@@ -163,23 +192,15 @@ if (isset($_POST['UPDATE'])) {
 		$stmt->execute($data);
 
 
-		$sum_pay_amount = db_value($conn, "SELECT SUM(pay_amount) FROM tbl_grn_pay_receipt WHERE grn_id = :grn_id", array(':grn_id' => $update_id));
-		$payable_amount = $dbconn->GetSingleReconrd("tbl_grn", "grn_pay_amount", "grn_id", $update_id);
-
-
-		if ((float)$sum_pay_amount == (float)$payable_amount) {
-			$grn_pay_finish_status = 3;
-		} else if ((float)$sum_pay_amount != (float)$payable_amount) {
-			$grn_pay_finish_status = 2;
-		} else {
-			$grn_pay_finish_status = 1;
-		}
+		$sum_pay_amount = round((float)db_value($conn, "SELECT SUM(pay_amount) FROM tbl_grn_pay_receipt WHERE grn_id = :grn_id", array(':grn_id' => $update_id)), 3);
+		$payable_amount = round((float)db_value($conn, "SELECT grn_pay_amount FROM tbl_grn WHERE grn_id = :grn_id", array(':grn_id' => $update_id)), 3);
+		$grn_pay_finish_status = $sum_pay_amount >= $payable_amount ? 3 : 2;
 
 		$update_so = $conn->prepare("UPDATE tbl_grn SET grn_bill_copy = :grn_bill_copy, grn_bal_value = :grn_bal_value, grn_pay_status = :grn_pay_status, grn_pay_finished_status = :grn_pay_finished_status WHERE grn_id = :grn_id");
 		$data1 = array(
 			':grn_id' => $update_id,
 			':grn_bill_copy' =>  $_REQUEST['grn_bill_copy'],
-			':grn_bal_value' => $_REQUEST['grn_bal_value1'],
+			':grn_bal_value' => max(0, $payable_amount - $sum_pay_amount),
 			':grn_pay_status' =>  1,
 			':grn_pay_finished_status' =>  $grn_pay_finish_status
 
@@ -373,7 +394,7 @@ if ($_REQUEST['grn_id'] != "") {
 											<select name="grn_ids[]" id="grn_ids" data-placeholder="Choose a GRN.." class="select" multiple>
 												<option value="">--- Select GRN ---</option>
 												<?php
-												$grn_query = "SELECT a.grn_slno,a.grn_id,b.supp_name FROM tbl_grn  as a LEFT JOIN mst_supplier_new as b ON a.supp_id=b.supp_id WHERE a.supp_id ='" . $obj->supp_id . "' AND grn_id !='" . $_REQUEST['grn_id'] . "' AND grn_pay_finished_status = 0 ";
+												$grn_query = "SELECT a.grn_slno,a.grn_id,b.supp_name FROM tbl_grn  as a LEFT JOIN mst_supplier_new as b ON a.supp_id=b.supp_id WHERE a.supp_id ='" . (int)$obj->supp_id . "' AND a.branch_id = '" . (int)$obj->branch_id . "' AND a.grn_status = 2 AND grn_id !='" . (int)$_REQUEST['grn_id'] . "' AND grn_pay_finished_status = 0 AND (a.pay_type = 'S' OR a.grn_ids = '" . (int)$_REQUEST['grn_id'] . "') ";
 												$grn_res = $conn->query($grn_query);
 												if ($grn_res->rowCount() > 0) {
 													if ($obj->grn_ids != '') {
@@ -582,17 +603,17 @@ if ($_REQUEST['grn_id'] != "") {
 
 
 									$grn_pay_amt = $dbconn->GetSingleReconrd("tbl_grn_pay_receipt", "sum(pay_amount)", "grn_id", $_REQUEST['grn_id']);
-									$bal = floatval($grn_pay_amount) - floatval($pay_amount);
+									$bal = floatval($grn_pay_amount) - floatval($grn_pay_amt);	// all payments, not just the first
 
 									echo '<tr style="font-weight:bold">								
 												<td align="right"> Total </td>
-												 <td align="right">' . number_format(round($grn_pay_amt), 2) . '</td>
+												 <td align="right">' . number_format((float)$grn_pay_amt, 2) . '</td>
 												<td align="right"></td>	
 												<td align="right"></td>	
 											</tr>';
 									echo '<tr style="font-weight:bold">								
 												<td align="right"> Balance </td>
-												<td align="right">' . number_format(round($bal), 2) . '</td>
+												<td align="right">' . number_format($bal, 2) . '</td>
 												<td align="right"></td>	
 												<td align="right"></td>	
 											</tr>';

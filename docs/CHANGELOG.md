@@ -8,6 +8,36 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-22 - GRN payment: status in the GRN payment list, bill amount edit, multiple GRN bills
+
+Customer: the status in the GRN payment list was not right, and a bill amount could not be entered on edit.
+
+**Multiple GRN bills never linked their GRNs (main cause of wrong status).** "Multiple GRN" lists every unbilled
+GRN of the supplier, but the save only linked GRNs on the same PO. Of 23 multiple bills on live only 1 was
+linked; the other GRNs stayed "Not Yet" though their bill was entered and paid on the main GRN, and some were
+later given a bill of 1 to clear them. GRNs are now linked by supplier and branch (any PO); the dropdown leaves out
+GRNs already on another bill; the main GRN lists only the GRNs actually linked; un-picking a GRN releases it.
+
+**Editing a bill amount** set the status back to Pending even when part or fully paid, and kept the old balance;
+the first bill amount was saved with balance 0. Status and balance now come from the payments made
+(1 nothing paid, 2 part paid, 3 fully paid); a bill below the paid amount is refused on the server too.
+Paying also works the balance out on the server. The payments table "Balance" took off only the first payment
+and rounded off the paise - now all payments, to the paisa. The list shows status as saved and paid 0.00
+instead of blank.
+
+**"Not able to enter the bill amount on edit":** the Edit button is for GRN Payment approvers in Task Settings
+(admin only today - it was hidden for everyone before 13-10, the old check used a session value never set).
+Give the accounts user "GRN Payment - Approver" in Task Settings to let them correct a bill amount.
+
+Also: GRN payment list page set its status filter before use (PHP 8 printed a warning inside the page script);
+list filters / sort and the multiple-GRN save take ids only as numbers and quote the search text.
+
+`db/grn_pay_status_fix_221026.sql` (run after uploading, safe to run again): links the GRNs of the old multiple
+bills (22 on live), then sets status and balance from the payments; lists the 4 GRNs that sit on a multiple bill
+but also got a bill of their own (GRN/0447, 0695, 0696 /2425-2526, GRN/0116/2627) for the customer to check.
+
+---
+
 ## 2026-10-16 - Loader on the price screens, branches line, principal filter on the item list
 
 - Bulk Discount / Margin and Item Price Update show a small "Please wait.." over the page while items load, a row or
