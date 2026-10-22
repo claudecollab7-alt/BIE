@@ -8,6 +8,9 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 branch filter for viewers in Task Settings (GRN_PAYMENT W) - was head office
+// 2026-10-22 status filter / page number set before use - the php 8 warning landed inside the page script and stopped it
+$searchByStatus = isset($_REQUEST['searchByStatus']) && in_array($_REQUEST['searchByStatus'], array('0', '1', '2', '3'), true) ? $_REQUEST['searchByStatus'] : '';
+$iPageNum = isset($_REQUEST['iPageNum']) ? (int)$_REQUEST['iPageNum'] : 0;
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
