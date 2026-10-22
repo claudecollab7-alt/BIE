@@ -8,6 +8,20 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-22 - Sales Order Report: Partial opens the SO's items and their stage
+
+- Clicking **Partial** opened `dc_add_view.php`, a page that does not exist. It now opens a popup with the SO's
+  items: ordered, DC qty (approved; DCs waiting approval shown apart), invoiced, still to DC, still to invoice,
+  branch stock, stage (Not dispatched / DC in approval / Part dispatched / Dispatched, not invoiced / Part invoiced /
+  Completed) and the DC and invoice numbers with their qty. Pending items by default, **Show all items** for all.
+- **Status fix:** the report added up `dc_qty`, which holds the ordered qty again on every DC - an SO sent in two or
+  more DCs never showed Completed. It now adds up the dispatched qty (`dc_dispatch_qty`). On the local copy 10 of 596
+  SOs change: 6 Partial -> Completed (e.g. SO/0080/BIE/KL/2627: 6 ordered, 3 + 3 sent and invoiced) and 4 Completed ->
+  Partial (one DC raised for the whole order but only part sent).
+- The report form called a `fnValidate()` that does not exist (a script error on every Generate Report) - removed.
+
+---
+
 ## 2026-10-22 - GRN payment: status in the GRN payment list, bill amount edit, multiple GRN bills
 
 Customer: the status in the GRN payment list was not right, and a bill amount could not be entered on edit.
