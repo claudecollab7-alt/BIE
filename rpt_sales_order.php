@@ -7,6 +7,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-22 dispatched qty from dc_dispatch_qty - dc_qty repeats the ordered qty on every DC, so an SO sent in 2+ DCs never showed Completed
+// 2026-10-22 Partial opens a popup with the SO's items and their stage (pending items, Show all for every item) - it linked to a page that does not exist
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -140,7 +142,7 @@ else
                                 </div>
                             </div>
 
-                            <form name='thisForm' id="validate" method='post' action="" onSubmit="return fnValidate();">
+                            <form name='thisForm' id="validate" method='post' action="">
                                 <!-- <table style="border:1px solid #d5d5d5; margin:1px 0px; background:#fafafa;" cellpadding="10" width="100%"> -->
                                 <div class="card-body pt-2 pb-5">
                                         <div class="form-group row">
@@ -291,7 +293,7 @@ else
                                                 $dc_count_ids = $dbconn->GetSingleReconrd("tbl_dc", "group_concat(dc_id)", "dc_status = 1 AND so_id", $obj->so_id);
                                                 $dc_qty=0;
                                                 if($dc_count_ids != ''){
-                                                $dc_qty = $dbconn->GetSingleReconrd("tbl_dc_details", "SUM(dc_qty)","dc_id IN (".$dc_count_ids.") AND dc_dispatch_qty>0 AND 1", 1);
+                                                $dc_qty = $dbconn->GetSingleReconrd("tbl_dc_details", "SUM(dc_dispatch_qty)","dc_id IN (".$dc_count_ids.") AND dc_dispatch_qty>0 AND 1", 1);
                                                 }
                                                 $count_dc_ids = $dbconn->GetSingleReconrd("tbl_dc", "count(dc_id)", " dc_status = 1 AND so_id", $obj->so_id);
                                                 $count_inv_ids = $dbconn->GetSingleReconrd("tbl_invoice", "count(inv_id)", " inv_status = 1 AND so_id", $obj->so_id);
@@ -309,7 +311,7 @@ else
                                                 }
                                                 else if($so_qty != $dc_qty || $count_dc_ids != $count_inv_ids){
                                                     
-                                                    $status ='<a target="_blank" href="dc_add_view.php?so_id='.$obj->so_id.'&status=partial&view=0" class="tip" title="View DC"><span class="badge bg-grey"> Partial</span></a>';
+                                                    $status ='<a href="javascript:;" class="so-items" data-so="'.(int)$obj->so_id.'" title="Items and their stage"><span class="badge bg-grey"> Partial</span></a>';
                                                 }
                                             
                                                 else{
@@ -818,6 +820,44 @@ else
     </div>
 
     <!-- /page content -->
+
+    <!-- items of a sales order with their stage, opened from Partial -->
+    <div id="modalSoItems" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-full modal-dialog-scrollable" style="max-width: 1200px;">
+            <div class="modal-content">
+                <div class="modal-header pb-2 pt-2 bg-modal">
+                    <h6 class="modal-title font-weight-bold">Sales Order Items</h6>
+                    <label class="ml-auto mr-3 mb-0"><input type="checkbox" id="so_show_all"> Show all items</label>
+                    <button type="button" class="close ml-0" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body py-2" id="soItemsBody"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(function() {
+            // pending items by default, every item with Show all
+            function soFilter() {
+                var all = $('#so_show_all').is(':checked');
+                $('#soItemTable tr.so-done').toggle(all);
+                $('#soItemTable tr.so-none').toggle(!all && $('#soItemTable tr.so-pending').length == 0);
+            }
+            $('#so_show_all').on('change', soFilter);
+            $(document).on('click', '.so-items', function(e) {
+                e.preventDefault();
+                fnPrice.busy(true);
+                $.ajax({ type: 'POST', url: 'inc/cis_ajax/jquery_so_item_status.php', data: { so_id: $(this).data('so') } })
+                    .done(function(html) {
+                        $('#soItemsBody').html(html);
+                        $('#so_show_all').prop('checked', false);
+                        soFilter();
+                        $('#modalSoItems').modal('show');
+                    })
+                    .fail(function() { alert('Loading the items failed..!'); })
+                    .always(function() { fnPrice.busy(false); });
+            });
+        });
+    </script>
 </body>
 
 </html>
