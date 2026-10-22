@@ -15,7 +15,7 @@ require_once("../common/access.php");
 fnAjaxGuard();
 
 $conn = new dbconnect();
-$so_id = isset($_POST['so_id']) ? (int)$_POST['so_id'] : 0;
+$so_id = isset($_POST['id']) ? (int)$_POST['id'] : (isset($_POST['so_id']) ? (int)$_POST['so_id'] : 0);
 $h = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES); };
 $q = function ($v) { return rtrim(rtrim(number_format((float)$v, 3, '.', ''), '0'), '.'); };
 
@@ -85,7 +85,7 @@ foreach ($st->fetchAll(PDO::FETCH_OBJ) as $r) {
 	$is_pending = $to_dc > 0 || $dc_wait > 0 || $to_inv > 0;
 	$pending += $is_pending ? 1 : 0;
 	$n++;
-	$rows .= '<tr class="' . ($is_pending ? 'so-pending' : 'so-done') . '">'
+	$rows .= '<tr class="' . ($is_pending ? 'doc-pending' : 'doc-done') . '">'
 		. '<td>' . $n . '</td>'
 		. '<td><b>' . $h($r->item_code) . '</b><br><small>' . $h($r->item_desciption) . '</small></td>'
 		. '<td class="text-right">' . $q($ordered) . ' <small>' . $h($r->so_unit) . '</small></td>'
@@ -104,7 +104,7 @@ foreach ($st->fetchAll(PDO::FETCH_OBJ) as $r) {
 	<div><b><?php echo $h($so->so_refno); ?></b> &nbsp; <?php echo date('d-m-Y', strtotime($so->so_date)); ?> &nbsp; <?php echo $h($so->supp_name); ?></div>
 	<div><span class="badge bg-warning"><?php echo $pending; ?> pending</span> <span class="badge bg-success"><?php echo $n - $pending; ?> completed</span> of <?php echo $n; ?> item(s)</div>
 </div>
-<table class="table table-xs table-bordered" id="soItemTable">
+<table class="table table-xs table-bordered" id="docItemTable">
 	<thead>
 		<tr class="bg-table-header">
 			<th>#</th>
@@ -122,6 +122,6 @@ foreach ($st->fetchAll(PDO::FETCH_OBJ) as $r) {
 	</thead>
 	<tbody>
 		<?php echo $rows; ?>
-		<tr class="so-none"><td colspan="11" class="text-center text-muted">No pending items - tick Show all items to see them all.</td></tr>
+		<tr class="doc-none"><td colspan="11" class="text-center text-muted">No pending items - tick Show all items to see them all.</td></tr>
 	</tbody>
 </table>

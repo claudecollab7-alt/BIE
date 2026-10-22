@@ -8,6 +8,24 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-22 - Purchase Order Report; items popup centred
+
+- **Items popup** (Sales Order Report and the new Purchase Order Report) now follows the existing modals - centred,
+  `bg-modal` header and footer, **Show all items** in the footer with a Close button. One shared file
+  (`inc/common/doc_items_modal.php`).
+- **Report > Purchase Order Report** (`rpt_purchase_order.php`): approved POs for a date range, search (PO no. /
+  supplier), branch (PO viewers in Task Settings pick any branch or all, others see their own) and status. Columns:
+  PO no., date, supplier, branch, PO value, items, items fully received, GRN numbers (GRNs in draft noted), status.
+  Status per PO from the accepted qty on finalised GRNs (each GRN line repeats the PO qty, so it is not added up):
+  Pending (nothing received), Partial, Completed (every item fully received). Any status opens the PO's items: ordered,
+  received (GRNs in draft apart), accepted, rejected, returned (approved returns), still to receive, branch stock,
+  stage (Not received / GRN in draft / Part received / Rejected, not returned / Completed), GRN and return numbers.
+  Live data 12-10: 1,262 approved POs - 38 pending, 50 partial, 1,174 completed.
+- `db/post_upload_221026.sql`: the menu (given to whoever has the Sales Order Report - admin today) and indexes on the
+  PO / GRN / SO / DC / invoice link columns, which had none.
+
+---
+
 ## 2026-10-22 - Sales Order Report: Partial opens the SO's items and their stage
 
 - Clicking **Partial** opened `dc_add_view.php`, a page that does not exist. It now opens a popup with the SO's
