@@ -32,6 +32,12 @@ Give the accounts user "GRN Payment - Approver" in Task Settings to let them cor
 Also: GRN payment list page set its status filter before use (PHP 8 printed a warning inside the page script);
 list filters / sort and the multiple-GRN save take ids only as numbers and quote the search text.
 
+**Bill amount locked on a "Not Yet" GRN** (same day, from the customer's screen): the page took "no bill yet" to
+mean the amount text was exactly `0.000`. A database holding the amount with 2 decimals sends `0.00`, so the page
+thought a bill existed - bill amount read-only, payment section and Update shown instead of Save. The check is now
+the number 0 (this check was in the page from the start). "Multiple" rows in the list now have the edit icon too;
+it opens the payment page of the GRN they are billed on.
+
 `db/grn_pay_status_fix_221026.sql` (run after uploading, safe to run again): links the GRNs of the old multiple
 bills (22 on live), then sets status and balance from the payments; lists the 4 GRNs that sit on a multiple bill
 but also got a bill of their own (GRN/0447, 0695, 0696 /2425-2526, GRN/0116/2627) for the customer to check.
