@@ -311,7 +311,7 @@ else
                                                 }
                                                 else if($so_qty != $dc_qty || $count_dc_ids != $count_inv_ids){
                                                     
-                                                    $status ='<a href="javascript:;" class="so-items" data-so="'.(int)$obj->so_id.'" title="Items and their stage"><span class="badge bg-grey"> Partial</span></a>';
+                                                    $status ='<a href="javascript:;" class="doc-items" data-url="inc/cis_ajax/jquery_so_item_status.php" data-id="'.(int)$obj->so_id.'" data-title="Sales Order Items" title="Items and their stage"><span class="badge bg-grey"> Partial</span></a>';
                                                 }
                                             
                                                 else{
@@ -821,43 +821,7 @@ else
 
     <!-- /page content -->
 
-    <!-- items of a sales order with their stage, opened from Partial -->
-    <div id="modalSoItems" class="modal fade" tabindex="-1">
-        <div class="modal-dialog modal-full modal-dialog-scrollable" style="max-width: 1200px;">
-            <div class="modal-content">
-                <div class="modal-header pb-2 pt-2 bg-modal">
-                    <h6 class="modal-title font-weight-bold">Sales Order Items</h6>
-                    <label class="ml-auto mr-3 mb-0"><input type="checkbox" id="so_show_all"> Show all items</label>
-                    <button type="button" class="close ml-0" data-dismiss="modal">&times;</button>
-                </div>
-                <div class="modal-body py-2" id="soItemsBody"></div>
-            </div>
-        </div>
-    </div>
-    <script>
-        $(function() {
-            // pending items by default, every item with Show all
-            function soFilter() {
-                var all = $('#so_show_all').is(':checked');
-                $('#soItemTable tr.so-done').toggle(all);
-                $('#soItemTable tr.so-none').toggle(!all && $('#soItemTable tr.so-pending').length == 0);
-            }
-            $('#so_show_all').on('change', soFilter);
-            $(document).on('click', '.so-items', function(e) {
-                e.preventDefault();
-                fnPrice.busy(true);
-                $.ajax({ type: 'POST', url: 'inc/cis_ajax/jquery_so_item_status.php', data: { so_id: $(this).data('so') } })
-                    .done(function(html) {
-                        $('#soItemsBody').html(html);
-                        $('#so_show_all').prop('checked', false);
-                        soFilter();
-                        $('#modalSoItems').modal('show');
-                    })
-                    .fail(function() { alert('Loading the items failed..!'); })
-                    .always(function() { fnPrice.busy(false); });
-            });
-        });
-    </script>
+    <?php include("inc/common/doc_items_modal.php"); ?>
 </body>
 
 </html>
