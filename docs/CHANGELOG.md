@@ -8,6 +8,22 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-23 - Principal "All" option, item counts on principal / brand, principal-brand pairs
+
+- **Bulk Discount / Margin and Item Price Update:** the Principal dropdown had no "--- All ---" choice. It carried a
+  `data-placeholder`, and the dropdown widget then takes the empty "All" option as its placeholder and hides it
+  (Brand / Division have none, so theirs showed). Removed - All shows and clears the filter.
+- **Principal and Brand masters:** new **Items** column (active items mapped). The delete icon shows only when the
+  count is 0, and the delete call itself refuses a principal / brand still used by items (it only hid nothing before).
+- **`db/principal_brand_sync_231026.sql`:** Stanely Black And Decker - STANLEY, Taparia Tools Ltd - TAPARIA, Chicago
+  Pneumatics - CHICAGO PNEUMATIC, Shree Prayag Air Controls - SHREE PRAYAG (brand created; the others only if missing).
+  Items with one of these principals get the brand, items with one of these brands get the principal, where the other
+  side is empty or Not Applicable. Items that already have a different real principal or brand (e.g. HONDA + STANLEY,
+  MULTIBRAND + TAPARIA) are listed and left as they are. On the 12-10 copy with the SPAC items: 1,505 Stanley,
+  118 Taparia, 4,701 Shree Prayag items matched; about 24 listed.
+
+---
+
 ## 2026-10-22 - Purchase Order Report; items popup centred
 
 - **Items popup** (Sales Order Report and the new Purchase Order Report) now follows the existing modals - centred,
