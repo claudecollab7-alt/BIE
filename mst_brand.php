@@ -10,6 +10,7 @@ $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-10-23 Items column (items mapped); delete only when no item uses it
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -214,11 +215,12 @@ if (isset($_REQUEST['brand_id']) && $_REQUEST['brand_id'] != "")
 			                	</div>	
 							</div>
 							<div class="card-body pt-0">	
-								<table class="datatable-col3 table table-xs table-hover table-bordered" id="brandTable">
+								<table class="datatable-col4 table table-xs table-hover table-bordered" id="brandTable">
 									<thead>
 										<tr class="bg-table-header">	
 											<th>Brand Name</th>
 											<th>Brand Code</th>
+											<th class="text-center">Items</th>
 											<th class="text-center">Actions</th>											
 										</tr>							
 									</thead>										
@@ -226,6 +228,8 @@ if (isset($_REQUEST['brand_id']) && $_REQUEST['brand_id'] != "")
 									<tbody>									
 									<?php
 											
+										// items per brand - one that items use cannot be deleted
+										$item_count = $conn->query("SELECT item_brand_make, COUNT(*) FROM tbl_item_details WHERE item_status = 1 GROUP BY item_brand_make")->fetchAll(PDO::FETCH_KEY_PAIR);
 										$sql = "SELECT * FROM mst_brand WHERE brand_status = 1";
 										$searchRes1 = $conn->query($sql);	
 										$iSno = 1 ;
@@ -243,17 +247,20 @@ if (isset($_REQUEST['brand_id']) && $_REQUEST['brand_id'] != "")
 												echo '<tr>';	
 													echo '<td>'.$rs->brand_name.' </td>';	
 													echo '<td>'.$rs->brand_code.'</td>';								
+													$used = isset($item_count[$rs->brand_id]) ? (int)$item_count[$rs->brand_id] : 0;
+													echo '<td class="text-center">' . $used . '</td>';
 													echo '<td class="text-center">';													
 													echo "<a href='mst_brand.php?id=".$token."' data-popup='tooltip' title='Edit'>
 															<i class='icon-pencil5 bg-edit mr-2'></i></a>";
 														
 														if($_SESSION['_user_type'] == 'S' || $_SESSION['_user_type'] == 'A')
 														{															
-															/*if($ref_records >0)
-																echo '<i class="icon-bin bg-delete-disabled mr-2" data-popup="tooltip" title="You can\'t delete this"></i>';
-															else*/
+															if ($used > 0) {
+																echo '<i class="icon-bin bg-delete-disabled mr-2" data-popup="tooltip" title="Used by ' . $used . ' item(s) - cannot be deleted"></i>';
+															} else {
 																echo '<a href="javascript:;" class="delete" rel="'.$rs->brand_id.'" data-popup="tooltip" title="Delete">
 																<i class="icon-bin bg-delete mr-2"></i></a>';
+															}
 															
 														}else{
 															echo "<a href='javascript:;' title='Delete'><i class='icon-bin bg-delete mr-2'></i></a>";
@@ -265,7 +272,7 @@ if (isset($_REQUEST['brand_id']) && $_REQUEST['brand_id'] != "")
 										}
 										else
 										{
-											echo '<tr><td colspan="3">No Records...</td></tr>';	
+											echo '<tr><td colspan="4">No Records...</td></tr>';	
 										}
 									?>
 									</tbody>									
@@ -373,6 +380,9 @@ $(document).ready(function(){
 					}
 				},
 				complete:function(){
+				},
+				error:function(x){
+					alert(x.responseText || 'Delete failed..!');
 				},
 				success:function(result){
 					location.reload();

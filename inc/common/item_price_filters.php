@@ -1,12 +1,13 @@
 <?php
 // 2026-10-16 new - item set filters shared by the bulk discount / margin and price list screens
+// 2026-10-23 principal dropdown without data-placeholder - with it the All option was taken as the placeholder and hidden
 $h = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES); };
 $fl_types = array(2 => 'Trading', 3 => 'Raw Materials', 6 => 'Consumable', 7 => 'Group Products', 8 => 'Labour Charges');
 ?>
 <div class="form-group row">
 	<label class="col-lg-1 col-form-label">Principal</label>
 	<div class="col-lg-3">
-		<select id="f_principal" class="form-control select-search item-filter" data-placeholder="All principals">
+		<select id="f_principal" class="form-control select-search item-filter">
 			<option value="">--- All ---</option>
 			<?php foreach ($conn->query("SELECT principal_id, principal_name, principal_code FROM mst_principal WHERE principal_status = 1 ORDER BY principal_name")->fetchAll(PDO::FETCH_OBJ) as $r) { ?>
 				<option value="<?php echo (int)$r->principal_id; ?>"><?php echo $h($r->principal_name . ($r->principal_code != '' ? ' - ' . $r->principal_code : '')); ?></option>

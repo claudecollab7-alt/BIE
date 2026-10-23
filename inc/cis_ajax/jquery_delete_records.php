@@ -8,6 +8,7 @@
 
 	// 2026-10-13 login + csrf; only the table / column pairs the screens use, status set to 0, id bound
 	//            - it took table, column and value from the post with no login, so any row of any table could be changed
+	// 2026-10-23 a principal or brand still used by items cannot be deleted
 
 	fnAjaxGuard();
 
@@ -48,11 +49,26 @@
 		fnAccessDenied(true);
 	}
 
+	// masters that items point to: table => array(item column, what it is)
+	$in_use = array(
+		'mst_principal' => array('item_principal', 'principal'),
+		'mst_brand' => array('item_brand_make', 'brand'),
+	);
+
 	if ($delete_id !== '')
 	{
 		try
 		{
 			$conn = new dbconnect();
+			if (isset($in_use[$table])) {
+				$used = $conn->prepare("SELECT COUNT(*) FROM tbl_item_details WHERE item_status = 1 AND `" . $in_use[$table][0] . "` = :id");
+				$used->execute(array(':id' => $delete_id));
+				$n = (int)$used->fetchColumn();
+				if ($n > 0) {
+					http_response_code(409);
+					die("This " . $in_use[$table][1] . " is used by " . $n . " item(s) - it cannot be deleted..!");
+				}
+			}
 			$stmt = $conn->prepare("UPDATE `" . $table . "` SET `" . $status . "` = 0 WHERE `" . $where . "` = :id");
 			$stmt->execute(array(':id' => $delete_id));
 			echo 1;

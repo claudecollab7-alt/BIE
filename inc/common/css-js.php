@@ -152,6 +152,26 @@
 				}],
 			});
 
+			// 2026-10-23 four columns, last one (actions) not sortable - principal / brand masters with their item count
+			$('.datatable-col4').DataTable({
+				autoWidth: false,
+				responsive: true,
+				processing: true,
+				stateSave: true,
+				dom: '<"datatable-header"fl><"datatable-scroll"t><"datatable-footer"ip>',
+				language: {
+					search: ' _INPUT_',
+					searchPlaceholder: 'Type to Search...',
+					lengthMenu: '<span>Show:</span> _MENU_',
+					paginate: { 'first': 'First', 'last': 'Last', 'next': $('html').attr('dir') == 'rtl' ? '&larr;' : '&rarr;', 'previous': $('html').attr('dir') == 'rtl' ? '&rarr;' : '&larr;' }
+				},
+				columnDefs: [{
+					orderable: false,
+					width: 90,
+					targets: [ 3 ]
+				}],
+			});
+
 			$('.datatable-col5').DataTable({
 				autoWidth: false,
 				responsive: true,
