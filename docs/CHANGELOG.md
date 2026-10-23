@@ -21,6 +21,15 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
   side is empty or Not Applicable. Items that already have a different real principal or brand (e.g. HONDA + STANLEY,
   MULTIBRAND + TAPARIA) are listed and left as they are. On the 12-10 copy with the SPAC items: 1,505 Stanley,
   118 Taparia, 4,701 Shree Prayag items matched; about 24 listed.
+- **Second version of the sync script** (after it ran on live 23-10): live principal codes are `STANELY` and `TAPARIA`,
+  the script looked for `STAN` / `TAPA` and so skipped Stanley and Taparia completely; and Chicago's brand on live is
+  `CP`, so the script made a new CHICAGO PNEUMATIC brand nobody uses. Principals are now found by name as well as
+  code, Chicago uses brand CP, the unused duplicate brand is removed, and a pair it cannot find is shown instead of
+  skipped. On the live copy of 23-10 it matches 1,508 Stanley, 118 Taparia and 32 Chicago items (Shree Prayag 4,702
+  already were). Run `db/principal_brand_sync_231026.sql` again.
+- **Optional `db/principal_brand_override_231026.sql`:** the 45 items with a STANLEY / TAPARIA / CP brand but another
+  real principal (Customize 17, MULTIBRAND 23, HONDA 4, YAMAHA 2) get the brand's company as principal - only if
+  that is wanted; it lists the changes first.
 
 ---
 
