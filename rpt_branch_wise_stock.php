@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 units and branch stock read once for the whole list, not per item (21,000 queries on all items)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -323,6 +324,10 @@ else
                                     }
 
                                     $result = $conn->query($SQL);
+                                    $uom_map = $dbconn->GetMap("SELECT uom_id, uom_name FROM mst_uom");
+                                    // the chosen branch's stock column, first stock row of each item
+                                    $branch_field = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_REQUEST['branch_id']);
+                                    $stock_map = $branch_field != '' ? $dbconn->GetMap("SELECT item_id, " . $branch_field . " FROM tbl_item_stock ORDER BY stock_id") : array();
 
                                     if ($result->rowCount() > 0) {
                                         $Sno = 1;
@@ -330,12 +335,12 @@ else
                                             $tot_sales_value = 0;
                                             $name = $trans_type = $color = $trans_qty = $trans_code = $approve_by = '';
 
-                                            $name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $obj->item_id);
-                                            $uomname = $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $obj->uom_id);
-                                            $Itemtypename = $dbconn->GetSingleReconrd("tbl_item_details", "item_type", "item_id", $obj->item_type);
-
-                                            $field_name = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_REQUEST['branch_id']);
-                                            $branch_item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_stock", "$field_name", "item_id", $obj->item_id);
+                                            // from the row and the lists read once - these were 5 queries per item
+                                            // item_id comes from the stock join (d.*), so it is empty for an item without a stock row
+                                            $name = $obj->item_id ? $obj->item_desciption : '';
+                                            $uomname = $dbconn->MapValue($uom_map, $obj->uom_id);
+                                            $Itemtypename = '';
+                                            $branch_item_curr_stock = $dbconn->MapValue($stock_map, $obj->item_id);
 
 
                                             if ($obj->item_type == 2) {

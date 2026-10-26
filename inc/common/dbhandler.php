@@ -161,7 +161,36 @@ class dbhandler
 		}
 	}
 
-	
+	// 2026-10-26 whole lookup in one query, for reports that called GetSingleReconrd for every row
+	// SQL selects key, value; the first row of each key is kept, as GetSingleReconrd returns
+	public function GetMap($SQL)
+	{
+		$map = array();
+		try
+		{
+			foreach ($this->conn->query($SQL)->fetchAll(PDO::FETCH_NUM) as $r) {
+				if (!array_key_exists($r[0], $map)) {
+					$map[$r[0]] = $r[1];
+				}
+			}
+		}
+		catch(Exception  $e)
+		{
+			fnLogError($e);
+			echo $e->getMessage();
+		}
+		return $map;
+	}
+
+	// value for one key of a GetMap result; $none is what GetSingleReconrd gave when nothing matched
+	// ('' for a plain field, NULL for SUM / GROUP_CONCAT, '0' for COUNT). An empty key matches 0, as in SQL
+	public function MapValue($map, $key, $none = '')
+	{
+		if ($key === null || $key === '') {
+			$key = 0;
+		}
+		return array_key_exists($key, $map) ? $map[$key] : $none;
+	}
 
 	public function GetCount($tbl,$wf,$val)
 

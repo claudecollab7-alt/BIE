@@ -8,6 +8,31 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-26 - Faster reports: lookups read once per report, not once per row
+
+Six reports looked up names, units, GST, stock and SO / DC / invoice figures with one query per row - up to 21,000
+queries for one click. Each lookup is now read once for the whole report and picked from memory per row. The
+output is unchanged: 44 filter combinations of the six reports were compared byte for byte, old against new, on the
+12-10 live copy and again with the 23-10 item list (8,900 items) - all identical.
+
+| Report | Queries before -> after | Time on the server (8,900 items) |
+|---|---|---|
+| SO Stock List (branch wise) `rpt_so_stock_list_branchwise.php` | 16,845 -> 28 | 13.9 s -> 0.4 s |
+| Branch Wise Stock `rpt_branch_wise_stock.php` | 21,049 -> 27 | 5.8 s -> 0.2 s |
+| Stock List, all branches `rpt_all_store_stock_list.php` | 14,035 -> 26 | 3.3 s -> 0.15 s |
+| Stock List `rpt_store_stock_list.php` | 12,623 -> 21 | 3.6 s -> 0.16 s |
+| Item Details check `rpt_item_details_check.php` | 12,621 -> 20 | 3.5 s -> 0.1 s |
+| Sales Order Report `rpt_sales_order.php` | 5,891 -> 39 | 2.7 s -> 0.08 s |
+
+- New `dbhandler` helpers: `GetMap($sql)` (key => value, first row per key, as `GetSingleReconrd` returns) and
+  `MapValue($map, $key, $none)` (the value `GetSingleReconrd` would have given, also when nothing matches).
+- Lookups whose results were never shown are gone (item type on the stock lists, the Sales Order report's per-DC
+  invoice status / counts and enquiry name - these read columns the sales order does not have).
+- The big reports still send every row to the browser (4.5 MB for the SO stock list on all items), so the page
+  itself takes a few seconds to draw - paging them is the next step.
+
+---
+
 ## 2026-10-23 - Principal "All" option, item counts on principal / brand, principal-brand pairs
 
 - **Bulk Discount / Margin and Item Price Update:** the Principal dropdown had no "--- All ---" choice. It carried a

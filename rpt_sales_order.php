@@ -10,6 +10,7 @@ $dbconn = new dbhandler();
 // 2026-10-22 dispatched qty from dc_dispatch_qty - dc_qty repeats the ordered qty on every DC, so an SO sent in 2+ DCs never showed Completed
 // 2026-10-22 Partial opens a popup with the SO's items and their stage (pending items, Show all for every item) - it linked to a page that does not exist
 
+// 2026-10-26 DC / invoice / total / name lookups read once for all the SOs listed, not about 20 queries per SO
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -276,6 +277,37 @@ else
 
                                         //echo $SQL;
                                         $result = $conn->query($SQL);
+                                        $so_rows = $result->fetchAll();
+
+                                        // per SO: quantities, DCs, invoices, totals and names in one query each, not about 20 queries per SO
+                                        // (a group_concat keeps DC / invoice order, as the per-SO queries returned them)
+                                        $ids = $supp_ids = $cbr_ids = array(0);
+                                        foreach ($so_rows as $r) {
+                                            $ids[] = (int)$r->so_id;
+                                            $supp_ids[] = (int)$r->supp_id;
+                                            $cbr_ids[] = (int)$r->branch_id;
+                                        }
+                                        $in = implode(',', array_unique($ids));
+                                        $m_so_qty = $dbconn->GetMap("SELECT so_id, SUM(so_qty) FROM tbl_sales_order_details WHERE so_id IN ($in) GROUP BY so_id");
+                                        $m_item_total = $dbconn->GetMap("SELECT so_id, SUM(item_total) FROM tbl_sales_order_details WHERE so_id IN ($in) GROUP BY so_id");
+                                        $m_pack_total = $dbconn->GetMap("SELECT so_id, SUM(pack_total) FROM tbl_sales_order_pack_dts WHERE so_id IN ($in) GROUP BY so_id");
+                                        $m_dc_list = $dbconn->GetMap("SELECT so_id, GROUP_CONCAT(dc_id) FROM tbl_dc WHERE dc_status = 1 AND so_id IN ($in) GROUP BY so_id");
+                                        $m_dc_qty = $dbconn->GetMap("SELECT d.so_id, SUM(dd.dc_dispatch_qty) FROM tbl_dc d JOIN tbl_dc_details dd ON dd.dc_id = d.dc_id
+                                            WHERE d.dc_status = 1 AND dd.dc_dispatch_qty > 0 AND d.so_id IN ($in) GROUP BY d.so_id");
+                                        $m_dc_count = $dbconn->GetMap("SELECT so_id, COUNT(dc_id) FROM tbl_dc WHERE dc_status = 1 AND so_id IN ($in) GROUP BY so_id");
+                                        $m_inv_count = $dbconn->GetMap("SELECT so_id, COUNT(inv_id) FROM tbl_invoice WHERE inv_status = 1 AND so_id IN ($in) GROUP BY so_id");
+                                        $m_dc_first = $dbconn->GetMap("SELECT so_id, dc_id FROM tbl_dc WHERE so_id IN ($in) ORDER BY dc_id");
+                                        $m_inv_first = $dbconn->GetMap("SELECT so_id, inv_id FROM tbl_invoice WHERE so_id IN ($in) ORDER BY inv_id");
+                                        $m_dc_nos = $dbconn->GetMap("SELECT so_id, GROUP_CONCAT(dc_id,'~',dc_slno,'~',dc_date ORDER BY dc_id) FROM tbl_dc WHERE dc_slno > 0 AND so_id IN ($in) GROUP BY so_id");
+                                        $m_dc_nos_approved = $dbconn->GetMap("SELECT so_id, GROUP_CONCAT(dc_id,'~',dc_slno,'~',dc_date ORDER BY dc_id) FROM tbl_dc WHERE dc_slno > 0 AND dc_approve_status = '1' AND so_id IN ($in) GROUP BY so_id");
+                                        $m_inv_nos = $dbconn->GetMap("SELECT so_id, GROUP_CONCAT(inv_id,'~',inv_slno,'~',inv_date ORDER BY inv_id) FROM tbl_invoice WHERE inv_slno > 0 AND so_id IN ($in) GROUP BY so_id");
+                                        $m_inv_nos_active = $dbconn->GetMap("SELECT so_id, GROUP_CONCAT(inv_id,'~',inv_slno,'~',inv_date ORDER BY inv_id) FROM tbl_invoice WHERE inv_slno > 0 AND inv_status = '1' AND so_id IN ($in) GROUP BY so_id");
+                                        $in = implode(',', array_unique($supp_ids));
+                                        $m_supp_name = $dbconn->GetMap("SELECT supp_id, supp_name FROM mst_supplier_new WHERE supp_id IN ($in)");
+                                        $m_supp_add2 = $dbconn->GetMap("SELECT supp_id, supp_add2 FROM mst_supplier_new WHERE supp_id IN ($in)");
+                                        $in = implode(',', array_unique($cbr_ids));
+                                        $m_cbr_name = $dbconn->GetMap("SELECT branch_id, branch_name FROM mst_customer_branch WHERE branch_id IN ($in)");
+                                        $m_cbr_add2 = $dbconn->GetMap("SELECT branch_id, branch_add2 FROM mst_customer_branch WHERE branch_id IN ($in)");
 
                                         $c_jpo = $c_dc = $c_inv = $cc_dc = $tot_sub = $cdcc_dc = 0;
                                         if ($result->rowCount() > 0) {
@@ -284,22 +316,22 @@ else
 
                                             $total_quo_value = $net_value = 0;
 
-                                            while ($obj = $result->fetch()) {
+                                            foreach ($so_rows as $obj) {
                                                 $inv_stat = $inv_slno = '';
 
                                                 // echo $_REQUEST['sch_by'] . '**';
-                                                $so_qty = $dbconn->GetSingleReconrd("tbl_sales_order_details", "SUM(so_qty)", "so_id", $obj->so_id);
+                                                $so_qty = $dbconn->MapValue($m_so_qty, $obj->so_id, null);
                                                 
-                                                $dc_count_ids = $dbconn->GetSingleReconrd("tbl_dc", "group_concat(dc_id)", "dc_status = 1 AND so_id", $obj->so_id);
+                                                $dc_count_ids = $dbconn->MapValue($m_dc_list, $obj->so_id, null);
                                                 $dc_qty=0;
                                                 if($dc_count_ids != ''){
-                                                $dc_qty = $dbconn->GetSingleReconrd("tbl_dc_details", "SUM(dc_dispatch_qty)","dc_id IN (".$dc_count_ids.") AND dc_dispatch_qty>0 AND 1", 1);
+                                                $dc_qty = $dbconn->MapValue($m_dc_qty, $obj->so_id, null);
                                                 }
-                                                $count_dc_ids = $dbconn->GetSingleReconrd("tbl_dc", "count(dc_id)", " dc_status = 1 AND so_id", $obj->so_id);
-                                                $count_inv_ids = $dbconn->GetSingleReconrd("tbl_invoice", "count(inv_id)", " inv_status = 1 AND so_id", $obj->so_id);
+                                                $count_dc_ids = $dbconn->MapValue($m_dc_count, $obj->so_id, '0');
+                                                $count_inv_ids = $dbconn->MapValue($m_inv_count, $obj->so_id, '0');
 
-                                                $dc_ids = $dbconn->GetSingleReconrd("tbl_dc", "dc_id", "so_id", $obj->so_id);
-                                                $inv_ids = $dbconn->GetSingleReconrd("tbl_invoice", "inv_id", "so_id", $obj->so_id);
+                                                $dc_ids = $dbconn->MapValue($m_dc_first, $obj->so_id);
+                                                $inv_ids = $dbconn->MapValue($m_inv_first, $obj->so_id);
 
                                                 
                                                 //echo $so_qty.' ~ '.$dc_qty.'**'.$count_dc_ids.'***'.$count_inv_ids;
@@ -318,13 +350,11 @@ else
                                                     $status = '';
                                                 }
                                                 if ($_REQUEST['sch_by'] != "" && $_REQUEST['sch_by'] == 2) {
-                                                    $inv_stat = $dbconn->GetSingleReconrd("tbl_invoice", "inv_status", "dc_id", $obj->dc_id);
-                                                    $inv_slno = $dbconn->GetSingleReconrd("tbl_invoice", "inv_slno", "dc_id", $obj->dc_id);
                                                     //echo '~~' . $inv_stat;
                                                     if($so_qty == $dc_qty && $count_dc_ids == $count_inv_ids){
                                                     //if ($inv_stat == 1 && $inv_slno > 0) {
                                                         $dc_nos = "";
-                                                        $dc_ids = $dbconn->GetSingleReconrd("tbl_dc", "group_concat(dc_id,'~',dc_slno,'~',dc_date)", "dc_slno > 0 AND so_id", $obj->so_id);
+                                                        $dc_ids = $dbconn->MapValue($m_dc_nos, $obj->so_id, null);
                                                         if ($dc_ids != "") {
                                                             $dc_idss = explode(",", $dc_ids);
                                                             foreach ($dc_idss as $value) {
@@ -335,26 +365,19 @@ else
                                                                 $dc_nos .=  '<a target="_blank" href="dc_print.php?dc_id=' . $ind_dc_dets[0] . '"><b>' . $ind_dc_dets[1] .  "</b></a> (".$dc_date."),<br>";
                                                             }
                                                         }
-                                                        $invoice_ids = $dbconn->GetSingleReconrd("tbl_invoice", "group_concat(inv_id)", "dc_id", $obj->dc_id);
 
 
-                                                        $item_total = $dbconn->GetSingleReconrd("tbl_sales_order_details", "SUM(item_total)", "so_id", $obj->so_id_new);
-                                                        $pack_total = $dbconn->GetSingleReconrd("tbl_sales_order_pack_dts", "SUM(pack_total)", "so_id", $obj->so_id_new);
+                                                        $item_total = $dbconn->MapValue($m_item_total, $obj->so_id_new, null);
+                                                        $pack_total = $dbconn->MapValue($m_pack_total, $obj->so_id_new, null);
 
                                                         //$tot_subb = $item_total;
                                                         $tot_sub = $item_total + $pack_total;
 
-                                                        if ($obj->supp_id != '0') {
-                                                            $buss_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                            $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add2", "supp_id", $obj->supp_id);
-                                                        } else {
-                                                            $buss_name = $dbconn->GetSingleReconrd("tbl_enquiry", "enq_buss_name", "enq_id", $obj->enq_id);
-                                                        }
-                                                        $supp_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                        $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add2", "supp_id", $obj->supp_id);
+                                                        $supp_name = $dbconn->MapValue($m_supp_name, $obj->supp_id);
+                                                        $add2 = ' - ' . $dbconn->MapValue($m_supp_add2, $obj->supp_id);
                                                         if ($obj->branch_id > 0) {
-                                                            $branch_name = $dbconn->GetSingleReconrd("mst_customer_branch", "branch_name", "branch_id", $obj->branch_id);
-                                                            $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_customer_branch", "branch_add2", "branch_id", $obj->branch_id);
+                                                            $branch_name = $dbconn->MapValue($m_cbr_name, $obj->branch_id);
+                                                            $add2 = ' - ' . $dbconn->MapValue($m_cbr_add2, $obj->branch_id);
                                                             $cus_details = $supp_name . '<b>Branch Name: </b></br>' . $branch_name . $add2;
                                                         } else {
                                                             $cus_details = '<b>' . $supp_name . '</br></b>' . $add2;
@@ -366,31 +389,17 @@ else
                                                         // } else {
                                                         //     $jpo = '';
                                                         // }
-                                                        $count_ids = $dbconn->GetSingleReconrd("tbl_dc", "count(dc_id)", "so_id", $obj->so_id);
-                                                        if ($count_ids != '') {
-                                                            $dc = '<b>' . $obj->dc_slno . '</b><br>' . date("d-m-Y", strtotime($obj->dc_date));
-                                                            $c_dc++;
-                                                        } else {
-                                                            $dc = '';
-                                                        }
-                                                        $inv_ids = $dbconn->GetSingleReconrd("tbl_invoice", "count(inv_id)", "inv_slno > 0 AND dc_id", $obj->dc_id);
-                                                        if ($inv_ids != '') {
-                                                            $inv = '<b>' . $obj->inv_slno . '</b><br>' . date("d-m-Y", strtotime($obj->inv_date));
-                                                            $c_inv++;
-                                                        } else {
-                                                            $inv = '';
-                                                        }
                                                         if ($obj->so_id_new > 0) {
 
                                                             $so_link = '<a href="print_sales_order.php?so_id=' . $obj->so_id_new . '" target="_blank">' .
-                                                                $dbconn->GetSingleReconrd("tbl_sales_order", "so_refno", "so_id", $obj->so_id_new) . '</a>';
+                                                                $obj->so_refno . '</a>';
                                                         } else {
                                                             $so_link = '';
                                                         }
-                                                        $pack_total = $dbconn->GetSingleReconrd("tbl_sales_order_pack_dts", "SUM(pack_total)", "so_id", $obj->so_id_new);
+                                                        $pack_total = $dbconn->MapValue($m_pack_total, $obj->so_id_new, null);
                                                         $invoice_nos = "";
 
-                                                        $inv_data = $dbconn->GetSingleReconrd("tbl_invoice", "group_concat(inv_id,'~',inv_slno,'~',inv_date)", "inv_slno > 0 AND so_id", $obj->so_id);
+                                                        $inv_data = $dbconn->MapValue($m_inv_nos, $obj->so_id, null);
 
                                                         if ($inv_data != "") {
                                                             $inv_dets = explode(",", $inv_data);
@@ -425,13 +434,11 @@ else
                                                 }
                                                 
                                                 else if ($_REQUEST['sch_by'] != "" && $_REQUEST['sch_by'] == 4) {
-                                                    $inv_stat = $dbconn->GetSingleReconrd("tbl_invoice", "inv_status", "dc_id", $obj->dc_id);
-                                                    $inv_slno = $dbconn->GetSingleReconrd("tbl_invoice", "inv_slno", "dc_id", $obj->dc_id);
                                                     //echo '~~' . $inv_stat;
                                                     if($so_qty != $dc_qty || $count_dc_ids != $count_inv_ids){
                                                     //if ($inv_stat != 1) {
                                                         $dc_nos = "";
-                                                        $dc_ids = $dbconn->GetSingleReconrd("tbl_dc", "group_concat(dc_id,'~',dc_slno,'~',dc_date)", "dc_slno > 0 AND so_id", $obj->so_id);
+                                                        $dc_ids = $dbconn->MapValue($m_dc_nos, $obj->so_id, null);
                                                         if ($dc_ids != "") {
                                                             $dc_idss = explode(",", $dc_ids);
                                                             foreach ($dc_idss as $value) {
@@ -443,26 +450,19 @@ else
                                                             }
                                                         }
                                                         if($dc_nos != ''){
-                                                            $invoice_ids = $dbconn->GetSingleReconrd("tbl_invoice", "group_concat(inv_id)", "dc_id", $obj->dc_id);
 
 
-                                                            $item_total = $dbconn->GetSingleReconrd("tbl_sales_order_details", "SUM(item_total)", "so_id", $obj->so_id_new);
-                                                            $pack_total = $dbconn->GetSingleReconrd("tbl_sales_order_pack_dts", "SUM(pack_total)", "so_id", $obj->so_id_new);
+                                                            $item_total = $dbconn->MapValue($m_item_total, $obj->so_id_new, null);
+                                                            $pack_total = $dbconn->MapValue($m_pack_total, $obj->so_id_new, null);
 
                                                             //$tot_subb = $item_total;
                                                             $tot_sub = $item_total + $pack_total;
 
-                                                            if ($obj->supp_id != '0') {
-                                                                $buss_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                                $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add2", "supp_id", $obj->supp_id);
-                                                            } else {
-                                                                $buss_name = $dbconn->GetSingleReconrd("tbl_enquiry", "enq_buss_name", "enq_id", $obj->enq_id);
-                                                            }
-                                                            $supp_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                            $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add2", "supp_id", $obj->supp_id);
+                                                            $supp_name = $dbconn->MapValue($m_supp_name, $obj->supp_id);
+                                                            $add2 = ' - ' . $dbconn->MapValue($m_supp_add2, $obj->supp_id);
                                                             if ($obj->branch_id > 0) {
-                                                                $branch_name = $dbconn->GetSingleReconrd("mst_customer_branch", "branch_name", "branch_id", $obj->branch_id);
-                                                                $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_customer_branch", "branch_add2", "branch_id", $obj->branch_id);
+                                                                $branch_name = $dbconn->MapValue($m_cbr_name, $obj->branch_id);
+                                                                $add2 = ' - ' . $dbconn->MapValue($m_cbr_add2, $obj->branch_id);
                                                                 $cus_details = $supp_name . '<b>Branch Name: </b></br>' . $branch_name . $add2;
                                                             } else {
                                                                 $cus_details = '<b>' . $supp_name . '</br></b>' . $add2;
@@ -474,31 +474,17 @@ else
                                                             // } else {
                                                             //     $jpo = '';
                                                             // }
-                                                            $count_ids = $dbconn->GetSingleReconrd("tbl_dc", "count(dc_id)", "so_id", $obj->so_id);
-                                                            if ($count_ids != '') {
-                                                                $dc = '<b>' . $obj->dc_slno . '</b><br>' . date("d-m-Y", strtotime($obj->dc_date));
-                                                                $c_dc++;
-                                                            } else {
-                                                                $dc = '';
-                                                            }
-                                                            $inv_ids = $dbconn->GetSingleReconrd("tbl_invoice", "count(inv_id)", "inv_slno > 0 AND dc_id", $obj->sc_id);
-                                                            if ($inv_ids != '') {
-                                                                $inv = '<b>' . $obj->inv_slno . '</b><br>' . date("d-m-Y", strtotime($obj->inv_date));
-                                                                $c_inv++;
-                                                            } else {
-                                                                $inv = '';
-                                                            }
                                                             if ($obj->so_id_new > 0) {
 
                                                                 $so_link = '<a href="print_sales_order.php?so_id=' . $obj->so_id_new . '" target="_blank">' .
-                                                                    $dbconn->GetSingleReconrd("tbl_sales_order", "so_refno", "so_id", $obj->so_id_new) . '</a>';
+                                                                    $obj->so_refno . '</a>';
                                                             } else {
                                                                 $so_link = '';
                                                             }
-                                                            $pack_total = $dbconn->GetSingleReconrd("tbl_sales_order_pack_dts", "SUM(pack_total)", "so_id", $obj->so_id_new);
+                                                            $pack_total = $dbconn->MapValue($m_pack_total, $obj->so_id_new, null);
                                                             $invoice_nos = "";
 
-                                                            $inv_data = $dbconn->GetSingleReconrd("tbl_invoice", "group_concat(inv_id,'~',inv_slno,'~',inv_date)", "inv_slno > 0 AND inv_status = '1' AND so_id", $obj->so_id);
+                                                            $inv_data = $dbconn->MapValue($m_inv_nos_active, $obj->so_id, null);
 
                                                             if ($inv_data != "") {
                                                                 $inv_dets = explode(",", $inv_data);
@@ -534,8 +520,6 @@ else
                                                 }
                                                 else if ($_REQUEST['sch_by'] != "" && $_REQUEST['sch_by'] == 1) {
                                                     $status = '<span class="badge bg-warning"> Pending</span>';
-                                                    $inv_stat = $dbconn->GetSingleReconrd("tbl_invoice", "inv_status", "dc_id", $obj->dc_id);
-                                                    $inv_slno = $dbconn->GetSingleReconrd("tbl_invoice", "inv_slno", "dc_id", $obj->dc_id);
 
                                                     //echo '~~' . $inv_stat;
                                                     if($so_qty != $dc_qty || $count_dc_ids != $count_inv_ids){
@@ -543,7 +527,7 @@ else
                                                     //if ($inv_stat != 1) {
                                                         $dc_nos = "";
                                                         $invoice_nos = "";
-                                                        $dc_ids = $dbconn->GetSingleReconrd("tbl_dc", "group_concat(dc_id,'~',dc_slno,'~',dc_date)", "dc_slno > 0 AND dc_approve_status = '1' AND so_id", $obj->so_id);
+                                                        $dc_ids = $dbconn->MapValue($m_dc_nos_approved, $obj->so_id, null);
                                                         if ($dc_ids != "") {
                                                             $dc_idss = explode(",", $dc_ids);
                                                             foreach ($dc_idss as $value) {
@@ -555,26 +539,19 @@ else
                                                             }
                                                         }
                                                         if($dc_nos == '' || $inv_dets == ''){
-                                                            $invoice_ids = $dbconn->GetSingleReconrd("tbl_invoice", "group_concat(inv_id)", "dc_id", $obj->dc_id);
 
 
-                                                            $item_total = $dbconn->GetSingleReconrd("tbl_sales_order_details", "SUM(item_total)", "so_id", $obj->so_id_new);
-                                                            $pack_total = $dbconn->GetSingleReconrd("tbl_sales_order_pack_dts", "SUM(pack_total)", "so_id", $obj->so_id_new);
+                                                            $item_total = $dbconn->MapValue($m_item_total, $obj->so_id_new, null);
+                                                            $pack_total = $dbconn->MapValue($m_pack_total, $obj->so_id_new, null);
 
                                                             //$tot_subb = $item_total;
                                                             $tot_sub = $item_total + $pack_total;
 
-                                                            if ($obj->supp_id != '0') {
-                                                                $buss_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                                $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add2", "supp_id", $obj->supp_id);
-                                                            } else {
-                                                                $buss_name = $dbconn->GetSingleReconrd("tbl_enquiry", "enq_buss_name", "enq_id", $obj->enq_id);
-                                                            }
-                                                            $supp_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                            $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add2", "supp_id", $obj->supp_id);
+                                                            $supp_name = $dbconn->MapValue($m_supp_name, $obj->supp_id);
+                                                            $add2 = ' - ' . $dbconn->MapValue($m_supp_add2, $obj->supp_id);
                                                             if ($obj->branch_id > 0) {
-                                                                $branch_name = $dbconn->GetSingleReconrd("mst_customer_branch", "branch_name", "branch_id", $obj->branch_id);
-                                                                $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_customer_branch", "branch_add2", "branch_id", $obj->branch_id);
+                                                                $branch_name = $dbconn->MapValue($m_cbr_name, $obj->branch_id);
+                                                                $add2 = ' - ' . $dbconn->MapValue($m_cbr_add2, $obj->branch_id);
                                                                 $cus_details = $supp_name . '<b>Branch Name: </b></br>' . $branch_name . $add2;
                                                             } else {
                                                                 $cus_details = '<b>' . $supp_name . '</br></b>' . $add2;
@@ -586,31 +563,17 @@ else
                                                             // } else {
                                                             //     $jpo = '';
                                                             // }
-                                                            $count_ids = $dbconn->GetSingleReconrd("tbl_dc", "count(dc_id)", "so_id", $obj->so_id);
-                                                            if ($count_ids != '') {
-                                                                $dc = '<b>' . $obj->dc_slno . '</b><br>' . date("d-m-Y", strtotime($obj->dc_date));
-                                                                $c_dc++;
-                                                            } else {
-                                                                $dc = '';
-                                                            }
-                                                            $inv_ids = $dbconn->GetSingleReconrd("tbl_invoice", "count(inv_id)", "inv_slno > 0 AND dc_id", $obj->dc_id);
-                                                            if ($inv_ids != '') {
-                                                                $inv = '<b>' . $obj->inv_slno . '</b><br>' . date("d-m-Y", strtotime($obj->inv_date));
-                                                                $c_inv++;
-                                                            } else {
-                                                                $inv = '';
-                                                            }
                                                             if ($obj->so_id_new > 0) {
 
                                                                 $so_link = '<a href="print_sales_order.php?so_id=' . $obj->so_id_new . '" target="_blank">' .
-                                                                    $dbconn->GetSingleReconrd("tbl_sales_order", "so_refno", "so_id", $obj->so_id_new) . '</a>';
+                                                                    $obj->so_refno . '</a>';
                                                             } else {
                                                                 $so_link = '';
                                                             }
-                                                            $pack_total = $dbconn->GetSingleReconrd("tbl_sales_order_pack_dts", "SUM(pack_total)", "so_id", $obj->so_id_new);
+                                                            $pack_total = $dbconn->MapValue($m_pack_total, $obj->so_id_new, null);
                                                             $invoice_nos = "";
 
-                                                            $inv_data = $dbconn->GetSingleReconrd("tbl_invoice", "group_concat(inv_id,'~',inv_slno,'~',inv_date)", "inv_slno > 0 AND so_id", $obj->so_id);
+                                                            $inv_data = $dbconn->MapValue($m_inv_nos, $obj->so_id, null);
 
                                                             if ($inv_data != "") {
                                                                 $inv_dets = explode(",", $inv_data);
@@ -646,7 +609,7 @@ else
                                                 }
                                                 else {
                                                     $dc_nos = "";
-                                                    $dc_ids = $dbconn->GetSingleReconrd("tbl_dc", "group_concat(dc_id,'~',dc_slno,'~',dc_date)", " dc_slno > 0 AND so_id", $obj->so_id);
+                                                    $dc_ids = $dbconn->MapValue($m_dc_nos, $obj->so_id, null);
                                                     if ($dc_ids != "") {
                                                         $dc_idss = explode(",", $dc_ids);
                                                         foreach ($dc_idss as $value) {
@@ -657,26 +620,19 @@ else
                                                             $dc_nos .=  '<a target="_blank" href="dc_print.php?dc_id=' . $ind_dc_dets[0] . '"><b>' . $ind_dc_dets[1] .  "</b></a> (".$dc_date."),<br>";
                                                         }
                                                     }
-                                                    $invoice_ids = $dbconn->GetSingleReconrd("tbl_invoice", "group_concat(inv_id)", "inv_slno > 0 AND dc_id", $obj->dc_id);
 
 
-                                                    $item_total = $dbconn->GetSingleReconrd("tbl_sales_order_details", "SUM(item_total)", "so_id", $obj->so_id_new);
-                                                    $pack_total = $dbconn->GetSingleReconrd("tbl_sales_order_pack_dts", "SUM(pack_total)", "so_id", $obj->so_id_new);
+                                                    $item_total = $dbconn->MapValue($m_item_total, $obj->so_id_new, null);
+                                                    $pack_total = $dbconn->MapValue($m_pack_total, $obj->so_id_new, null);
 
                                                     //$tot_subb = $item_total;
                                                     $tot_sub = $item_total + $pack_total;
 
-                                                    if ($obj->supp_id != '0') {
-                                                        $buss_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                        $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add2", "supp_id", $obj->supp_id);
-                                                    } else {
-                                                        $buss_name = $dbconn->GetSingleReconrd("tbl_enquiry", "enq_buss_name", "enq_id", $obj->enq_id);
-                                                    }
-                                                    $supp_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                    $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add2", "supp_id", $obj->supp_id);
+                                                    $supp_name = $dbconn->MapValue($m_supp_name, $obj->supp_id);
+                                                    $add2 = ' - ' . $dbconn->MapValue($m_supp_add2, $obj->supp_id);
                                                     if ($obj->branch_id > 0) {
-                                                        $branch_name = $dbconn->GetSingleReconrd("mst_customer_branch", "branch_name", "branch_id", $obj->branch_id);
-                                                        $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_customer_branch", "branch_add2", "branch_id", $obj->branch_id);
+                                                        $branch_name = $dbconn->MapValue($m_cbr_name, $obj->branch_id);
+                                                        $add2 = ' - ' . $dbconn->MapValue($m_cbr_add2, $obj->branch_id);
                                                         $cus_details = $supp_name . '<b>Branch Name: </b></br>' . $branch_name . $add2;
                                                     } else {
                                                         $cus_details = '<b>' . $supp_name . '</br></b>' . $add2;
@@ -688,31 +644,17 @@ else
                                                     // } else {
                                                     //     $jpo = '';
                                                     // }
-                                                    $count_ids = $dbconn->GetSingleReconrd("tbl_dc", "count(dc_id)", "so_id", $obj->so_id);
-                                                    if ($count_ids != '') {
-                                                        $dc = '<b>' . $obj->dc_slno . '</b><br>' . date("d-m-Y", strtotime($obj->dc_date));
-                                                        $c_dc++;
-                                                    } else {
-                                                        $dc = '';
-                                                    }
-                                                    $inv_ids = $dbconn->GetSingleReconrd("tbl_invoice", "count(inv_id)", "inv_slno > 0 AND dc_id", $obj->dc_id);
-                                                    if ($inv_ids != '') {
-                                                        $inv = '<b>' . $obj->inv_slno . '</b><br>' . date("d-m-Y", strtotime($obj->inv_date));
-                                                        $c_inv++;
-                                                    } else {
-                                                        $inv = '';
-                                                    }
                                                     if ($obj->so_id_new > 0) {
 
                                                         $so_link = '<a href="print_sales_order.php?so_id=' . $obj->so_id_new . '" target="_blank">' .
-                                                            $dbconn->GetSingleReconrd("tbl_sales_order", "so_refno", "so_id", $obj->so_id_new) . '</a>';
+                                                            $obj->so_refno . '</a>';
                                                     } else {
                                                         $so_link = '';
                                                     }
-                                                    $pack_total = $dbconn->GetSingleReconrd("tbl_sales_order_pack_dts", "SUM(pack_total)", "so_id", $obj->so_id_new);
+                                                    $pack_total = $dbconn->MapValue($m_pack_total, $obj->so_id_new, null);
                                                     $invoice_nos = "";
 
-                                                    $inv_data = $dbconn->GetSingleReconrd("tbl_invoice", "group_concat(inv_id,'~',inv_slno,'~',inv_date)", "inv_slno > 0 AND so_id", $obj->so_id);
+                                                    $inv_data = $dbconn->MapValue($m_inv_nos, $obj->so_id, null);
 
                                                     if ($inv_data != "") {
                                                         $inv_dets = explode(",", $inv_data);

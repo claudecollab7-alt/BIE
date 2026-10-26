@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 names and units read once for the whole list, not per item (12,600 queries on all items)
 
 if ($_REQUEST['from_dt'] == '')
     $rpt_from_dt = date('Y-m-d');
@@ -318,6 +319,7 @@ error_reporting(E_ALL);
                                     //echo $SQL;
 
                                     $result = $conn->query($SQL);
+                                    $uom_map = $dbconn->GetMap("SELECT uom_id, uom_name FROM mst_uom");
 
                                     if ($result->rowCount() > 0) {
                                         $Sno = 1;
@@ -325,9 +327,10 @@ error_reporting(E_ALL);
                                             $tot_sales_value = 0;
                                             $name = $trans_type = $color = $trans_qty = $trans_code = $approve_by = '';
 
-                                            $name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $obj->item_id);
-                                            $uomname = $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $obj->uom_id);
-                                            $Itemtypename = $dbconn->GetSingleReconrd("tbl_item_details", "item_type", "item_id", $obj->item_type);
+                                            // from the row and the unit list read once - these were 3 queries per item
+                                            $name = $obj->item_desciption;
+                                            $uomname = $dbconn->MapValue($uom_map, $obj->uom_id);
+                                            $Itemtypename = '';
 
                                             if($obj->item_type == 2){
                                                 $Itemtypename = 'Trading';

@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 units and HSN codes read once for the whole list, not per item (12,600 queries)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -195,15 +196,18 @@ else
                                    $SQL = "SELECT item_id, item_code, item_desciption, item_uom, multi_uom_id, item_hsn FROM tbl_item_details WHERE item_status = '1' ORDER BY item_id ASC";
 
                                     $result = $conn->query($SQL);
+                                    // units and HSN codes read once - these were 3 queries per item
+                                    $uom_map = $dbconn->GetMap("SELECT uom_id, uom_name FROM mst_uom");
+                                    $hsn_map = $dbconn->GetMap("SELECT hsn_id, hsn_code FROM mst_hsn");
 	                                $tax_item_selling_price = '';	
 
 
                                     if ($result->rowCount() > 0) {
                                         while ($obj = $result->fetch()) {
                                             $item_name = "<b>".$obj->item_code."</b> - ".$obj->item_desciption;
-                                            $item_uom = $dbconn->GetSingleReconrd("mst_uom","uom_name","uom_id",$obj->item_uom);
-                                            $item_multi_uom = $dbconn->GetSingleReconrd("mst_uom","uom_name","uom_id",$obj->multi_uom_id);
-                                            $item_hsn = $dbconn->GetSingleReconrd("mst_hsn","hsn_code","hsn_id",$obj->item_hsn);
+                                            $item_uom = $dbconn->MapValue($uom_map, $obj->item_uom);
+                                            $item_multi_uom = $dbconn->MapValue($uom_map, (int)$obj->multi_uom_id);   // text column - read as a number, like the SQL compare
+                                            $item_hsn = $dbconn->MapValue($hsn_map, $obj->item_hsn);
 
 
                                            echo '<tr>

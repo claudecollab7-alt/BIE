@@ -23,6 +23,7 @@ if ($_REQUEST['to_dt'] == '')
 else
     $rpt_to_dt = $_REQUEST['to_dt'];
 
+// 2026-10-26 units, GST, stock and selling price read once for the whole list, not per item (14,000 queries on all items)
 // 2026-10-06 branch columns driven from mst_branch - the body only ever wrote ho and kl, so Rajapalayam had a header but no cells
 
 //ini_set('display_errors', '1');
@@ -333,6 +334,19 @@ else
                                     $result = $conn->query($SQL);
 	                                $tax_item_selling_price = '';	
 
+                                    // read once for the whole list: units, GST, every item's stock row (first one when an item has two)
+                                    // and the selling price of the user's branch
+                                    $uom_map = $dbconn->GetMap("SELECT uom_id, uom_name FROM mst_uom");
+                                    $igst_map = $dbconn->GetMap("SELECT hsn_id, igst FROM mst_hsn");
+                                    $stock_rows = array();
+                                    foreach ($conn->query("SELECT * FROM tbl_item_stock ORDER BY stock_id")->fetchAll(PDO::FETCH_OBJ) as $st) {
+                                        if (!isset($stock_rows[$st->item_id])) {
+                                            $stock_rows[$st->item_id] = $st;
+                                        }
+                                    }
+                                    $branch_item_selling_price = $dbconn->GetSingleReconrd("mst_branch","branch_item_selling_price","branch_id",$_SESSION['_user_branch']);
+                                    $selling_map = $branch_item_selling_price != '' ? $dbconn->GetMap("SELECT item_id, " . $branch_item_selling_price . " FROM tbl_item_stock ORDER BY stock_id") : array();
+
 
                                     if ($result->rowCount() > 0) {
                                         $Sno = 1;
@@ -340,9 +354,10 @@ else
                                             $tot_sales_value = 0;
                                             $name = $trans_type = $color = $trans_qty = $trans_code = $approve_by = '';
 
-                                            $name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $obj->item_id);
-                                            $uomname = $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $obj->uom_id);
-                                            $Itemtypename = $dbconn->GetSingleReconrd("tbl_item_details", "item_type", "item_id", $obj->item_type);
+                                            // from the row and the lists read before the loop - these were 8 queries per item
+                                            $name = $obj->item_desciption;
+                                            $uomname = $dbconn->MapValue($uom_map, $obj->uom_id);
+                                            $Itemtypename = '';
 											
 											 if ($obj->item_image != "") {
                                                 $item_image = '<a class="fancybox fancybox.ajax"  style="text-align: center;" target="_blank" href="project_img/item_image/' . $obj->item_image . '"><img src="project_img/item_image/' . $obj->item_image . '" width="50px" height="50px" alt=""></a>';
@@ -350,10 +365,8 @@ else
                                                 $item_image    = '<img class="fancybox"  src="project_img/no-image.jpg" width="50px" height="50px" >';
                                             }
 
-                                            // one stock row per item - fetched here, read per branch below
-                                            $stmt1 = $conn->prepare("SELECT * FROM tbl_item_stock WHERE item_id = :item_id");
-                                            $stmt1->execute(array(':item_id' => $obj->item_id));
-                                            $stockRow = $stmt1->fetch(PDO::FETCH_OBJ);
+                                            // the item's stock row, read per branch below
+                                            $stockRow = isset($stock_rows[$obj->item_id]) ? $stock_rows[$obj->item_id] : false;
 
                                             if($obj->item_type == 2){
                                                 $Itemtypename = 'Trading';
@@ -367,10 +380,9 @@ else
                                             elseif ($obj->item_type == 7) {
                                                 $Itemtypename = 'Group Trading';
                                             }
-                                            $branch_item_selling_price = $dbconn->GetSingleReconrd("mst_branch","branch_item_selling_price","branch_id",$_SESSION['_user_branch']);
-                                            $item_selling_price = $dbconn->GetSingleReconrd("tbl_item_stock", "$branch_item_selling_price", "item_id", $obj->item_id);
+                                            $item_selling_price = $dbconn->MapValue($selling_map, $obj->item_id);
 
-		                                    $igst = $dbconn->GetSingleReconrd("mst_hsn", "igst", "hsn_id", $obj->item_hsn);
+		                                    $igst = $dbconn->MapValue($igst_map, $obj->item_hsn);
 
 
                                             $with_tax = $item_selling_price * $igst / 100;

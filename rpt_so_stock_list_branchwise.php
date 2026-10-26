@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 branch stock and open SO qty read once for the whole list, not per item (16,800 queries on all items)
 // 2026-10-13 update location for creators in Task Settings (STOCK_LOCATION C) - was users 1 and 9
     // ini_set('display_errors', '1');
     // ini_set('display_startup_errors', '1');
@@ -346,15 +347,20 @@ else
                                             $sql .= " ORDER BY a.item_id ASC";
                                     $result = $conn->query($sql);
 
+                                    // the branch's stock column (first stock row of each item) and the qty on its open SOs, per item
+                                    $branch_field = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_REQUEST['branch_id']);
+                                    $stock_map = $branch_field != '' ? $dbconn->GetMap("SELECT item_id, " . $branch_field . " FROM tbl_item_stock ORDER BY stock_id") : array();
+                                    $so_qty_map = $dbconn->GetMap("SELECT b.item_id, SUM(b.so_qty) FROM tbl_sales_order AS a JOIN tbl_sales_order_details AS b ON a.so_id = b.so_id
+                                        WHERE a.so_finyr = " . $conn->quote($finyr_name) . " AND a.bie_branch_id = " . (int)$_REQUEST['branch_id'] . " AND a.dc_status = 0 AND a.so_cancel_status = 0 GROUP BY b.item_id");
+
                                     if ($result->rowCount() > 0) {
                                         $Sno = 1;
                                         while ($obj = $result->fetch()) {
 
                                             $so_pending_qty = $available_qty = 0;
         
-                                            $item_uom = $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $obj->item_uom);
-                                            $field_name = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_REQUEST['branch_id']);
-                                            $branch_item_curr_stock = $dbconn->GetSingleReconrd("tbl_item_stock", "$field_name", "item_id", $obj->item_id);
+                                            // stock and SO qty from the lists read before the loop - these were 4 queries per item
+                                            $branch_item_curr_stock = $dbconn->MapValue($stock_map, $obj->item_id);
         
                                             if ($obj->item_image != "") {
                                                 $img_link = '<a class="fancybox" href="project_img/item_image/' . $obj->item_image . '">
@@ -373,25 +379,7 @@ else
                                             // echo "SELECT SUM(b.so_qty) as so_qty, a.so_finyr FROM tbl_sales_order as a LEFT JOIN tbl_sales_order_details as b ON 
                                             // a.so_id=b.so_id WHERE a.so_finyr='".$finyr_name."' AND a.bie_branch_id ='" . $_REQUEST['branch_id']."' AND a.dc_status=0 AND a.so_cancel_status = 0 AND b.item_id='".$obj->item_id."'";
 
-                                            $so_details_qty = $conn->query("SELECT SUM(b.so_qty) as so_qty, a.so_finyr FROM tbl_sales_order as a LEFT JOIN tbl_sales_order_details as b ON 
-                                            a.so_id=b.so_id WHERE a.so_finyr='".$finyr_name."' AND a.bie_branch_id ='" . $_REQUEST['branch_id']."' AND a.dc_status=0 AND a.so_cancel_status = 0 AND b.item_id='".$obj->item_id."'");
-        
-                                        
-                                            if ($so_details_qty->rowCount() > 0) {
-                                                
-                                                $get = $so_details_qty->fetch(PDO::FETCH_OBJ);
-                                                
-                                                $so_qty = $get->so_qty;
-        
-                                                if($_REQUEST['finyr_name'] !="")
-                                                {
-                                                    $so_qty .= "AND a.so_finyr = '".($_REQUEST['finyr_name'])."' ";
-                                                }
-                                            
-        
-                                            }
-        
-        
+                                            $so_qty = $dbconn->MapValue($so_qty_map, $obj->item_id, null);
                                             $so_pending_qty = (float)$so_qty;
                                             
                                             if($so_pending_qty > 0 && $so_pending_qty > $branch_item_curr_stock){
