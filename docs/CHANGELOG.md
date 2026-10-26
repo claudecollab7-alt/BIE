@@ -8,6 +8,34 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-26 - Less work on every page: sidebar, menu lookup, shared connection
+
+Every page ran 17-22 queries before its own work, mostly the sidebar: one query per main menu for the admin, two
+(user rights, then sub menus) for everyone else. Now:
+
+- **Sidebar** (`inc/common/sidebar.php`): every sub menu the user can see in one query (admin: all shown; others:
+  the ones in their user rights for that main menu), grouped in PHP. Same menus, same order, same HTML.
+- **Current menu** (`inc/common/active_menu.php`): the page's sub menu and main menu in one query (was two).
+- **dbhandler** (`inc/common/dbhandler.php`): one connection shared by all `dbhandler` objects of a request - a page
+  made 5-7 of them, each opening its own connection. It only runs reads and single inserts, no transactions, so
+  sharing changes nothing; pages' own `dbconnect` connections (where transactions are) are untouched.
+  New `GetRow($sql, $params)` (prepared, first row).
+- **Quotation list** (`inc/datatable/ajaxQuotationlist.php`): the proforma of each quotation on the page in one query
+  (was one per row).
+
+| Page | Queries before -> after |
+|---|---|
+| Brand master (admin) | 20 -> 9 |
+| Quotation list (sales user) | 49 -> 15 |
+| Dashboard (sales user) | about 22 -> 11 |
+
+Nothing is cached - menus and rights are still read on every page, so a rights change shows at once. Checked:
+6 users (admin, sales, kerala, accounts, stores, rajapalayam) x 8 pages plus the quotation list data - all
+byte-identical to before; the earlier report (44) and list (63) comparisons and the price screen / report popup
+browser tests pass again.
+
+---
+
 ## 2026-10-26 - Big reports shown 100 rows a page
 
 After the query fix the server answers in under half a second, but the browser still drew every row at once -
