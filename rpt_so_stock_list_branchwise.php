@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
 // 2026-10-26 branch stock and open SO qty read once for the whole list, not per item (16,800 queries on all items)
 // 2026-10-13 update location for creators in Task Settings (STOCK_LOCATION C) - was users 1 and 9
     // ini_set('display_errors', '1');
@@ -54,6 +55,7 @@ else
 
     <?php include_once("inc/common/css-js.php"); ?>
     <script type="text/javascript" src="print_me.js"></script>
+    <script src="js/report_rows.js"></script>
     <script src="js/jquery.table2excel.min.js"></script>
     <script src="js/html2pdf.bundle.min.js"></script>
 
@@ -315,7 +317,7 @@ else
                                             
                                                
 		                    			</thead>
-		                            	<tbody>';
+		                            	<tbody><template id="rpt_rows">';
 
 
                                         $sql = "SELECT a.item_id as item_id, a.item_uom, a.item_image, a.item_code, a.item_type, a.item_desciption, a.item_curr_stock, b.uom_name, c.category_name,a.branch_id FROM tbl_item_details as a 
@@ -409,7 +411,7 @@ else
                                         }
                                     } 
 
-                                    echo     '</tbody>
+                                    echo     '</template></tbody>
 									   </table>
 									</div></div>';
                                 }

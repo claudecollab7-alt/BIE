@@ -8,6 +8,31 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-26 - Big reports shown 100 rows a page
+
+After the query fix the server answers in under half a second, but the browser still drew every row at once -
+38,000 cells and up to 2,000 item photos for the SO stock list, 4-9 s before the page could be used. The rows now
+wait in a `<template>` (read but not drawn, photos not loaded) and `js/report_rows.js` shows them 100 a page with a
+search box over all rows and Show 100 / 500 / 1000 / All. Excel, PDF and Print still take every row in the
+original order: the rows are put back for that click (search box / pager hidden) and paged again after.
+
+| Report | Page usable before -> after |
+|---|---|
+| SO Stock List (branch wise), 4,205 rows | 8.9 s -> 1.0 s |
+| Stock List all branches, 2,001 rows with photos | 5.5 s -> 1.4 s |
+| Branch Wise Stock, 4,205 rows | 4.3 s -> 1.0 s |
+| Item Discount, 4,337 rows | 3.5 s -> 0.7 s |
+| Stock List, 4,201 rows | 1.9 s -> 1.0 s |
+| Item Details check, 4,201 rows | 2.1 s -> 0.5 s |
+
+- Checked in the browser for each: 100 rows shown, search over all rows, Excel and Print carry every row (Excel
+  file identical to the old one apart from `rowspan/colspan='1'` on the header cells), PDF of 709 rows = 29 pages,
+  table back to 100 rows afterwards, no script errors. A result of one row (or "No records") stays a plain table.
+- Files: `js/report_rows.js` (new), and the six reports (`<tbody><template id="rpt_rows">` around the rows plus
+  the script tag).
+
+---
+
 ## 2026-10-26 - Sales Order list and GRN Payments pending list: lookups read once
 
 Same fix as the reports below, for the two list pages that still looked things up row by row. Output unchanged -

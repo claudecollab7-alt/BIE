@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
 // 2026-10-26 units and branch stock read once for the whole list, not per item (21,000 queries on all items)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -44,6 +45,7 @@ else
 
     <?php include_once("inc/common/css-js.php"); ?>
     <script type="text/javascript" src="print_me.js"></script>
+    <script src="js/report_rows.js"></script>
     <script src="js/jquery.table2excel.min.js"></script>
     <script src="js/html2pdf.bundle.min.js"></script>
 
@@ -301,7 +303,7 @@ else
                                                 <th style="text-align: right;"><b>Stock</b></th>
                                                
 		                    			</thead>
-		                            	<tbody>';
+		                            	<tbody><template id="rpt_rows">';
 
 
                                     $SQL = "SELECT * FROM tbl_item_details as a  LEFT JOIN mst_uom as b ON a.item_uom = b.uom_id
@@ -377,7 +379,7 @@ else
 																	</tr>';
                                     }
 
-                                    echo     '</tbody>
+                                    echo     '</template></tbody>
 									   </table>
 									</div></div>';
                                 }

@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
 // 2026-10-26 units and HSN codes read once for the whole list, not per item (12,600 queries)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -43,6 +44,7 @@ else
 
     <?php include_once("inc/common/css-js.php"); ?>
     <script type="text/javascript" src="print_me.js"></script>
+    <script src="js/report_rows.js"></script>
     <script src="js/jquery.table2excel.min.js"></script>
     <script src="js/html2pdf.bundle.min.js"></script>
 
@@ -190,7 +192,7 @@ else
                                                 <th style="text-align:center;">HSN Code</th>
                                             </tr>
 		                    			</thead>
-		                            	<tbody>';
+		                            	<tbody><template id="rpt_rows">';
 
                                      
                                    $SQL = "SELECT item_id, item_code, item_desciption, item_uom, multi_uom_id, item_hsn FROM tbl_item_details WHERE item_status = '1' ORDER BY item_id ASC";
@@ -226,7 +228,7 @@ else
 																	</tr>';
                                     }
 
-                                    echo     '</tbody>
+                                    echo     '</template></tbody>
 									   </table>
 									</div></div>';
                                 

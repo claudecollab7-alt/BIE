@@ -23,6 +23,7 @@ if ($_REQUEST['to_dt'] == '')
 else
     $rpt_to_dt = $_REQUEST['to_dt'];
 
+// 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
 // 2026-10-26 units, GST, stock and selling price read once for the whole list, not per item (14,000 queries on all items)
 // 2026-10-06 branch columns driven from mst_branch - the body only ever wrote ho and kl, so Rajapalayam had a header but no cells
 
@@ -45,6 +46,7 @@ else
 
     <?php include_once("inc/common/css-js.php"); ?>
     <script type="text/javascript" src="print_me.js"></script>
+    <script src="js/report_rows.js"></script>
     <script src="js/jquery.table2excel.min.js"></script>
     <script src="js/html2pdf.bundle.min.js"></script>
 
@@ -313,7 +315,7 @@ else
                                                 }
                                                 echo '</tr>
 		                    			</thead>
-		                            	<tbody>';
+		                            	<tbody><template id="rpt_rows">';
 
                                      $SQL = "SELECT *  FROM tbl_item_details as a  LEFT JOIN mst_uom as b ON a.item_uom = b.uom_id
                                              LEFT JOIN mst_category as c on a.item_category = c.category_id 
@@ -422,7 +424,7 @@ else
 																	</tr>';
                                     }
 
-                                    echo     '</tbody>
+                                    echo     '</template></tbody>
 									   </table>
 									</div></div>';
                                 }
