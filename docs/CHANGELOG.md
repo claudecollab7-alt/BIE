@@ -8,6 +8,33 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-26 - Indexes on the link columns (`db/post_upload_261026.sql`)
+
+Every menu page was opened with the query log on and each distinct query run through EXPLAIN (230 queries,
+8,500 runs). The ones reading a whole table every time were lookups by a link column with no index - worst, the
+quotation branch report summing quotation details 1,400 times a run, each reading all 6,200 detail rows.
+
+**Run `db/post_upload_261026.sql` once on live** (phpMyAdmin, bie database). Only adds indexes, no data change, safe
+to run again; it took 0.5 s on the 12-10 copy and lists the indexes at the end. 24 indexes:
+
+- detail rows by their document: quotation details / pack, invoice pack, SO pack, store indent details,
+  PO prepare details (by prepare and by indent), PO prepare (by indent), PO print details, package box details,
+  item group details, attendance (by employee)
+- documents by supplier / origin: quotation, PO, GRN, invoice (`supp_id`); SO by quotation; receipt by SO;
+  DC by invoice
+- item lookups: quotation / SO / PO / invoice details and spare mapping by `item_id`
+
+| Page | Before -> after (whole page in the browser) |
+|---|---|
+| Quotation branch report | 3.0 s -> 1.7 s |
+| PO prepare list | 1.3 s -> 0.95 s |
+
+The full scans left are counts / lists on status columns of small tables (under 5,000 rows, once a page) - an index
+does not help those. Checked: all pages / lists / reports compared earlier give the same output after the indexes
+(72 + 63 + 44 cases).
+
+---
+
 ## 2026-10-26 - Less work on every page: sidebar, menu lookup, shared connection
 
 Every page ran 17-22 queries before its own work, mostly the sidebar: one query per main menu for the admin, two
