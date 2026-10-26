@@ -9,6 +9,7 @@ $dbconn = new dbhandler();
 
 
 // 2026-10-14 customer branch read from cus_branch_id - it used branch_id (our branch, 1 = head office), so every head office invoice showed customer branch #1
+// 2026-10-26 customer names and invoice / pack totals read once for the report, not 6-8 queries per invoice
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -276,37 +277,55 @@ else
 
 
                                         $result = $conn->query($SQL);
+                                        $inv_rows = $result->fetchAll();
+
+                                        // names and invoice / pack totals for all the invoices listed, one query each
+                                        $inv_ids = $supp_ids = $cbr_ids = array(0);
+                                        foreach ($inv_rows as $r) {
+                                            $inv_ids[] = (int)$r->inv_id;
+                                            $supp_ids[] = (int)$r->supp_id;
+                                            $cbr_ids[] = (int)$r->cus_branch_id;
+                                        }
+                                        $in = implode(',', array_unique($supp_ids));
+                                        $m_supp_name = $dbconn->GetMap("SELECT supp_id, supp_name FROM mst_supplier_new WHERE supp_id IN ($in)");
+                                        $m_supp_add2 = $dbconn->GetMap("SELECT supp_id, supp_add2 FROM mst_supplier_new WHERE supp_id IN ($in)");
+                                        $in = implode(',', array_unique($cbr_ids));
+                                        $m_cbr_name = $dbconn->GetMap("SELECT branch_id, branch_name FROM mst_customer_branch WHERE branch_id IN ($in)");
+                                        $m_cbr_add2 = $dbconn->GetMap("SELECT branch_id, branch_add2 FROM mst_customer_branch WHERE branch_id IN ($in)");
+                                        $in = implode(',', array_unique($inv_ids));
+                                        $m_net = $dbconn->GetMap("SELECT inv_id, SUM(net_value) FROM tbl_invoice_details WHERE inv_id IN ($in) GROUP BY inv_id");
+                                        $m_pack = $dbconn->GetMap("SELECT inv_id, SUM(inv_pack_total) FROM tbl_invoice_pack_details WHERE inv_id IN ($in) GROUP BY inv_id");
+
                                         if ($result->rowCount() > 0) {
                                             $Sno = 1;
-                                            while ($obj = $result->fetch()) {
+                                            foreach ($inv_rows as $obj) {
 
                                                 if ($obj->supp_id != '0') {
-                                                    $buss_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                    $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add2", "supp_id", $obj->supp_id);
+                                                    $buss_name = $dbconn->MapValue($m_supp_name, $obj->supp_id);
+                                                    $add2 = ' - ' . $dbconn->MapValue($m_supp_add2, $obj->supp_id);
                                                 } else {
+                                                    // invoice without a customer - left as it was (rare)
                                                     $buss_name = $dbconn->GetSingleReconrd("tbl_enquiry", "enq_buss_name", "enq_id", $obj->enq_id);
                                                 }
 
                                                 if ($obj->cus_branch_id > 0) {
-                                                    $branch_name = $dbconn->GetSingleReconrd("mst_customer_branch", "branch_name", "branch_id", $obj->cus_branch_id);
-                                                    $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_customer_branch", "branch_add2", "branch_id", $obj->cus_branch_id);
+                                                    $branch_name = $dbconn->MapValue($m_cbr_name, $obj->cus_branch_id);
+                                                    $add2 = ' - ' . $dbconn->MapValue($m_cbr_add2, $obj->cus_branch_id);
                                                     $cus_details = $buss_name . '<br/><b>Branch Name: </b>' . $branch_name . $add2;
                                                 } else {
                                                     $cus_details = '<b>' . $buss_name . '</b>';
                                                 }
 
 
-                                                $inv_pack_val_ins = 0;
-                                                $net_value = $dbconn->GetSingleReconrd("tbl_invoice_details", "SUM(net_value)", "inv_id", $obj->inv_id);
-                                                $inv_pack_val = $dbconn->GetSingleReconrd("tbl_invoice_pack_details", "SUM(inv_pack_total)", "inv_id", $obj->inv_id);
-                                                $inv_pack_val_ins = $dbconn->GetSingleReconrd("tbl_invoice_pack_details", "SUM(inv_pack_total)", "inv_pack_decp IN (2,5,11,15) AND inv_id", $obj->inv_id);
+                                                $net_value = $dbconn->MapValue($m_net, $obj->inv_id, null);
+                                                $inv_pack_val = $dbconn->MapValue($m_pack, $obj->inv_id, null);
 
 
 
                                                 if ($obj->inv_id > 0) {
 
                                                     $invoice_link = '<a href="invoice_print.php?inv_id=' . $obj->inv_id . '" target="_blank">' .
-                                                        $dbconn->GetSingleReconrd("tbl_invoice", "inv_refno", "inv_id", $obj->inv_id) . '</a>';
+                                                        $obj->inv_refno . '</a>';
                                                 } else {
                                                     $invoice_link = '';
                                                 }

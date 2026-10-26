@@ -8,6 +8,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-26 customer names and item counts read once for the report, not 5-7 queries per quotation
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -252,31 +253,46 @@ else
                                         $SQL .= " ORDER BY a.quo_date DESC";
 
                                         $result = $conn->query($SQL);
+                                        $quo_rows = $result->fetchAll();
+
+                                        // names and item counts for all the quotations listed, one query each
+                                        $quo_ids = $supp_ids = $cbr_ids = array(0);
+                                        foreach ($quo_rows as $r) {
+                                            $quo_ids[] = (int)$r->quo_id;
+                                            $supp_ids[] = (int)$r->supp_id;
+                                            $cbr_ids[] = (int)$r->branch_id;
+                                        }
+                                        $in = implode(',', array_unique($supp_ids));
+                                        $m_supp_name = $dbconn->GetMap("SELECT supp_id, supp_name FROM mst_supplier_new WHERE supp_id IN ($in)");
+                                        $m_supp_add1 = $dbconn->GetMap("SELECT supp_id, supp_add1 FROM mst_supplier_new WHERE supp_id IN ($in)");
+                                        $in = implode(',', array_unique($cbr_ids));
+                                        $m_cbr_name = $dbconn->GetMap("SELECT branch_id, branch_name FROM mst_customer_branch WHERE branch_id IN ($in)");
+                                        $m_cbr_add2 = $dbconn->GetMap("SELECT branch_id, branch_add2 FROM mst_customer_branch WHERE branch_id IN ($in)");
+                                        $m_items = $dbconn->GetMap("SELECT quo_id, COUNT(*) FROM tbl_quotation_details WHERE quo_id IN (" . implode(',', array_unique($quo_ids)) . ") GROUP BY quo_id");
 
                                         if ($result->rowCount() > 0) {
                                             $Sno = 1;
 
-                                            while ($obj = $result->fetch()) {
+                                            foreach ($quo_rows as $obj) {
                                                 if ($obj->supp_id != '0') {
-                                                    $buss_name = $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $obj->supp_id);
-                                                    $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_add1", "supp_id", $obj->supp_id);
+                                                    $buss_name = $dbconn->MapValue($m_supp_name, $obj->supp_id);
+                                                    $add2 = ' - ' . $dbconn->MapValue($m_supp_add1, $obj->supp_id);
                                                 }
 
                                                 if ($obj->branch_id > 0) {
-                                                    $branch_name = $dbconn->GetSingleReconrd("mst_customer_branch", "branch_name", "branch_id", $obj->branch_id);
-                                                    $add2 = ' - ' . $dbconn->GetSingleReconrd("mst_customer_branch", "branch_add2", "branch_id", $obj->branch_id);
+                                                    $branch_name = $dbconn->MapValue($m_cbr_name, $obj->branch_id);
+                                                    $add2 = ' - ' . $dbconn->MapValue($m_cbr_add2, $obj->branch_id);
                                                     $cus_details = $buss_name . '<br/><b>Branch Name: </b>' . $branch_name . $add2;
                                                 } else {
                                                     $cus_details = '<b>' . $buss_name . '</b>' . $add2;
                                                 }
                                                 if ($obj->quo_id > 0) {
                                                     $quotation_link = '<a href="print_quotation.php?quo_id=' . $obj->quo_id . '" target="_blank">' .
-                                                        $dbconn->GetSingleReconrd("tbl_quotation", "quo_refno", "quo_id", $obj->quo_id) . '</a>';
+                                                        $obj->quo_refno . '</a>';
                                                 } else {
                                                     $quotation_link = 'Direct Sales Order';
                                                 }
-                                                $quo_qty = $dbconn->GetSingleReconrd("tbl_quotation_details", "SUM(quo_qty)", "quo_id", $obj->quo_id);
-                                                $total_count = $dbconn->GetCount("tbl_quotation_details", "quo_id", $obj->quo_id);
+                                                $total_count = $dbconn->MapValue($m_items, $obj->quo_id, 0);
                                                 echo '<tr  style="background-color:#bcedc88f";>
 																<td>' . $Sno . '</td>
 																<td>' . $quotation_link . '</td>

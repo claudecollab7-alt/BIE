@@ -327,8 +327,8 @@ else
                                                 if($dc_count_ids != ''){
                                                 $dc_qty = $dbconn->MapValue($m_dc_qty, $obj->so_id, null);
                                                 }
-                                                $count_dc_ids = $dbconn->MapValue($m_dc_count, $obj->so_id, '0');
-                                                $count_inv_ids = $dbconn->MapValue($m_inv_count, $obj->so_id, '0');
+                                                $count_dc_ids = $dbconn->MapValue($m_dc_count, $obj->so_id, 0);
+                                                $count_inv_ids = $dbconn->MapValue($m_inv_count, $obj->so_id, 0);
 
                                                 $dc_ids = $dbconn->MapValue($m_dc_first, $obj->so_id);
                                                 $inv_ids = $dbconn->MapValue($m_inv_first, $obj->so_id);

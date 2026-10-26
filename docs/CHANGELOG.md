@@ -8,6 +8,28 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-26 - Quotation branch report, invoice report, PO prepare list: lookups read once
+
+The last three pages the crawl showed looking things up row by row. Output unchanged - 44 cases (every branch,
+three date ranges, search, one customer; the PO prepare list for admin / purchase / kerala over years, statuses,
+pages and 500 rows) compared old against new, all identical.
+
+| Page | Queries before -> after | Whole page (with the 26-10 indexes) |
+|---|---|---|
+| Quotation branch report (`quotation_branch_rept.php`, 719 quotations) | 3,606 -> 17 | 3.0 s -> 1.3 s |
+| Invoice report (`invoice_report.php`) | 901 -> 19 | 1.2 s -> 1.0 s |
+| PO prepare list (`inc/datatable/ajaxPoPrepareList.php`, 25 a page) | about 450 -> 22 | 1.3 s -> 1.1 s |
+
+- Lookups never shown are gone: quotation qty sum (quotation report), the insurance-pack sum (invoice report),
+  indent ref / supplier / customer branch name (PO prepare list).
+- Invoice report: an invoice without a customer still looks up `tbl_enquiry` as before - that table does not
+  exist on the 12-10 copy, so such an invoice shows an error line, as it did before (none in the data).
+- Fixed in the 26-10 lookup helpers: a COUNT for a document with no rows now gives the number 0 (it gave the text
+  "0"), as the old per-row count did - Sales Order list "items" and the Sales Order report status. No SO in the data
+  is affected.
+
+---
+
 ## 2026-10-26 - Indexes on the link columns (`db/post_upload_261026.sql`)
 
 Every menu page was opened with the query log on and each distinct query run through EXPLAIN (230 queries,

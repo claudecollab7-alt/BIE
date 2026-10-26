@@ -209,7 +209,7 @@ class dbhandler
 	}
 
 	// value for one key of a GetMap result; $none is what GetSingleReconrd gave when nothing matched
-	// ('' for a plain field, NULL for SUM / GROUP_CONCAT, '0' for COUNT). An empty key matches 0, as in SQL
+	// ('' for a plain field, NULL for SUM / GROUP_CONCAT, 0 for COUNT). An empty key matches 0, as in SQL
 	public function MapValue($map, $key, $none = '')
 	{
 		if ($key === null || $key === '') {

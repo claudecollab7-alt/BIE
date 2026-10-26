@@ -122,7 +122,7 @@ foreach ($so_page as $row) {
 
 
 
-    $del_item = $dbconn->MapValue($m_items, $row->so_id, '0');
+    $del_item = $dbconn->MapValue($m_items, $row->so_id, 0);
 
     $quotation_link = '<a href="print_quotation.php?quo_id=' . $row->quo_id . '" target="_blank">' .
         $dbconn->MapValue($m_quo, $row->quo_id) . '</a>';
