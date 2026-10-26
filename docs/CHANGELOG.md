@@ -8,6 +8,19 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-26 - Sales Order list and GRN Payments pending list: lookups read once
+
+Same fix as the reports below, for the two list pages that still looked things up row by row. Output unchanged -
+63 cases (every year / branch, several pages and sort orders, search, 500 rows at once, and the pending GRN list)
+compared old against new, all identical.
+
+| Page | Queries before -> after |
+|---|---|
+| Sales Order list (`inc/datatable/ajaxSaleslist.php`, 25 rows a page) | 392 -> 33 |
+| GRN Payments pending (`grn_payment_details_pending.php`, all pending GRNs) | 1,512 -> 21 |
+
+---
+
 ## 2026-10-26 - Faster reports: lookups read once per report, not once per row
 
 Six reports looked up names, units, GST, stock and SO / DC / invoice figures with one query per row - up to 21,000

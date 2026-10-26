@@ -8,6 +8,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 supplier names / credit days and paid amounts read once for the list, not 3 queries per GRN
 // 2026-10-13 list limited to the branches the user approves for (GRN_PAY in task_queues.php), the same rule as its dashboard tile
     // ini_set('display_errors', '1');
     // ini_set('display_startup_errors', '1');
@@ -100,14 +101,26 @@ $dbconn = new dbhandler();
                                             $SQL .= " ORDER BY grn_id DESC";
 
                                             $result = $conn->query($SQL);
+                                            $grn_rows = $result->fetchAll();
+
+                                            // supplier names / credit days and amounts paid, read once for all the GRNs listed
+                                            $grn_ids = $supp_ids = array(0);
+                                            foreach ($grn_rows as $r) {
+                                                $grn_ids[] = (int)$r->grn_id;
+                                                $supp_ids[] = (int)$r->supp_id;
+                                            }
+                                            $in = implode(',', array_unique($supp_ids));
+                                            $m_supp_name = $dbconn->GetMap("SELECT supp_id, supp_name FROM mst_supplier_new WHERE supp_id IN ($in)");
+                                            $m_supp_days = $dbconn->GetMap("SELECT supp_id, supp_credit_days FROM mst_supplier_new WHERE supp_id IN ($in)");
+                                            $m_paid = $dbconn->GetMap("SELECT grn_id, SUM(pay_amount) FROM tbl_grn_pay_receipt WHERE grn_id IN (" . implode(',', array_unique($grn_ids)) . ") GROUP BY grn_id");
                                             
                                             if ($result->rowCount() > 0)
                                             {										
                                                 $Sno = 1;
-                                                while ($obj = $result->fetch())
+                                                foreach ($grn_rows as $obj)
                                                 {
-                                                    $supp_name = $dbconn->GetSingleReconrd("mst_supplier_new","supp_name","supp_id",$obj->supp_id);
-                                                    $supp_credit_days = $dbconn->GetSingleReconrd("mst_supplier_new","supp_credit_days","supp_id",$obj->supp_id);
+                                                    $supp_name = $dbconn->MapValue($m_supp_name, $obj->supp_id);
+                                                    $supp_credit_days = $dbconn->MapValue($m_supp_days, $obj->supp_id);
                                                     // $party_bill_date = $dbconn->GetSingleReconrd("tbl_purchase_inward","party_bill_date","pi_id",$obj->pi_id);
 
 
@@ -130,7 +143,7 @@ $dbconn = new dbhandler();
                                                             $next_dt = "<span class='badge bg-success'>". date("d-m-Y", strtotime($grn_due_date)) ."</span>";
                                                         }
                                                     }
-                                                    $pay_amount = $dbconn->GetSingleReconrd("tbl_grn_pay_receipt","sum(pay_amount)","grn_id",$obj->grn_id);
+                                                    $pay_amount = $dbconn->MapValue($m_paid, $obj->grn_id, null);
 
                                                     if($obj->grn_pay_amount == $pay_amount){
 
