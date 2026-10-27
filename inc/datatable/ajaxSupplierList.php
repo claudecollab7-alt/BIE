@@ -14,6 +14,7 @@ $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-10-13 all branches for viewers in Task Settings (SUPPLIER W) - was admin or head office
 // 2026-10-13 supplier item mapping / delete for creators (SUPPLIER C, was head office), approve link for approvers (SUPPLIER A, was admin)
 // 2026-10-13 from the Supplier InApproval tile: pending suppliers of the branches the user approves for
@@ -25,20 +26,20 @@ $dbconn= new dbhandler();
 
 ## Read value
 $draw = $_POST['draw'];
-$row = $_POST['start'];
-$rowperpage = $_POST['length']; // Rows display per page
+$row = (int)($_POST['start']);
+$rowperpage = (int)($_POST['length']); // Rows display per page
 $columnIndex = $_POST['order'][0]['column']; // Column index
-$columnName = $_POST['columns'][$columnIndex]['data']; // Column name
-$columnSortOrder = $_POST['order'][0]['dir']; // asc or desc
-$searchValue = $_POST['search']['value']; // Search value
+$columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data']); // Column name
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']); // asc or desc
+$searchValue = fnSqlText($_POST['search']['value']); // Search value
 
 if($columnName == ''){
 	$columnName = " grn_date ";
 }
 ## Custom Field value
-$searchByCode = isset($_POST['searchByCode'])? $_POST['searchByCode'] : '';
-$searchByStatus = isset($_POST['searchByStatus']) ? $_POST['searchByStatus'] : '';
-$searchByBranch = isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '';
+$searchByCode = fnSqlText(isset($_POST['searchByCode'])? $_POST['searchByCode'] : '');
+$searchByStatus = fnSqlText(isset($_POST['searchByStatus']) ? $_POST['searchByStatus'] : '');
+$searchByBranch = fnSqlText(isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '');
 
 
 ## Search 

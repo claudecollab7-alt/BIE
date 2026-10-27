@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-10-13 all branches for viewers in Task Settings (EMPLOYEE W) - was admin or head office
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -20,18 +21,18 @@ $dbconn = new dbhandler();
 
 ## Read value
 $draw = $_POST['draw'];
-$row = $_POST['start'];
-$rowperpage = $_POST['length']; // Rows display per page
+$row = (int)($_POST['start']);
+$rowperpage = (int)($_POST['length']); // Rows display per page
 $columnIndex = $_POST['order'][0]['column']; // Column index
-$columnName = $_POST['columns'][$columnIndex]['data']; // Column name
-$columnSortOrder = $_POST['order'][0]['dir']; // asc or desc
-$searchValue = $_POST['search']['value']; // Search value
+$columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data']); // Column name
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']); // asc or desc
+$searchValue = fnSqlText($_POST['search']['value']); // Search value
 
 // echo '***'.$searchValue;
 
-$search_salary = $_POST['search_salary'] ? $_POST['search_salary'] : '';
-$searchByBranch = isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '';
-$searchByEmployeeType = $_POST['searchByEmployeeType'] ? $_POST['searchByEmployeeType'] : '';
+$search_salary = fnSqlText($_POST['search_salary'] ? $_POST['search_salary'] : '');
+$searchByBranch = fnSqlText(isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '');
+$searchByEmployeeType = fnSqlText($_POST['searchByEmployeeType'] ? $_POST['searchByEmployeeType'] : '');
 
 $search ="";
 

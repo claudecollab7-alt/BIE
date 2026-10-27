@@ -10,6 +10,7 @@ require_once("../common/access.php");
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-10-13 edit / price / branch / delete links for creators in Task Settings (ITEM C) - was admin at head office
 // 2026-10-16 principal filter; brand / principal as numbers and the search text quoted - they went into the sql as typed
 ini_set('display_errors', '1');
@@ -22,8 +23,8 @@ $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
 $row = isset($_POST['start']) ? intval($_POST['start']) : 0;
 $rowperpage = isset($_POST['length']) ? intval($_POST['length']) : 10;
 $columnIndex = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
-$columnName = $_POST['columns'][$columnIndex]['data'] ?? "a.item_code";
-$columnSortOrder = isset($_POST['order'][0]['dir']) ;
+$columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data'] ?? "a.item_code");
+$columnSortOrder = fnSqlDir(isset($_POST['order'][0]['dir']));
 $searchValue = isset($_POST['search']['value']) ? $_POST['search']['value'] : '';
 
 

@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-27 no stock join in the list query - an item with 2 stock rows was listed twice
 // 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
 // 2026-10-26 branch stock and open SO qty read once for the whole list, not per item (16,800 queries on all items)
 // 2026-10-13 update location for creators in Task Settings (STOCK_LOCATION C) - was users 1 and 9
@@ -323,10 +324,8 @@ else
                                         $sql = "SELECT a.item_id as item_id, a.item_uom, a.item_image, a.item_code, a.item_type, a.item_desciption, a.item_curr_stock, b.uom_name, c.category_name,a.branch_id FROM tbl_item_details as a 
                                         LEFT JOIN mst_uom as b ON a.item_uom = b.uom_id
                                         LEFT JOIN mst_category as c on a.item_category = c.category_id  
-                                        LEFT JOIN tbl_item_stock as d on a.item_id = d.item_id 
 
                                         WHERE a.item_status = 1";
-                                        $field_name = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_SESSION['_user_branch']);
                                             
                                             // if($_REQUEST['keyword'] != ""){
                                             //     $sql .= " AND (a.item_code LIKE '%".$_REQUEST['keyword']."%' OR a.item_purchase_code LIKE '%".$_REQUEST['keyword']."%'  OR a.item_desciption LIKE '%".$_REQUEST['keyword']."%' )";
@@ -340,10 +339,6 @@ else
                                                 $sql .= " AND a.item_id=" . $_REQUEST['item_id'];
                                             }
 
-                                            if (($_REQUEST['branch_id'] == $field_name) != '') {
-
-                                                $sql .= " AND branch_stock_field =" . $_REQUEST['branch_id'];
-                                            }
                                             
 
                                             $sql .= " ORDER BY a.item_id ASC";
@@ -362,7 +357,7 @@ else
                                             $so_pending_qty = $available_qty = 0;
         
                                             // stock and SO qty from the lists read before the loop - these were 4 queries per item
-                                            $branch_item_curr_stock = $dbconn->MapValue($stock_map, $obj->item_id);
+                                            $branch_item_curr_stock = $dbconn->MapValue($stock_map, $obj->item_id, '0.000');   // no stock row - nothing in stock
         
                                             if ($obj->item_image != "") {
                                                 $img_link = '<a class="fancybox" href="project_img/item_image/' . $obj->item_image . '">

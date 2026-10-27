@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-27 no stock join in the list query - an item with 2 stock rows was listed twice and one without a stock row lost its description
 // 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
 // 2026-10-26 units and branch stock read once for the whole list, not per item (21,000 queries on all items)
 // ini_set('display_errors', '1');
@@ -308,10 +309,8 @@ else
 
                                     $SQL = "SELECT * FROM tbl_item_details as a  LEFT JOIN mst_uom as b ON a.item_uom = b.uom_id
                                              LEFT JOIN mst_category as c on a.item_category = c.category_id
-                                             LEFT JOIN tbl_item_stock as d on a.item_id = d.item_id 
                                              WHERE a.item_status = 1";
 
-                                    $field_name = $dbconn->GetSingleReconrd("mst_branch", "branch_stock_field", "branch_id", $_SESSION['_user_branch']);
 
                                     if ($_REQUEST['item_id'] > 0 && $_REQUEST['item_id'] != '') {
                                         $SQL .= " AND a.item_id=" . $_REQUEST['item_id'];
@@ -319,10 +318,6 @@ else
                                     if ($_REQUEST['item_type_id'] != '') {
 
                                         $SQL .= " AND a.item_type=" . $_REQUEST['item_type_id'];
-                                    }
-                                    if (($_REQUEST['branch_id'] == $field_name) != '') {
-
-                                        $SQL .= " AND branch_stock_field =" . $_REQUEST['branch_id'];
                                     }
 
                                     $result = $conn->query($SQL);
@@ -338,11 +333,10 @@ else
                                             $name = $trans_type = $color = $trans_qty = $trans_code = $approve_by = '';
 
                                             // from the row and the lists read once - these were 5 queries per item
-                                            // item_id comes from the stock join (d.*), so it is empty for an item without a stock row
-                                            $name = $obj->item_id ? $obj->item_desciption : '';
+                                            $name = $obj->item_desciption;
                                             $uomname = $dbconn->MapValue($uom_map, $obj->uom_id);
                                             $Itemtypename = '';
-                                            $branch_item_curr_stock = $dbconn->MapValue($stock_map, $obj->item_id);
+                                            $branch_item_curr_stock = $dbconn->MapValue($stock_map, $obj->item_id, '0.000');   // no stock row - nothing in stock
 
 
                                             if ($obj->item_type == 2) {

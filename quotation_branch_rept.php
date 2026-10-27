@@ -9,6 +9,7 @@ $dbconn = new dbhandler();
 
 
 // 2026-10-26 customer names and item counts read once for the report, not 5-7 queries per quotation
+// 2026-10-27 search text quoted (fnSqlText) and branch taken as a number - a ' in the search box broke the report
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -232,16 +233,16 @@ else
 														WHERE a.quo_status = '1'";
 
                                         if ($_REQUEST['keyword'] != "") {
-                                            $SQL .= " AND (a.quo_refno LIKE '%" . $_REQUEST['keyword'] . "%' OR a.quo_value LIKE '%" . $_REQUEST['keyword'] . "%'  OR b.supp_name LIKE '%" . $_REQUEST['keyword'] . "%' )";
+                                            $SQL .= " AND (a.quo_refno LIKE '%" . fnSqlText($_REQUEST['keyword']) . "%' OR a.quo_value LIKE '%" . fnSqlText($_REQUEST['keyword']) . "%'  OR b.supp_name LIKE '%" . fnSqlText($_REQUEST['keyword']) . "%' )";
                                         }
 
                                          if ($_REQUEST['supp_id'] != '') {
-                                            $SQL .= " AND (a.supp_id ='" . $_REQUEST['supp_id'] . "') ";
+                                            $SQL .= " AND (a.supp_id ='" . fnSqlText($_REQUEST['supp_id']) . "') ";
                                         }
 
                                         if (($_REQUEST['branch_id']) != '') {
     
-                                            $SQL .= " AND (a.bie_branch_id =" . $_REQUEST['branch_id'].") ";
+                                            $SQL .= " AND (a.bie_branch_id =" . (int)$_REQUEST['branch_id'] . ") ";
                                         }
 
                                          

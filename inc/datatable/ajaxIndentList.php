@@ -9,6 +9,7 @@ require_once("../common/dbhandler.php");
 
 $conn  = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -16,19 +17,19 @@ error_reporting(E_ALL);
 
 ## Read value
 $draw            = $_POST['draw'];
-$row             = $_POST['start'];
-$rowperpage      = $_POST['length'];
+$row             = (int)($_POST['start']);
+$rowperpage      = (int)($_POST['length']);
 $columnIndex     = $_POST['order'][0]['column'];
-$columnName      = $_POST['columns'][$columnIndex]['data'];
-$columnSortOrder = $_POST['order'][0]['dir'];
-$searchValue     = $_POST['search']['value'];
+$columnName      = fnSqlColumn($_POST['columns'][$columnIndex]['data']);
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']);
+$searchValue     = fnSqlText($_POST['search']['value']);
 
 if ($columnName == '') {
     $columnName = " a.sal_repair_id ";
 }
 
 ## Custom Field value
-$searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';
+$searchByCode = fnSqlText(isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '');
 
 ## Search
 $searchQuery = " ";

@@ -8,6 +8,48 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-27 - Fixes from the list / report audit
+
+The audit of 27-10 (run on `b645fda`, then rolled back) listed reproduced defects. Each one below was confirmed on
+this code first, then fixed. Checked old against new with the unchanged code served side by side.
+
+- **Search with an apostrophe** broke 20 lists and 3 reports (SQL error). Search / sort input now goes through
+  `fnSqlText` (text inside a quoted SQL string), `fnSqlColumn` (sort column must be a plain column name) and
+  `fnSqlDir` (asc / desc only), new in `inc/common/functions.php`; start / length are numbers. Applied to all
+  29 list endpoints in `inc/datatable/` (not where the search was already quoted or bound) and to the keyword /
+  customer / branch filters of the quotation branch, invoice and sales order reports. A sweep of all 31 lists
+  - every sortable column both ways and an apostrophe in every search box - went from 25 failures to 0 (284 checks);
+  searching `7620-1/2'` finds that item.
+- **Stock List, all branches** (`rpt_all_store_stock_list.php`): on PHP 8 an item without a selling price or with an
+  HSN not in the HSN list stopped the page at row 2,001 of 4,201 (type error, hidden). Missing price / GST count as 0;
+  all 4,201 rows show. (On PHP 7.4 it was only a hidden warning.)
+- **Branch Wise Stock, SO Stock List, Item Discount**: the list query also joined the stock table, so the 4 items
+  with two stock rows were listed twice, and (branch wise) an item without a stock row lost its description. The join
+  is gone (stock comes from the first stock row, as shown); no stock row shows 0.000. 4,205 -> 4,201 rows. The
+  `branch_stock_field` condition that could never be true was removed.
+- **Customer list**: sorting by # failed (no such column) - # is no longer sortable.
+- **GRN Payment list**: sorting by supplier failed (`supp_id` is in both joined tables) - sorts by supplier name.
+- **Prepare PO list**: sorting by status failed (status is worked out per row) - not sortable now; date sorts. The
+  status filter (hidden on the page) looks at the PO prepare rows instead of a column the indent does not have.
+- **Item Price History**: search named deleted columns (`new_selling_price` ...) - it now searches item code /
+  purchase code / description and the branch's new price / qty in the history row. Price / qty columns sorted by old
+  item-master fields - they sort by the values shown. One joined query (first stock row, user name). 1,341 history
+  rows of items with no stock row showed the previous row's price / qty - now blank; all other rows unchanged
+  (6,131 compared).
+- **Invoice report**: chosen dates went back to the year start / end after Generate; Print / PDF pointed at a missing
+  `rpt_division` (now wraps the report); title and empty row span the 5 columns.
+- **Delete cancel** on 17 masters and the item grouping list: `return false()` threw a script error - `return false`.
+- **DC list**: the Sales Details popup was given the DC id where it expects the SO id - now the SO; a DC without an SO
+  shows the number without a link.
+- **Spare mapping list**: the item name linked to a page that does not exist - it opens the item details popup.
+- **Menu**: 5 menu URLs stored with a line break (New Employee, Staff List, Labour List, Designation, Employee Debit
+  Note) never showed as active - the lookup ignores line breaks.
+
+Not changed: the branch settings map "max qty" / "order min qty" to each other's stock columns (the price history
+list shows them as before); invoices without a customer still look up a `tbl_enquiry` table that does not exist.
+
+---
+
 ## 2026-10-27 - GRN bill due date, Item Discount max column
 
 - **GRN Payments pending list** (`grn_payment_details_pending.php`): **Bill Due Date** was today + the supplier's

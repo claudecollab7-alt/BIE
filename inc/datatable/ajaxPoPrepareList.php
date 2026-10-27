@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-10-26 PO prepare / indent lookups read once for the page's indents, not about 14 queries per indent
 // 2026-10-13 all branches for viewers in Task Settings (PO_PREPARE W) - was admin or head office
     // ini_set('display_errors', '1');
@@ -21,20 +22,20 @@ $dbconn = new dbhandler();
 
 ## Read value
 $draw = $_POST['draw'];
-$row = $_POST['start'];
-$rowperpage = $_POST['length']; // Rows display per page
+$row = (int)($_POST['start']);
+$rowperpage = (int)($_POST['length']); // Rows display per page
 $columnIndex = $_POST['order'][0]['column']; // Column index
-$columnName = $_POST['columns'][$columnIndex]['data']; // Column name
-$columnSortOrder = $_POST['order'][0]['dir']; // asc or desc
-$searchValue = $_POST['search']['value']; // Search value
+$columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data']); // Column name
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']); // asc or desc
+$searchValue = fnSqlText($_POST['search']['value']); // Search value
 
 
 ## Custom Field value
-$searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';
-$searchByStatus = isset($_POST['searchByStatus']) ? $_POST['searchByStatus'] : '';
-$searchBySupp = isset($_POST['searchBySupp']) ? $_POST['searchBySupp'] : '';
-$searchByBranch = isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '';
-$searchByYear = isset($_POST['searchByYear']) ? $_POST['searchByYear'] : '';
+$searchByCode = fnSqlText(isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '');
+$searchByStatus = isset($_POST['searchByStatus']) && $_POST['searchByStatus'] !== '' ? (int)$_POST['searchByStatus'] : '';
+$searchBySupp = fnSqlText(isset($_POST['searchBySupp']) ? $_POST['searchBySupp'] : '');
+$searchByBranch = fnSqlText(isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '');
+$searchByYear = fnSqlText(isset($_POST['searchByYear']) ? $_POST['searchByYear'] : '');
 
 
 
@@ -45,7 +46,8 @@ if ($searchByCode != '') {
     $searchQuery .= " and (si_refno like '%" . $searchByCode . "%' OR si_date like '%" . $searchByCode . "%') ";
 }
 if ($searchByStatus != '') {
-    $searchQuery .= " and (send_admin_status = " . $searchByStatus . ") ";
+    // the status is on the PO prepare rows, not on the indent
+    $searchQuery .= " and si_id IN (SELECT si_id FROM tbl_po_prepare WHERE send_admin_status = " . $searchByStatus . ") ";
 }
 
 

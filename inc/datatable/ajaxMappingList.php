@@ -9,6 +9,8 @@ require_once("../common/dbhandler.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-27 item name opens the item details popup (it linked to a missing page)
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -16,19 +18,19 @@ error_reporting(E_ALL);
 
 ## Read value
 $draw            = $_POST['draw'];
-$row             = $_POST['start'];
-$rowperpage      = $_POST['length'];
+$row             = (int)($_POST['start']);
+$rowperpage      = (int)($_POST['length']);
 $columnIndex     = $_POST['order'][0]['column'];
-$columnName      = $_POST['columns'][$columnIndex]['data'];
-$columnSortOrder = $_POST['order'][0]['dir'];
-$searchValue     = $_POST['search']['value'];
+$columnName      = fnSqlColumn($_POST['columns'][$columnIndex]['data']);
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']);
+$searchValue     = fnSqlText($_POST['search']['value']);
 
 if ($columnName == '') {
     $columnName = " item_desciption ";
 }
 
 ## Custom Field value
-$searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';
+$searchByCode = fnSqlText(isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '');
 
 ## Search
 $searchQuery = " ";
@@ -62,7 +64,7 @@ $sno        = 1;
 while ($row = $cusRecords->fetch()) {
 
     $item_division   = $dbconn->GetSingleReconrd("mst_division", "division_name", "division_id", $row->item_division);
-    $item_desciption = '<a class="fancybox fancybox.ajax" href="inc/popup/fancybox_view_item_details.php?item_id=' . $row->item_id . '" title="View Details">' . $row->item_desciption . '</a>';
+    $item_desciption = '<a data-toggle="modal" data-target="#modalitemDets" href="" data-id="' . (int)$row->item_id . '" data-popup="tooltip" title="Item Details">' . $row->item_desciption . '</a>';
     $edit_link       = '<a href="spare_mapping.php?item_id=' . $row->item_id . '" data-popup="tooltip" title="Edit"><i class="icon-pencil5 bg-edit mr-2"></i></a>';
     $spare_cnt       = $dbconn->GetCount("tbl_spare_mapping", "item_id", $row->item_id);
 

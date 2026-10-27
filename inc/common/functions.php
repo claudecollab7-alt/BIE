@@ -9,6 +9,25 @@ $ip=$_SERVER['REMOTE_ADDR'];
 
 // logged in to this app: the login sets the user and the branch - a session holding only _user
 // (for example from another app on the same server) is not a BIE login
+// 2026-10-27 list / report search text and sort input safe to put into SQL - a ' in a search box broke the query
+// text inside a quoted SQL string ('...'); what was typed is searched for as it is
+function fnSqlText($s)
+{
+	return str_replace(array('\\', "'", "\0"), array('\\\\', "\\'", ''), (string)$s);
+}
+
+// sort column sent by a list: a plain column name (or alias.column), else the first selected column
+function fnSqlColumn($s)
+{
+	return preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/', (string)$s) ? $s : '1';
+}
+
+// sort direction sent by a list: asc or desc only
+function fnSqlDir($s)
+{
+	return strtolower((string)$s) === 'desc' ? 'desc' : 'asc';
+}
+
 function fnIsLoggedIn()
 {
 	return isset($_SESSION['_user']) && $_SESSION['_user'] == "crm_user"

@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-27 the item's first stock row only - an item with 2 stock rows was listed twice
 // 2026-10-27 Max Discount shown when set - it checked the min value, so it showed '-' whenever min was 0
 // 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
 
@@ -223,7 +224,7 @@ error_reporting(E_ALL);
 
                                         $SQL = "SELECT {$select_cols}
                                                 FROM tbl_item_details AS itd
-                                                LEFT JOIN tbl_item_stock AS s ON itd.item_id = s.item_id
+                                                LEFT JOIN tbl_item_stock AS s ON s.stock_id = (SELECT MIN(x.stock_id) FROM tbl_item_stock x WHERE x.item_id = itd.item_id)
                                                 WHERE 1 = 1";
 
                                         if ($item_id_filter != '') {

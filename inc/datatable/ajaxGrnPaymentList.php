@@ -10,6 +10,7 @@ require_once("../common/access.php");
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-10-13 all branches for viewers in Task Settings (GRN_PAYMENT W) - was admin or head office
 // 2026-10-22 status from the saved status (exact amount matching sent some rows to Not Yet); paid shown as 0.00 when nothing is paid
 // 2026-10-22 filters and sort taken only as numbers / column names, search text quoted
@@ -20,11 +21,14 @@ error_reporting(E_ALL);
 
 ## Read value
 $draw = $_POST['draw'];
-$row = $_POST['start'];
-$rowperpage = $_POST['length']; // Rows display per page
+$row = (int)($_POST['start']);
+$rowperpage = (int)($_POST['length']); // Rows display per page
 $columnIndex = $_POST['order'][0]['column']; // Column index
-$columnName = $_POST['columns'][$columnIndex]['data']; // Column name
-$columnSortOrder = $_POST['order'][0]['dir']; // asc or desc
+$columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data']); // Column name
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']); // asc or desc
+if ($columnName == 'supp_id') {
+    $columnName = 'b.supp_name';   // supp_id is in both joined tables (the sort failed); the column shows the name
+}
 $searchValue = $_POST['search']['value']; // Search value
 
 $searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';

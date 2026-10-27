@@ -8,6 +8,7 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-27 delete cancel uses return false (return false() threw a script error)
 
 ?>
 <!DOCTYPE html>
@@ -176,7 +177,7 @@ $dbconn = new dbhandler();
                     },
                     beforeSend: function() {
                         if (confirm('Are your sure want to Delete..?')) {} else {
-                            return false();
+                            return false;
                         }
                     },
                     complete: function() {},

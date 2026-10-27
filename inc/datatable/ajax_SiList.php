@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-10-13 all branches for viewers in Task Settings (STORE_INDENT W) - was admin or head office
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -20,20 +21,20 @@ $dbconn = new dbhandler();
 
 ## Read value
 $draw = $_POST['draw'];
-$row = $_POST['start'];
-$rowperpage = $_POST['length']; // Rows display per page
+$row = (int)($_POST['start']);
+$rowperpage = (int)($_POST['length']); // Rows display per page
 $columnIndex = $_POST['order'][0]['column']; // Column index
-$columnName = $_POST['columns'][$columnIndex]['data']; // Column name
-$columnSortOrder = $_POST['order'][0]['dir']; // asc or desc
-$searchValue = $_POST['search']['value']; // Search value
+$columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data']); // Column name
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']); // asc or desc
+$searchValue = fnSqlText($_POST['search']['value']); // Search value
 
 
 ## Custom Field value
-$searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';
-$searchByStatus = isset($_POST['searchByStatus']) ? $_POST['searchByStatus'] : '';
-$searchBySupp = isset($_POST['searchBySupp']) ? $_POST['searchBySupp'] : '';
-$searchByBranch = isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '';
-$searchByYear = isset($_POST['searchByYear']) ? $_POST['searchByYear'] : '';
+$searchByCode = fnSqlText(isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '');
+$searchByStatus = fnSqlText(isset($_POST['searchByStatus']) ? $_POST['searchByStatus'] : '');
+$searchBySupp = fnSqlText(isset($_POST['searchBySupp']) ? $_POST['searchBySupp'] : '');
+$searchByBranch = fnSqlText(isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '');
+$searchByYear = fnSqlText(isset($_POST['searchByYear']) ? $_POST['searchByYear'] : '');
 
 
 

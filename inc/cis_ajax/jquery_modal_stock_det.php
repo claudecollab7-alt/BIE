@@ -12,6 +12,7 @@ require_once("../common/dbhandler.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-27 delete cancel uses return false (return false() threw a script error)
 
 
 $item_id = $_POST['id'];
@@ -76,12 +77,12 @@ echo $stock;
 		if (branch_loc_rack <= 0) {
 			alert("Please Enter The Rack..!");
 			$('#branch_loc_rack').val('');
-			return false();
+			return false;
 		}
 		if (branch_loc_row <= 0) {
 			alert("Please Enter The Row..!");
 			$('#branch_loc_row').val('');
-			return false();
+			return false;
 		}
 
 		$.ajax({
