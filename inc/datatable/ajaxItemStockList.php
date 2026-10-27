@@ -1,4 +1,5 @@
 <?php
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-09-23 new - rows for lst_item_stock.php, one stock column per active branch
 
 ob_start();
@@ -26,10 +27,10 @@ $columnSortOrder = 'asc';
 if (isset($_POST['order'][0]['column'])) {
     $columnIndex = $_POST['order'][0]['column'];
     if (isset($_POST['columns'][$columnIndex]['data'])) {
-        $columnName = $_POST['columns'][$columnIndex]['data'];
+        $columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data']);
     }
     if (isset($_POST['order'][0]['dir'])) {
-        $columnSortOrder = $_POST['order'][0]['dir'];
+        $columnSortOrder = fnSqlDir($_POST['order'][0]['dir']);
     }
 }
 
@@ -65,7 +66,7 @@ $orderDir = (strtolower($columnSortOrder) == 'desc') ? 'DESC' : 'ASC';
 ## Custom Field value
 $searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';
 $itemTypeId   = isset($_POST['itemTypeId']) ? $_POST['itemTypeId'] : '';
-$stockFilter  = isset($_POST['stockFilter']) ? $_POST['stockFilter'] : '';
+$stockFilter  = fnSqlText(isset($_POST['stockFilter']) ? $_POST['stockFilter'] : '');
 
 ## Search
 $searchQuery = " ";

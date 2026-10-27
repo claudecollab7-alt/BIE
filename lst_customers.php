@@ -87,7 +87,7 @@ $dbconn = new dbhandler();
 
                 columnDefs: [{
                         orderable: false,
-                        targets: [1,2,3,4,5,6]
+                        targets: [0,1,2,3,4,5,6]   // 2026-10-27 serial no. is not a column (sorting by it failed)
                     },
                     {
                         targets: [6],

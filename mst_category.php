@@ -8,6 +8,7 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn= new dbhandler();
+// 2026-10-27 delete cancel uses return false (return false() threw a script error)
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
 
@@ -369,7 +370,7 @@ $(document).ready(function(){
 				beforeSend:function(){
 					if (confirm('Are your sure, to Delete this Record..?')) {
 					} else {
-					return false();
+					return false;
 					}
 				},
 				complete:function(){

@@ -117,7 +117,7 @@ $searchByYear=$dbconn->GetSingleReconrd("mst_finyear","finyr","finyr_active",1);
 
                 columnDefs: [{
                         orderable: false,
-                        targets: [0, 2, 3, 5]
+                        targets: [0, 3, 4, 5]   // 2026-10-27 status is worked out per row (no column to sort by); date sorts
                     },
                     {
                         targets: [3,4,5],

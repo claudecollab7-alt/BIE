@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 // 2026-10-22 Partial opens a popup with the SO's items and their stage (pending items, Show all for every item) - it linked to a page that does not exist
 
 // 2026-10-26 DC / invoice / total / name lookups read once for all the SOs listed, not about 20 queries per SO
+// 2026-10-27 search text quoted (fnSqlText) and branch taken as a number - a ' in the search box broke the report
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -248,18 +249,18 @@ else
                                                                     WHERE a.so_approve_status = 1 AND a.so_status = 5 AND a.so_slno > 0 ";
 
                                         if ($_REQUEST['keyword'] != "") {
-                                            $SQL .= " AND (a.so_refno LIKE '%" . $_REQUEST['keyword'] . "%' OR a.item_net_val LIKE '%" . $_REQUEST['keyword'] . "%'  OR b.supp_name LIKE '%" . $_REQUEST['keyword'] . "%' )";
+                                            $SQL .= " AND (a.so_refno LIKE '%" . fnSqlText($_REQUEST['keyword']) . "%' OR a.item_net_val LIKE '%" . fnSqlText($_REQUEST['keyword']) . "%'  OR b.supp_name LIKE '%" . fnSqlText($_REQUEST['keyword']) . "%' )";
                                         }
 
                                         if ($_REQUEST['supp_id'] != '') {
-                                            $SQL .= " AND (a.supp_id ='" . $_REQUEST['supp_id'] . "') ";
+                                            $SQL .= " AND (a.supp_id ='" . fnSqlText($_REQUEST['supp_id']) . "') ";
                                         }
                                         if ($_REQUEST['keyword1'] != "") {
-                                            $SQL .= " AND (b.supp_name LIKE '%" . $_REQUEST['keyword1'] . "%' ) ";
+                                            $SQL .= " AND (b.supp_name LIKE '%" . fnSqlText($_REQUEST['keyword1']) . "%' ) ";
                                         }
                                         if (($_REQUEST['branch_id']) != '') {
         
-                                            $SQL .= " AND (a.bie_branch_id =" . $_REQUEST['branch_id'].") ";
+                                            $SQL .= " AND (a.bie_branch_id =" . (int)$_REQUEST['branch_id'] . ") ";
                                         }
                                         if ($_REQUEST['sch_by'] != "") {
                                         /*   if ($_REQUEST['sch_by'] == 1) {

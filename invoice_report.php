@@ -10,6 +10,9 @@ $dbconn = new dbhandler();
 
 // 2026-10-14 customer branch read from cus_branch_id - it used branch_id (our branch, 1 = head office), so every head office invoice showed customer branch #1
 // 2026-10-26 customer names and invoice / pack totals read once for the report, not 6-8 queries per invoice
+// 2026-10-27 chosen dates kept after Generate (they went back to the year start / end); Print / PDF area rpt_division
+// exists now (they pointed at a missing one); title and empty row span the 5 columns
+// 2026-10-27 search text quoted (fnSqlText) and branch taken as a number - a ' in the search box broke the report
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -17,11 +20,11 @@ $dbconn = new dbhandler();
 
 $from_dt = $dbconn->GetSingleReconrd("mst_finyear", "finyr_startdt", "finyr_active", 1);
 if (isset($_REQUEST['from_dt']) && $_REQUEST['from_dt'] != '') {
-    $from_date = $_REQUEST['from_dt'];
+    $from_dt = $_REQUEST['from_dt'];
 }
 $to_dt   = $dbconn->GetSingleReconrd("mst_finyear", "finyr_enddt", "finyr_active", 1);
 if (isset($_REQUEST['to_dt']) && $_REQUEST['to_dt'] != '') {
-    $to_date = $_REQUEST['to_dt'];
+    $to_dt = $_REQUEST['to_dt'];
 }
 
 if ($_REQUEST['branch_id'] == '')
@@ -202,7 +205,7 @@ else
 
 
                                         if ($_REQUEST['supp_id'] != '')
-                                            $customer = "<span style='color:green;'> | " . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", $_REQUEST['supp_id']) . '</span>';
+                                            $customer = "<span style='color:green;'> | " . $dbconn->GetSingleReconrd("mst_supplier_new", "supp_name", "supp_id", fnSqlText($_REQUEST['supp_id'])) . '</span>';
 
                                         else
                                             $customer = '';
@@ -230,14 +233,14 @@ else
                                         //------  PRINT  ------//
 
                                         echo ' 
-                                    <div class="invoice" id="print_content1" style="width:100%;">
+                                    <div id="rpt_division"><div class="invoice" id="print_content1" style="width:100%;">
                                     <div class="table-responsive" style="width:100%" id="payment_tbl"><br>';
 
                                         echo '<table class="table table-xs invoice_tbl" id="lst_table">
                                            
                                     <thead>
                                     <tr>
-                                        <th colspan="7" style="text-align: center;">
+                                        <th colspan="5" style="text-align: center;">
                                         <span style="font-size: 18px; color: #463ece;">Invoice Details</span><br/>' . date("d-M-Y", strtotime($_REQUEST['from_dt'])) . ' - ' . date("d-M-Y", strtotime($_REQUEST['to_dt'])) . '' . $customer . ' ' . $keyword . '
                                         </th>
                                     </tr>
@@ -256,15 +259,15 @@ else
                                         $SQL = "SELECT *,a.supp_id as supp_id, b.supp_name FROM tbl_invoice AS a LEFT JOIN mst_supplier_new AS b ON b.supp_id = a.supp_id  WHERE a.inv_status = '1'";
 
                                         if ($_REQUEST['keyword'] != "") {
-                                            $SQL .= " AND (a.inv_slno = '" . $_REQUEST['keyword'] . "' )";
+                                            $SQL .= " AND (a.inv_slno = '" . fnSqlText($_REQUEST['keyword']) . "' )";
                                         }
 
                                         if ($_REQUEST['supp_id'] != "") {
-                                            $SQL .= " AND (a.supp_id ='" . $_REQUEST['supp_id'] . "') ";
+                                            $SQL .= " AND (a.supp_id ='" . fnSqlText($_REQUEST['supp_id']) . "') ";
                                         }
                                         if (($_REQUEST['branch_id']) != '') {
     
-                                            $SQL .= " AND (a.branch_id =" . $_REQUEST['branch_id'].") ";
+                                            $SQL .= " AND (a.branch_id =" . (int)$_REQUEST['branch_id'] . ") ";
                                         }
 
 
@@ -355,13 +358,13 @@ else
                                         } else {
 
                                             echo ' <tr class="font-weight-semibold rpt_footer ">
-                                                             <td colspan="8" align="center">No History found..!</td>
+                                                             <td colspan="5" align="center">No History found..!</td>
                                                       </tr>';
                                         }
 
                                         echo     '</tbody>
                                         </table>
-                                        </div></div></div>';
+                                        </div></div></div></div>';
                                     }
 
                                     ?>

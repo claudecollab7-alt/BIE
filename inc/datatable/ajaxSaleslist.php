@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-10-26 DC / invoice / qty / quotation lookups read once for the page's SOs, not about 11 queries per SO
 // 2026-10-13 all branches for viewers in Task Settings (SALES_ORDER W) - was admin or head office
 // 2026-10-13 cancel link for Sales Order Cancel in Task Settings (SO_CANCEL A) - was admin
@@ -21,17 +22,17 @@ $dbconn = new dbhandler();
 
 ## Read value
 $draw = $_POST['draw'];
-$row = $_POST['start'];
-$rowperpage = $_POST['length']; // Rows display per page
+$row = (int)($_POST['start']);
+$rowperpage = (int)($_POST['length']); // Rows display per page
 $columnIndex = $_POST['order'][0]['column']; // Column index
-$columnName = $_POST['columns'][$columnIndex]['data']; // Column name
-$columnSortOrder = $_POST['order'][0]['dir']; // asc or desc
-$searchValue = $_POST['search']['value']; // Search value
+$columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data']); // Column name
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']); // asc or desc
+$searchValue = fnSqlText($_POST['search']['value']); // Search value
 
 
-$searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';
-$searchByBranch = isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '';
-$searchByYear = isset($_POST['searchByYear']) ? $_POST['searchByYear'] : '';
+$searchByCode = fnSqlText(isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '');
+$searchByBranch = fnSqlText(isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '');
+$searchByYear = fnSqlText(isset($_POST['searchByYear']) ? $_POST['searchByYear'] : '');
 
 
 

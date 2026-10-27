@@ -8,6 +8,7 @@ require_once("inc/common/userclass.php");
 
 $conn = new dbconnect();
 $dbconn= new dbhandler();
+// 2026-10-27 delete cancel uses return false (return false() threw a script error)
 
 /*
 ini_set('display_errors', '1');
@@ -226,7 +227,7 @@ $(function() {
 					beforeSend:function(){
 						if (confirm('Are your sure want to Delete..?')) {
 						} else {
-						return false();
+						return false;
 						}
 					},
 					complete:function(){

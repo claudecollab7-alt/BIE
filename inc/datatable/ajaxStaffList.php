@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-10-13 all branches for viewers in Task Settings (EMPLOYEE W) - was admin or head office
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -20,19 +21,19 @@ error_reporting(E_ALL);
 
 ## Read value
 $draw = $_POST['draw'];
-$row = $_POST['start'];
-$rowperpage = $_POST['length']; // Rows display per page
+$row = (int)($_POST['start']);
+$rowperpage = (int)($_POST['length']); // Rows display per page
 $columnIndex = $_POST['order'][0]['column']; // Column index
-$columnName = $_POST['columns'][$columnIndex]['data']; // Column name
-$columnSortOrder = $_POST['order'][0]['dir']; // asc or desc
-$searchValue = $_POST['search']['value']; // Search value
+$columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data']); // Column name
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']); // asc or desc
+$searchValue = fnSqlText($_POST['search']['value']); // Search value
 
 // echo '***'.$searchValue;
 
-$search_staff_dets = $_POST['search_staff_dets'] ? $_POST['search_staff_dets'] : '';
-$searchByBranch = isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '';
-$searchByDepartment = isset($_POST['searchByDepartment']) ? $_POST['searchByDepartment'] : '';
-$searchByDesignation = isset($_POST['searchByDesignation']) ? $_POST['searchByDesignation'] : '';
+$search_staff_dets = fnSqlText($_POST['search_staff_dets'] ? $_POST['search_staff_dets'] : '');
+$searchByBranch = fnSqlText(isset($_POST['searchByBranch']) ? $_POST['searchByBranch'] : '');
+$searchByDepartment = fnSqlText(isset($_POST['searchByDepartment']) ? $_POST['searchByDepartment'] : '');
+$searchByDesignation = fnSqlText(isset($_POST['searchByDesignation']) ? $_POST['searchByDesignation'] : '');
 
 $search ="";
 

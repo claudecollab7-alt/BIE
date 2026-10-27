@@ -23,6 +23,7 @@ if ($_REQUEST['to_dt'] == '')
 else
     $rpt_to_dt = $_REQUEST['to_dt'];
 
+// 2026-10-27 net price with a missing price / GST counted as 0 - the PHP 8 type error cut the report off
 // 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
 // 2026-10-26 units, GST, stock and selling price read once for the whole list, not per item (14,000 queries on all items)
 // 2026-10-06 branch columns driven from mst_branch - the body only ever wrote ho and kl, so Rajapalayam had a header but no cells
@@ -387,9 +388,10 @@ else
 		                                    $igst = $dbconn->MapValue($igst_map, $obj->item_hsn);
 
 
-                                            $with_tax = $item_selling_price * $igst / 100;
+                                            // a missing price or GST counts as 0 - on PHP 8 the empty value stopped the report part way (row 2,001 of 4,201)
+                                            $with_tax = (float)$item_selling_price * (float)$igst / 100;
 
-		                                    $tax_item_selling_price = $item_selling_price + $with_tax;
+		                                    $tax_item_selling_price = (float)$item_selling_price + $with_tax;
 
 
                                            // $total = ((int)$obj->trans_qty * (int)$obj->item_price);

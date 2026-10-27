@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-27 item name opens the item details popup of the item list - it linked to a page that does not exist
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -25,6 +26,15 @@ $dbconn = new dbhandler();
 
     <script type="text/javascript">
         $(document).ready(function() {
+            $('#modalitemDets').on('show.bs.modal', function(e) {
+                var id = $(e.relatedTarget).data('id');
+                if (id != '') {
+                    $.ajax({ type: 'post', url: 'inc/cis_ajax/modal_items_dets.php', data: 'id=' + id }).done(function(data) {
+                        var string = data.split("~");
+                        $('#m_item_desciption').html(string[1]);
+                    });
+                }
+            });
             <?php
             if (isset($_SESSION['_msg']) && $_SESSION['_msg'] != "") {
                 echo "$.jGrowl('" . $_SESSION['_msg'] . "', { sticky: false, theme: 'alert-styled-left alert-arrow-left alert-success', position: 'bottom-right', life:'2000', header: 'Success!' });";
@@ -166,6 +176,7 @@ $dbconn = new dbhandler();
         });
     </script>
     <?php include("modal_supp_dets.php") ?>
+    <?php include("modal_item_dets.php") ?>
 </head>
 
 

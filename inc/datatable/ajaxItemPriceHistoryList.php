@@ -9,32 +9,40 @@ require_once("../common/dbhandler.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-27 one joined query: search on columns that exist (it named deleted ones), sort by the values shown,
+// an item without a stock row shows blanks (it showed the previous row's values)
+// 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 
 ## Read value
 $draw = $_POST['draw'];
-$row = $_POST['start'];
-$rowperpage = $_POST['length']; // Rows display per page
+$row = (int)($_POST['start']);
+$rowperpage = (int)($_POST['length']); // Rows display per page
 $columnIndex = $_POST['order'][0]['column']; // Column index
-$columnName = $_POST['columns'][$columnIndex]['data']; // Column name
-$columnSortOrder = $_POST['order'][0]['dir']; // asc or desc
-$searchValue = $_POST['search']['value']; // Search value
+$columnName = fnSqlColumn($_POST['columns'][$columnIndex]['data']); // Column name
+$columnSortOrder = fnSqlDir($_POST['order'][0]['dir']); // asc or desc
+$searchValue = fnSqlText($_POST['search']['value']); // Search value
 
 if ($columnName == '') {
     $columnName = " item_history ";
 }
 ## Custom Field value
-$searchByCode = isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '';
+$searchByCode = fnSqlText(isset($_POST['searchByCode']) ? $_POST['searchByCode'] : '');
 
-## Search 
+// the user's branch: its stock columns for the price / qty shown, its prefix (ho / kl / rjpm) for the history columns
+$branch_data = $conn->query("SELECT * FROM mst_branch WHERE branch_id = " . (int)$_SESSION['_user_branch'])->fetch(PDO::FETCH_OBJ);
+$pre = $branch_data ? preg_replace('/_stock$/', '', $branch_data->branch_stock_field) : 'ho';
+
+## Search - item code / purchase code / description, and the branch's new selling price / qty in the history row
 $searchQuery = " ";
-$app_qry = " ";
 if ($searchByCode != '') {
-    $searchQuery .= " and ( b.item_code like '%" . $searchByCode . "%'  OR b.item_purchase_code like '%" . $searchByCode . "%'  OR a.new_selling_price like '%" . $searchByCode . "%' OR a.new_msq like '%" . $searchByCode . "%' OR a.new_maq like '%" . $searchByCode . "%' OR a.new_moq like '%" . $searchByCode . "%' ) ";
+    $k = "'%" . $searchByCode . "%'";
+    $searchQuery .= " and (b.item_code like $k OR b.item_purchase_code like $k OR b.item_desciption like $k
+        OR a.{$pre}_new_selling_price like $k OR a.{$pre}_new_msq like $k OR a.{$pre}_new_maq like $k OR a.{$pre}_new_moq like $k) ";
 }
-$sel = $conn->query("SELECT count(*) as allcount FROM tbl_itemprice_history as a LEFT JOIN tbl_item_details b ON a.item_id = b.item_id WHERE 1 = 1" . $searchQuery);
+$sel = $conn->query("SELECT count(*) as allcount FROM tbl_itemprice_history as a LEFT JOIN tbl_item_details b ON a.item_id = b.item_id WHERE 1 = 1");
 $records = $sel->fetch();
 $totalRecords = $records->allcount;
 
@@ -43,64 +51,40 @@ $sel = $conn->query("SELECT count(*) as allcount FROM tbl_itemprice_history as a
 $records = $sel->fetch();
 $totalRecordwithFilter = $records->allcount;
 
-## Fetch records
-$itemQuery = "SELECT * FROM tbl_itemprice_history as a LEFT JOIN tbl_item_details b ON a.item_id = b.item_id WHERE 1 = 1" . $searchQuery .
-    " order by " . $columnName . " " . $columnSortOrder . " limit " . $row . "," . $rowperpage ;
+// sort only by what the list shows (it sorted the price / qty columns by old item master fields)
+$sorts = array('auto_id' => 'a.auto_id', 'item_code' => 'b.item_code', 'item_purchase_code' => 'b.item_purchase_code', 'item_desciption' => 'b.item_desciption',
+    'item_selling_price' => 'item_selling_price', 'item_min_qty' => 'item_min_qty', 'item_max_qty' => 'item_max_qty', 'item_order_min_qty' => 'item_order_min_qty', 'itm_upt' => 'a.created_dtm');
+$orderBy = isset($sorts[$columnName]) ? $sorts[$columnName] : 'a.auto_id';
+
+## Fetch records - the item's first stock row (as before) and the user name in the same query
+$itemQuery = "SELECT a.item_id, a.created_by, a.created_dtm, b.item_code, b.item_purchase_code, b.item_desciption, u.usr_name";
+if ($branch_data) {
+    $itemQuery .= ", s." . $branch_data->branch_item_selling_price . " AS item_selling_price, s." . $branch_data->branch_item_msq . " AS item_min_qty,
+        s." . $branch_data->branch_item_maq . " AS item_max_qty, s." . $branch_data->branch_item_moq . " AS item_order_min_qty";
+} else {
+    $itemQuery .= ", NULL AS item_selling_price, NULL AS item_min_qty, NULL AS item_max_qty, NULL AS item_order_min_qty";
+}
+$itemQuery .= " FROM tbl_itemprice_history as a LEFT JOIN tbl_item_details b ON a.item_id = b.item_id
+    LEFT JOIN tbl_item_stock s ON s.stock_id = (SELECT MIN(x.stock_id) FROM tbl_item_stock x WHERE x.item_id = a.item_id)
+    LEFT JOIN tbl_user u ON u.usr_id = a.created_by
+    WHERE 1 = 1" . $searchQuery . " order by " . $orderBy . " " . $columnSortOrder . " limit " . $row . "," . $rowperpage;
 
 $sno = 1;
 $itemRecords = $conn->query($itemQuery);
 $data = array();
 
-
-
 while ($row = $itemRecords->fetch())
 	{
-        $user_branch = $_SESSION['_user_branch'];
-    	$usr_name = $dbconn->GetSingleReconrd("tbl_user","usr_name","usr_id",$row->created_by);
-
-				$result_branch = $conn->query("SELECT * FROM mst_branch WHERE branch_id = $user_branch");
-
-                if ($result_branch->rowCount() > 0) {
-
-					$branch_data = $result_branch->fetch(PDO::FETCH_OBJ);
-                   
-                    $result1 = $conn->query("SELECT ".$branch_data->branch_item_maq." as item_max_qty, ".$branch_data->branch_item_price." as item_price, ".$branch_data->branch_item_discount." as item_discount, ".
-                    $branch_data->branch_item_cost_price." as item_cost_price, ".$branch_data->branch_item_selling_price." as item_selling_price, ".$branch_data->branch_item_msq." as item_min_qty, ".
-                    $branch_data->branch_item_moq." as item_order_min_qty FROM tbl_item_stock WHERE item_id = '".$row->item_id."'");
-                    }
-                    if ($result1->rowCount()>0)
-                    {
-                        $res = $result1->fetch(PDO::FETCH_OBJ);	
-                        $item_id=$res->item_id;
-                        // $new_item_uom=$obj->new_item_uom;
-                        // $new_item_hsn=$obj->new_item_hsn;
-                        
-                        
-                                                                                            
-                    }
-        // $field_name = $dbconn->GetSingleReconrd("mst_branch","branch_item_selling_price","branch_id",$_SESSION['_user_branch']);
-
-
-    	// $new_selling_price = $dbconn->GetSingleReconrd("tbl_item_stock","'.$field_name.'","item_id",$row->item_id);
-    	// $usr_name = $dbconn->GetSingleReconrd("tbl_item_stock","usr_name","item_id",$row->item_id);
-           
-	
   $data[] = array(
         "auto_id"=> $sno,
         "item_code" => $row->item_code,
         "item_purchase_code" => $row->item_purchase_code,
         "item_desciption" => $row->item_desciption,
-       /* "new_price" =>$row->new_price,
-        "new_discount" => $row->new_discount,
-        "new_cost_price" => $row->new_cost_price,*/
-        "item_selling_price" => $res->item_selling_price,
-        "item_min_qty" => $res->item_min_qty,
-        "item_max_qty" => $res->item_max_qty,
-        "item_order_min_qty" => $res->item_order_min_qty,
-		"itm_upt" => '<b>'.$usr_name.'</b><br><small>'.date("d-m-Y H:i:s", strtotime($row->created_dtm)).'</small>',
-        
-		
-         
+        "item_selling_price" => $row->item_selling_price,
+        "item_min_qty" => $row->item_min_qty,
+        "item_max_qty" => $row->item_max_qty,
+        "item_order_min_qty" => $row->item_order_min_qty,
+		"itm_upt" => '<b>'.$row->usr_name.'</b><br><small>'.date("d-m-Y H:i:s", strtotime($row->created_dtm)).'</small>',
     );
     $sno++;
 }
