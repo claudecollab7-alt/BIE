@@ -8,6 +8,18 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-27 - GRN bill due date, Item Discount max column
+
+- **GRN Payments pending list** (`grn_payment_details_pending.php`): **Bill Due Date** was today + the supplier's
+  credit days - the code added the days to a variable that was never set. Now party bill date + credit days, and
+  the badge (green / amber / red) follows that date. A supplier with no credit days counts as 0 days (it would have
+  shown 01-01-1970). Checked: all 498 pending GRNs match bill date + credit days from the database, badges right.
+- **Item Discount report** (`rpt_item_discount.php`): **Max Discount** showed "-" whenever the min discount was 0 -
+  it checked the min value. Now it shows whenever a max is set: 1,694 items on the 12-10 copy now show their HO max
+  (more for Kerala / Rajapalayam). Checked: every min / max cell of all 4,337 rows matches the stock table.
+
+---
+
 ## 2026-10-26 - Quotation branch report, invoice report, PO prepare list: lookups read once
 
 The last three pages the crawl showed looking things up row by row. Output unchanged - 44 cases (every branch,

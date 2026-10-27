@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-27 Max Discount shown when set - it checked the min value, so it showed '-' whenever min was 0
 // 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
 
 ini_set('display_errors', '1');
@@ -278,7 +279,7 @@ error_reporting(E_ALL);
                                                     $max_val = $row->{$field . "_max_disc"};
 
                                                     echo '<td align="right">' . (($min_val !== null && $min_val != 0) ? number_format($min_val, 2) : '-') . '</td>';
-                                                    echo '<td align="right">' . (($max_val !== null && $min_val != 0) ? number_format($max_val, 2) : '-') . '</td>';
+                                                    echo '<td align="right">' . (($max_val !== null && $max_val != 0) ? number_format($max_val, 2) : '-') . '</td>';
                                                 }
 
                                                 echo '</tr>';

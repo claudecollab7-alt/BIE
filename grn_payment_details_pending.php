@@ -8,6 +8,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-27 bill due date = party bill date + supplier credit days - it read an unset variable, so it showed today + credit days
 // 2026-10-26 supplier names / credit days and paid amounts read once for the list, not 3 queries per GRN
 // 2026-10-13 list limited to the branches the user approves for (GRN_PAY in task_queues.php), the same rule as its dashboard tile
     // ini_set('display_errors', '1');
@@ -124,7 +125,7 @@ $dbconn = new dbhandler();
                                                     // $party_bill_date = $dbconn->GetSingleReconrd("tbl_purchase_inward","party_bill_date","pi_id",$obj->pi_id);
 
 
-                                                    $grn_due_date =  date("Y-m-d", strtotime($party_bill_date. '+'.$supp_credit_days.' day'));
+                                                    $grn_due_date =  date("Y-m-d", strtotime($obj->party_bill_date. ' +'.(int)$supp_credit_days.' day'));   // from the party bill date (was today + credit days)
 
                                                     if($obj->party_bill_date == "0000-00-00"){
                                                         $next_dt = "";
