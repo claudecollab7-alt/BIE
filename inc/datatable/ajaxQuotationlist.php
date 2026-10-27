@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-26 proforma lookup read once for the page, not one query per quotation
 // 2026-10-13 all branches for viewers in Task Settings (QUOTATION W) - was admin or head office
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -88,9 +89,17 @@ else
 
 
 $cusRecords = $conn->query($cusQuery);
+$quo_page = $cusRecords->fetchAll();
 $data = array();
 
-while ($row = $cusRecords->fetch()) {
+// proforma of each quotation on the page in one query (first one, as before)
+$quo_ids = array(0);
+foreach ($quo_page as $r) {
+    $quo_ids[] = (int)$r->quo_id;
+}
+$m_pro = $dbconn->GetMap("SELECT quo_id, pro_id FROM tbl_proforma WHERE quo_id IN (" . implode(',', array_unique($quo_ids)) . ") ORDER BY pro_id");
+
+foreach ($quo_page as $row) {
     $gen_so ='';
     $invoice ='';
     if ($row->quo_verify_status == 0) 
@@ -168,7 +177,7 @@ while ($row = $cusRecords->fetch()) {
   
     // $invoice = '<a href="quo_invoice.php?quo_id=' . $row->quo_id . '" data-popup="tooltip" title="invoice" data-original-title="Edit" ><i class="fa fa-list-alt bg-edit mr-2"></i></a>';
     $pro_invoice = '';
-    $pro_id = $dbconn->GetSingleReconrd("tbl_proforma", "pro_id", "quo_id ", $row->quo_id);
+    $pro_id = $dbconn->MapValue($m_pro, $row->quo_id);
     if($pro_id != ''){
         $pro_invoice = '<a href="quo_proforma_invoice_print.php?pro_id=' . $pro_id . '" data-popup="tooltip" title="Proforma invoice" data-original-title="Proforma Invoice" ><i class="icon-printer2 mr-2"></i></a>';
     }

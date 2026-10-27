@@ -9,6 +9,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
+
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
@@ -24,6 +26,7 @@ error_reporting(E_ALL);
 
     <?php include_once("inc/common/css-js.php"); ?>
     <script type="text/javascript" src="print_me.js"></script>
+    <script src="js/report_rows.js"></script>
     <script src="js/jquery.table2excel.min.js"></script>
     <script src="js/html2pdf.bundle.min.js"></script>
 
@@ -255,7 +258,7 @@ error_reporting(E_ALL);
                                         }
                                         echo '</tr>';
                                         echo '</thead>';
-                                        echo '<tbody>';
+                                        echo '<tbody><template id="rpt_rows">';
 
                                         // -----------------------------------------------------------
                                         // 4. Data rows
@@ -286,7 +289,7 @@ error_reporting(E_ALL);
                                             echo '<tr class="no-data"><td colspan="' . $total_cols . '">No records found.</td></tr>';
                                         }
 
-                                        echo '</tbody></table>';
+                                        echo '</template></tbody></table>';
                                         echo '</div>'; // col-md-12
                                         echo '</div>'; // discount_division
                                     }

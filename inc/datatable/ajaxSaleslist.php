@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-26 DC / invoice / qty / quotation lookups read once for the page's SOs, not about 11 queries per SO
 // 2026-10-13 all branches for viewers in Task Settings (SALES_ORDER W) - was admin or head office
 // 2026-10-13 cancel link for Sales Order Cancel in Task Settings (SO_CANCEL A) - was admin
 // ini_set('display_errors', '1');
@@ -90,10 +91,29 @@ else{
 
   
 $cusRecords = $conn->query($cusQuery);
+$so_page = $cusRecords->fetchAll();
 $data = array();
 
+// lookups for the SOs on this page in one query each - item count, qty, DCs, dispatched qty, invoices, quotation no.
+$so_ids = $quo_ids = array(0);
+foreach ($so_page as $r) {
+    $so_ids[] = (int)$r->so_id;
+    $quo_ids[] = (int)$r->quo_id;
+}
+$in = implode(',', array_unique($so_ids));
+$m_items = $dbconn->GetMap("SELECT so_id, COUNT(*) FROM tbl_sales_order_details WHERE so_id IN ($in) GROUP BY so_id");
+$m_qty = $dbconn->GetMap("SELECT so_id, SUM(so_qty) FROM tbl_sales_order_details WHERE so_id IN ($in) GROUP BY so_id");
+$m_dc_first = $dbconn->GetMap("SELECT so_id, dc_id FROM tbl_dc WHERE so_id IN ($in) ORDER BY dc_id");
+$m_dc_max = $dbconn->GetMap("SELECT so_id, MAX(dc_id) FROM tbl_dc WHERE so_id IN ($in) GROUP BY so_id");
+$m_dc_approve = $dbconn->GetMap("SELECT dc_id, dc_approve_status FROM tbl_dc WHERE so_id IN ($in)");
+$m_dc_verify = $dbconn->GetMap("SELECT dc_id, dc_verify_status FROM tbl_dc WHERE so_id IN ($in)");
+$m_dispatch = $dbconn->GetMap("SELECT d.so_id, SUM(dd.dc_dispatch_qty) FROM tbl_dc d JOIN tbl_dc_details dd ON dd.dc_id = d.dc_id
+    WHERE dd.dc_dispatch_qty > 0 AND d.so_id IN ($in) GROUP BY d.so_id");
+$m_inv = $dbconn->GetMap("SELECT so_id, GROUP_CONCAT(inv_id,'~',inv_slno ORDER BY inv_id) FROM tbl_invoice WHERE so_id IN ($in) GROUP BY so_id");
+$m_quo = $dbconn->GetMap("SELECT quo_id, quo_refno FROM tbl_quotation WHERE quo_id IN (" . implode(',', array_unique($quo_ids)) . ")");
+
 $iSno = 1;
-while ($row = $cusRecords->fetch()) {
+foreach ($so_page as $row) {
     $credit ='';
     $pay_link = '';
 	$item_status ='';
@@ -102,10 +122,10 @@ while ($row = $cusRecords->fetch()) {
 
 
 
-    $del_item = $dbconn->GetCount("tbl_sales_order_details", "so_id", $row->so_id);
+    $del_item = $dbconn->MapValue($m_items, $row->so_id, 0);
 
     $quotation_link = '<a href="print_quotation.php?quo_id=' . $row->quo_id . '" target="_blank">' .
-        $dbconn->GetSingleReconrd("tbl_quotation", "quo_refno", "quo_id", $row->quo_id) . '</a>';
+        $dbconn->MapValue($m_quo, $row->quo_id) . '</a>';
 
 
         $dc_add_link='';
@@ -144,22 +164,21 @@ while ($row = $cusRecords->fetch()) {
 
    
     //For DC
-    $dc_id = $dbconn->GetSingleReconrd("tbl_dc","dc_id","so_id",$row->so_id);
+    $dc_id = $dbconn->MapValue($m_dc_first, $row->so_id);
 
-    $max_dc_id = $dbconn->GetSingleReconrd("tbl_dc","MAX(dc_id)","so_id",$row->so_id);
+    $max_dc_id = $dbconn->MapValue($m_dc_max, $row->so_id, null);
 
-    $total_count = $dbconn->GetSingleReconrd("tbl_sales_order_details","SUM(so_qty)","so_id",$row->so_id);
+    $total_count = $dbconn->MapValue($m_qty, $row->so_id, null);
 
-    $dc_approve_status = $dbconn->GetSingleReconrd("tbl_dc","dc_approve_status","dc_id",$dc_id);
+    $dc_approve_status = $dbconn->MapValue($m_dc_approve, $dc_id);
 
-    $dc_verify_status = $dbconn->GetSingleReconrd("tbl_dc","dc_verify_status","dc_id",$dc_id);
+    $dc_verify_status = $dbconn->MapValue($m_dc_verify, $dc_id);
 
     if($dc_id != '')
     {                                               
         //$approve_count = $dbconn->GetCount("tbl_dc_details","bal_qty = '0' AND dc_id",$max_dc_id);
         //$approve_count = $dbconn->GetCount("tbl_dc_details","dc_dispatch_qty != '0' AND dc_id",$max_dc_id);
-        $dc_ids = $dbconn->GetSingleReconrd("tbl_dc","group_concat(dc_id)","so_id",$row->so_id);                
-        $approve_count = $dbconn->GetSingleReconrd("tbl_dc_details","SUM(dc_dispatch_qty)","dc_id IN (".$dc_ids.") AND dc_dispatch_qty>0 AND 1",1);     
+        $approve_count = $dbconn->MapValue($m_dispatch, $row->so_id, null);
        
     }
     //DC End 
@@ -198,7 +217,7 @@ while ($row = $cusRecords->fetch()) {
                     $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
 				    $item_status = '<span class="badge bg-secondary">Partially Despatched</span>';
                     
-                    $max_dc_approve = $dbconn->GetSingleReconrd("tbl_dc","dc_approve_status","dc_id",$max_dc_id);
+                    $max_dc_approve = $dbconn->MapValue($m_dc_approve, $max_dc_id);
 
                     if($max_dc_approve==0)
                     {
@@ -264,7 +283,7 @@ while ($row = $cusRecords->fetch()) {
                 {
                     $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
 				    $item_status = '<span class="badge bg-secondary">Partially Despatched</span>';
-                    $max_dc_approve = $dbconn->GetSingleReconrd("tbl_dc","dc_approve_status","dc_id",$max_dc_id);
+                    $max_dc_approve = $dbconn->MapValue($m_dc_approve, $max_dc_id);
 
                     if($max_dc_approve==0)
                     {
@@ -331,7 +350,7 @@ while ($row = $cusRecords->fetch()) {
                     $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
 				    $item_status = '<span class="badge bg-secondary">Partially Despatched</span>';
                     
-                    $max_dc_approve = $dbconn->GetSingleReconrd("tbl_dc","dc_approve_status","dc_id",$max_dc_id);
+                    $max_dc_approve = $dbconn->MapValue($m_dc_approve, $max_dc_id);
 
                     if($max_dc_approve==0)
                     {
@@ -382,7 +401,7 @@ if (fnTaskCan('SO_CANCEL', 'A', $row->bie_branch_id)) {
     
     $invoice_nos="";
 
-    $inv_data = $dbconn->GetSingleReconrd("tbl_invoice","group_concat(inv_id,'~',inv_slno)","so_id",$row->so_id);
+    $inv_data = $dbconn->MapValue($m_inv, $row->so_id, null);
 
     if($inv_data !="")
     {

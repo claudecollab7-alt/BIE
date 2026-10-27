@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-10-26 PO prepare / indent lookups read once for the page's indents, not about 14 queries per indent
 // 2026-10-13 all branches for viewers in Task Settings (PO_PREPARE W) - was admin or head office
     // ini_set('display_errors', '1');
     // ini_set('display_startup_errors', '1');
@@ -94,11 +95,28 @@ else
 //$cusQuery = "SELECT po_id,po_code, po_date, supp_id, po_value, po_status FROM tbl_grn WHERE grn_del_status = 0 ";
 
 $cusRecords = $conn->query($cusQuery);
+$si_page = $cusRecords->fetchAll();
 $data = array();
+
+// PO prepare status and indent qty / item counts for the indents on this page, one query each
+$si_ids = array(0);
+foreach ($si_page as $r) {
+    $si_ids[] = (int)$r->si_id;
+}
+$in = implode(',', array_unique($si_ids));
+$m_prep_status = $dbconn->GetMap("SELECT si_id, SUM(item_prepare_status) FROM tbl_po_prepare_dets WHERE si_id IN ($in) GROUP BY si_id");
+$m_prep_count = $dbconn->GetMap("SELECT si_id, COUNT(*) FROM tbl_po_prepare_dets WHERE si_id IN ($in) GROUP BY si_id");
+$m_prep_qty = $dbconn->GetMap("SELECT si_id, SUM(si_qty) FROM tbl_po_prepare_dets WHERE si_id IN ($in) GROUP BY si_id");
+$m_send_admin = $dbconn->GetMap("SELECT si_id, send_admin_status FROM tbl_po_prepare WHERE si_id IN ($in) ORDER BY po_prepare_id");
+$m_prepare_id = $dbconn->GetMap("SELECT si_id, po_prepare_id FROM tbl_po_prepare WHERE po_prepare_status = 1 AND si_id IN ($in) ORDER BY po_prepare_id");
+$m_admin_status = $dbconn->GetMap("SELECT po_prepare_id, send_admin_status FROM tbl_po_prepare WHERE po_prepare_status = 1 AND si_id IN ($in)");
+$m_to_admin = $dbconn->GetMap("SELECT po_prepare_id, send_to_admin_status FROM tbl_po_prepare WHERE si_id IN ($in)");
+$m_si_qty = $dbconn->GetMap("SELECT si_id, SUM(si_qty) FROM tbl_store_indent_details WHERE si_id IN ($in) GROUP BY si_id");
+$m_si_count = $dbconn->GetMap("SELECT si_id, COUNT(*) FROM tbl_store_indent_details WHERE si_id IN ($in) GROUP BY si_id");
 
 $sno = 1;
 
-while ($row = $cusRecords->fetch()) {
+foreach ($si_page as $row) {
 
     $curr_plus_icon = 0;
     $po_prepare = "";
@@ -107,20 +125,11 @@ while ($row = $cusRecords->fetch()) {
     // $edit_link = '<a href="po_prepare.php?si_id=' . $row->si_id . '" data-popup="tooltip" title="Edit" data-original-title="Edit" ><i class="icon-pencil5 bg-edit mr-2"></i></a>';
    
    
-    $item_prepare_status = $dbconn->GetSingleReconrd("tbl_po_prepare_dets","SUM(item_prepare_status)","si_id",$row->si_id);
-    $send_admin_status = $dbconn->GetSingleReconrd("tbl_po_prepare","send_admin_status","si_id",$row->si_id);
+    $item_prepare_status = $dbconn->MapValue($m_prep_status, $row->si_id, null);
+    $send_admin_status = $dbconn->MapValue($m_send_admin, $row->si_id);
     
     
-    $total_items_count = $dbconn->GetSingleReconrd("tbl_po_prepare_dets","count(*)","si_id",$row->si_id);
-    
-    $si_dets = $dbconn->GetSingleReconrd("tbl_store_indent","CONCAT(si_refno,'~',si_date)","si_id",$row->si_id);
-    
-    $si_det = explode('~',$si_dets);
-    $supp_name = $dbconn->GetSingleReconrd("mst_supplier_new","supp_name","supp_id",$row->supp_id);
-    $branch_name = $dbconn->GetSingleReconrd("mst_customer_branch","branch_name","supp_id",$row->supp_id);
-    if($branch_name!='') {
-        $branch_name = ' <i>'.$branch_name.'</i>';
-    }
+    $total_items_count = $dbconn->MapValue($m_prep_count, $row->si_id, 0);
     
     if($item_prepare_status == $total_items_count )
         $indent_status = "";
@@ -144,11 +153,11 @@ while ($row = $cusRecords->fetch()) {
     {
     $si_print = '<a href="store_indent_print.php?si_id='.$row->si_id.'" class="tip" title="View Store Indent"><i class="icon-eye bg-edit mr-2"></i></a>';
     
-        $po_prepare_id = $dbconn->GetSingleReconrd("tbl_po_prepare","po_prepare_id","po_prepare_status = 1 AND si_id",$row->si_id);
+        $po_prepare_id = $dbconn->MapValue($m_prepare_id, $row->si_id);
       
         if($po_prepare_id>0){
-            $admin_status = $dbconn->GetSingleReconrd("tbl_po_prepare","send_admin_status","po_prepare_status = 1 AND po_prepare_id",$po_prepare_id);
-            $send_to_admin_status = $dbconn->GetSingleReconrd("tbl_po_prepare","send_to_admin_status","po_prepare_id",$po_prepare_id);
+            $admin_status = $dbconn->MapValue($m_admin_status, $po_prepare_id);
+            $send_to_admin_status = $dbconn->MapValue($m_to_admin, $po_prepare_id);
             
             if($admin_status == 0 && $item_prepare_status != 0 && $send_to_admin_status == 1){
                 $po_prepare = '<a href="po_prepare.php?si_id='.$row->si_id.'" class="tip" title="Prepare PO"><i class="fa fa-plus"></i></a>';
@@ -166,8 +175,8 @@ while ($row = $cusRecords->fetch()) {
     $si_print = '<a href="store_indent_print.php?si_id='.$row->si_id.'" class="tip" title="View Store Indent"><i class="icon-eye bg-edit mr-2"></i></a>';
     }
     
-    $sum_pi_qty = $dbconn->GetSingleReconrd("tbl_po_prepare_dets","SUM(si_qty)","si_id",$row->si_id);
-    $sum_po_qty = $dbconn->GetSingleReconrd("tbl_store_indent_details","SUM(si_qty)","si_id",$row->si_id);
+    $sum_pi_qty = $dbconn->MapValue($m_prep_qty, $row->si_id, null);
+    $sum_po_qty = $dbconn->MapValue($m_si_qty, $row->si_id, null);
     $new_plus_icon = '';
     if(($sum_pi_qty != $sum_po_qty || $item_prepare_status != ($total_items_count*3)) && $curr_plus_icon == 0 && $send_admin_status < 2){
         
@@ -175,9 +184,9 @@ while ($row = $cusRecords->fetch()) {
         
         
     }
-    $total_count = $dbconn->GetCount("tbl_store_indent_details", "si_id", $row->si_id);
+    $total_count = $dbconn->MapValue($m_si_count, $row->si_id, 0);
     
-    $si_items = $dbconn->GetSingleReconrd("tbl_store_indent_details","SUM(si_qty)","si_id",$row->si_id);
+    $si_items = $sum_po_qty;
 
     $total_items = $si_items. ' / ' .$total_count ;
     

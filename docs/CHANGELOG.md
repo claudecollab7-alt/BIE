@@ -8,6 +8,146 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-26 - Quotation branch report, invoice report, PO prepare list: lookups read once
+
+The last three pages the crawl showed looking things up row by row. Output unchanged - 44 cases (every branch,
+three date ranges, search, one customer; the PO prepare list for admin / purchase / kerala over years, statuses,
+pages and 500 rows) compared old against new, all identical.
+
+| Page | Queries before -> after | Whole page (with the 26-10 indexes) |
+|---|---|---|
+| Quotation branch report (`quotation_branch_rept.php`, 719 quotations) | 3,606 -> 17 | 3.0 s -> 1.3 s |
+| Invoice report (`invoice_report.php`) | 901 -> 19 | 1.2 s -> 1.0 s |
+| PO prepare list (`inc/datatable/ajaxPoPrepareList.php`, 25 a page) | about 450 -> 22 | 1.3 s -> 1.1 s |
+
+- Lookups never shown are gone: quotation qty sum (quotation report), the insurance-pack sum (invoice report),
+  indent ref / supplier / customer branch name (PO prepare list).
+- Invoice report: an invoice without a customer still looks up `tbl_enquiry` as before - that table does not
+  exist on the 12-10 copy, so such an invoice shows an error line, as it did before (none in the data).
+- Fixed in the 26-10 lookup helpers: a COUNT for a document with no rows now gives the number 0 (it gave the text
+  "0"), as the old per-row count did - Sales Order list "items" and the Sales Order report status. No SO in the data
+  is affected.
+
+---
+
+## 2026-10-26 - Indexes on the link columns (`db/post_upload_261026.sql`)
+
+Every menu page was opened with the query log on and each distinct query run through EXPLAIN (230 queries,
+8,500 runs). The ones reading a whole table every time were lookups by a link column with no index - worst, the
+quotation branch report summing quotation details 1,400 times a run, each reading all 6,200 detail rows.
+
+**Run `db/post_upload_261026.sql` once on live** (phpMyAdmin, bie database). Only adds indexes, no data change, safe
+to run again; it took 0.5 s on the 12-10 copy and lists the indexes at the end. 24 indexes:
+
+- detail rows by their document: quotation details / pack, invoice pack, SO pack, store indent details,
+  PO prepare details (by prepare and by indent), PO prepare (by indent), PO print details, package box details,
+  item group details, attendance (by employee)
+- documents by supplier / origin: quotation, PO, GRN, invoice (`supp_id`); SO by quotation; receipt by SO;
+  DC by invoice
+- item lookups: quotation / SO / PO / invoice details and spare mapping by `item_id`
+
+| Page | Before -> after (whole page in the browser) |
+|---|---|
+| Quotation branch report | 3.0 s -> 1.7 s |
+| PO prepare list | 1.3 s -> 0.95 s |
+
+The full scans left are counts / lists on status columns of small tables (under 5,000 rows, once a page) - an index
+does not help those. Checked: all pages / lists / reports compared earlier give the same output after the indexes
+(72 + 63 + 44 cases).
+
+---
+
+## 2026-10-26 - Less work on every page: sidebar, menu lookup, shared connection
+
+Every page ran 17-22 queries before its own work, mostly the sidebar: one query per main menu for the admin, two
+(user rights, then sub menus) for everyone else. Now:
+
+- **Sidebar** (`inc/common/sidebar.php`): every sub menu the user can see in one query (admin: all shown; others:
+  the ones in their user rights for that main menu), grouped in PHP. Same menus, same order, same HTML.
+- **Current menu** (`inc/common/active_menu.php`): the page's sub menu and main menu in one query (was two).
+- **dbhandler** (`inc/common/dbhandler.php`): one connection shared by all `dbhandler` objects of a request - a page
+  made 5-7 of them, each opening its own connection. It only runs reads and single inserts, no transactions, so
+  sharing changes nothing; pages' own `dbconnect` connections (where transactions are) are untouched.
+  New `GetRow($sql, $params)` (prepared, first row).
+- **Quotation list** (`inc/datatable/ajaxQuotationlist.php`): the proforma of each quotation on the page in one query
+  (was one per row).
+
+| Page | Queries before -> after |
+|---|---|
+| Brand master (admin) | 20 -> 9 |
+| Quotation list (sales user) | 49 -> 15 |
+| Dashboard (sales user) | about 22 -> 11 |
+
+Nothing is cached - menus and rights are still read on every page, so a rights change shows at once. Checked:
+6 users (admin, sales, kerala, accounts, stores, rajapalayam) x 8 pages plus the quotation list data - all
+byte-identical to before; the earlier report (44) and list (63) comparisons and the price screen / report popup
+browser tests pass again.
+
+---
+
+## 2026-10-26 - Big reports shown 100 rows a page
+
+After the query fix the server answers in under half a second, but the browser still drew every row at once -
+38,000 cells and up to 2,000 item photos for the SO stock list, 4-9 s before the page could be used. The rows now
+wait in a `<template>` (read but not drawn, photos not loaded) and `js/report_rows.js` shows them 100 a page with a
+search box over all rows and Show 100 / 500 / 1000 / All. Excel, PDF and Print still take every row in the
+original order: the rows are put back for that click (search box / pager hidden) and paged again after.
+
+| Report | Page usable before -> after |
+|---|---|
+| SO Stock List (branch wise), 4,205 rows | 8.9 s -> 1.0 s |
+| Stock List all branches, 2,001 rows with photos | 5.5 s -> 1.4 s |
+| Branch Wise Stock, 4,205 rows | 4.3 s -> 1.0 s |
+| Item Discount, 4,337 rows | 3.5 s -> 0.7 s |
+| Stock List, 4,201 rows | 1.9 s -> 1.0 s |
+| Item Details check, 4,201 rows | 2.1 s -> 0.5 s |
+
+- Checked in the browser for each: 100 rows shown, search over all rows, Excel and Print carry every row (Excel
+  file identical to the old one apart from `rowspan/colspan='1'` on the header cells), PDF of 709 rows = 29 pages,
+  table back to 100 rows afterwards, no script errors. A result of one row (or "No records") stays a plain table.
+- Files: `js/report_rows.js` (new), and the six reports (`<tbody><template id="rpt_rows">` around the rows plus
+  the script tag).
+
+---
+
+## 2026-10-26 - Sales Order list and GRN Payments pending list: lookups read once
+
+Same fix as the reports below, for the two list pages that still looked things up row by row. Output unchanged -
+63 cases (every year / branch, several pages and sort orders, search, 500 rows at once, and the pending GRN list)
+compared old against new, all identical.
+
+| Page | Queries before -> after |
+|---|---|
+| Sales Order list (`inc/datatable/ajaxSaleslist.php`, 25 rows a page) | 392 -> 33 |
+| GRN Payments pending (`grn_payment_details_pending.php`, all pending GRNs) | 1,512 -> 21 |
+
+---
+
+## 2026-10-26 - Faster reports: lookups read once per report, not once per row
+
+Six reports looked up names, units, GST, stock and SO / DC / invoice figures with one query per row - up to 21,000
+queries for one click. Each lookup is now read once for the whole report and picked from memory per row. The
+output is unchanged: 44 filter combinations of the six reports were compared byte for byte, old against new, on the
+12-10 live copy and again with the 23-10 item list (8,900 items) - all identical.
+
+| Report | Queries before -> after | Time on the server (8,900 items) |
+|---|---|---|
+| SO Stock List (branch wise) `rpt_so_stock_list_branchwise.php` | 16,845 -> 28 | 13.9 s -> 0.4 s |
+| Branch Wise Stock `rpt_branch_wise_stock.php` | 21,049 -> 27 | 5.8 s -> 0.2 s |
+| Stock List, all branches `rpt_all_store_stock_list.php` | 14,035 -> 26 | 3.3 s -> 0.15 s |
+| Stock List `rpt_store_stock_list.php` | 12,623 -> 21 | 3.6 s -> 0.16 s |
+| Item Details check `rpt_item_details_check.php` | 12,621 -> 20 | 3.5 s -> 0.1 s |
+| Sales Order Report `rpt_sales_order.php` | 5,891 -> 39 | 2.7 s -> 0.08 s |
+
+- New `dbhandler` helpers: `GetMap($sql)` (key => value, first row per key, as `GetSingleReconrd` returns) and
+  `MapValue($map, $key, $none)` (the value `GetSingleReconrd` would have given, also when nothing matches).
+- Lookups whose results were never shown are gone (item type on the stock lists, the Sales Order report's per-DC
+  invoice status / counts and enquiry name - these read columns the sales order does not have).
+- The big reports still send every row to the browser (4.5 MB for the SO stock list on all items), so the page
+  itself takes a few seconds to draw - paging them is the next step.
+
+---
+
 ## 2026-10-23 - Principal "All" option, item counts on principal / brand, principal-brand pairs
 
 - **Bulk Discount / Margin and Item Price Update:** the Principal dropdown had no "--- All ---" choice. It carried a

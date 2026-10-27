@@ -53,6 +53,20 @@
 										
 					$qry="SELECT * FROM mst_main_menu WHERE mm_show = 1";
 					$res = $conn->query($qry);
+
+					// 2026-10-26 every sub menu the user can see in one query, grouped by main menu - it was 1-2 queries per main menu
+					// (admin: all shown sub menus; others: the ones in their user rights for that main menu)
+					if ($_SESSION['_user_type'] == 'A') {
+						$sub_res = $conn->query("SELECT * FROM mst_sub_menu WHERE `sm_show` = 1 ORDER BY sm_index, sm_id");
+					} else {
+						$sub_res = $conn->prepare("SELECT s.* FROM mst_sub_menu s WHERE s.`sm_show` = 1
+							AND EXISTS (SELECT 1 FROM tbl_user_rights r WHERE r.usr_id = :u AND r.mm_id = s.mm_id AND r.sm_id = s.sm_id) ORDER BY s.sm_index, s.sm_id");
+						$sub_res->execute(array(':u' => $_SESSION['_user_id']));
+					}
+					$sub_menus = array();
+					foreach ($sub_res->fetchAll(PDO::FETCH_OBJ) as $sm) {
+						$sub_menus[$sm->mm_id][] = $sm;
+					}
 					
 				//echo $_SESSION['_user_id'];
 				//echo $_SESSION['_user_type'];
@@ -74,14 +88,12 @@
 											<i class="'.$ob->mm_class.'"></i> <span>'.$ob->mm_name.'</span></a>';
 											
 											
-								$sql="SELECT * FROM mst_sub_menu WHERE mm_id =".$ob->mm_id." AND `sm_show` = 1 ORDER BY sm_index";
-								
-								$res1 = $conn->query($sql);
+								$res1 = isset($sub_menus[$ob->mm_id]) ? $sub_menus[$ob->mm_id] : array();
 							
-								if ($res1->rowCount()>0) 
+								if (count($res1)>0) 
 								{
 									echo '<ul class="nav nav-group-sub" data-submenu-title="'.$ob->mm_name.'">';
-									while($ob1 = $res1->fetch(PDO::FETCH_OBJ))
+									foreach($res1 as $ob1)
 									{
 										if($sm_id == $ob1->sm_id)
 											echo '<li class="nav-item"><a href="'.$ob1->sm_url.'" class="nav-link active">'.$ob1->sm_name .'</a></li>';										
@@ -95,40 +107,29 @@
 							else
 							{
 								
-								$sm_ids ='';
-								$sm_ids = $dbconn->GetSingleReconrd("tbl_user_rights","group_concat(sm_id)","mm_id = '".$ob->mm_id."' AND usr_id",$_SESSION['_user_id']);
-								
+								$res1 = isset($sub_menus[$ob->mm_id]) ? $sub_menus[$ob->mm_id] : array();
 
-								if(	$sm_ids	!='')
+								if(	count($res1) > 0)
 								{
-									$sql="SELECT * FROM mst_sub_menu WHERE mm_id =".$ob->mm_id." AND sm_id IN (".$sm_ids.") AND `sm_show` = 1
-										ORDER BY sm_index";								
-									//echo $sm_ids.' **'.$sql;
-									
-									$res1 = $conn->query($sql);
-								
-									if ($res1->rowCount()>0) 
-									{
-										if($mm_id == $ob->mm_id)
-										echo '<li class="nav-item nav-item-submenu nav-item-expanded nav-item-open">
+									if($mm_id == $ob->mm_id)
+									echo '<li class="nav-item nav-item-submenu nav-item-expanded nav-item-open">
 												<a href="'.$ob->mm_url.'" class="nav-link active">
 												<i class="'.$ob->mm_class.'"></i> <span>'.$ob->mm_name.'</span></a>';
-										else
-											echo '<li class="nav-item nav-item-submenu">
+									else
+										echo '<li class="nav-item nav-item-submenu">
 												<a href="'.$ob->mm_url.'" class="nav-link">
 												<i class="'.$ob->mm_class.'"></i> <span>'.$ob->mm_name.'</span></a>';
-										
-										
-										echo '<ul class="nav nav-group-sub" data-submenu-title="'.$ob->mm_name.'">';
-										while($ob1 = $res1->fetch(PDO::FETCH_OBJ))
-										{
-											if($sm_id == $ob1->sm_id)
-												echo '<li class="nav-item"><a href="'.$ob1->sm_url.'" class="nav-link active">'.$ob1->sm_name .'</a></li>';										
-											else
-												echo '<li class="nav-item"><a href="'.$ob1->sm_url.'" class="nav-link">'.$ob1->sm_name .'</a></li>';
-										}
-										echo '</ul>';
+									
+									
+									echo '<ul class="nav nav-group-sub" data-submenu-title="'.$ob->mm_name.'">';
+									foreach($res1 as $ob1)
+									{
+										if($sm_id == $ob1->sm_id)
+											echo '<li class="nav-item"><a href="'.$ob1->sm_url.'" class="nav-link active">'.$ob1->sm_name .'</a></li>';										
+										else
+											echo '<li class="nav-item"><a href="'.$ob1->sm_url.'" class="nav-link">'.$ob1->sm_name .'</a></li>';
 									}
+									echo '</ul>';
 								}
 								
 								

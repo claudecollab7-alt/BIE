@@ -9,6 +9,8 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-10-26 rows shown 100 a page with search (js/report_rows.js) - all rows drawn at once took seconds; Excel / PDF / Print still take every row
+// 2026-10-26 units and HSN codes read once for the whole list, not per item (12,600 queries)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -42,6 +44,7 @@ else
 
     <?php include_once("inc/common/css-js.php"); ?>
     <script type="text/javascript" src="print_me.js"></script>
+    <script src="js/report_rows.js"></script>
     <script src="js/jquery.table2excel.min.js"></script>
     <script src="js/html2pdf.bundle.min.js"></script>
 
@@ -189,21 +192,24 @@ else
                                                 <th style="text-align:center;">HSN Code</th>
                                             </tr>
 		                    			</thead>
-		                            	<tbody>';
+		                            	<tbody><template id="rpt_rows">';
 
                                      
                                    $SQL = "SELECT item_id, item_code, item_desciption, item_uom, multi_uom_id, item_hsn FROM tbl_item_details WHERE item_status = '1' ORDER BY item_id ASC";
 
                                     $result = $conn->query($SQL);
+                                    // units and HSN codes read once - these were 3 queries per item
+                                    $uom_map = $dbconn->GetMap("SELECT uom_id, uom_name FROM mst_uom");
+                                    $hsn_map = $dbconn->GetMap("SELECT hsn_id, hsn_code FROM mst_hsn");
 	                                $tax_item_selling_price = '';	
 
 
                                     if ($result->rowCount() > 0) {
                                         while ($obj = $result->fetch()) {
                                             $item_name = "<b>".$obj->item_code."</b> - ".$obj->item_desciption;
-                                            $item_uom = $dbconn->GetSingleReconrd("mst_uom","uom_name","uom_id",$obj->item_uom);
-                                            $item_multi_uom = $dbconn->GetSingleReconrd("mst_uom","uom_name","uom_id",$obj->multi_uom_id);
-                                            $item_hsn = $dbconn->GetSingleReconrd("mst_hsn","hsn_code","hsn_id",$obj->item_hsn);
+                                            $item_uom = $dbconn->MapValue($uom_map, $obj->item_uom);
+                                            $item_multi_uom = $dbconn->MapValue($uom_map, (int)$obj->multi_uom_id);   // text column - read as a number, like the SQL compare
+                                            $item_hsn = $dbconn->MapValue($hsn_map, $obj->item_hsn);
 
 
                                            echo '<tr>
@@ -222,7 +228,7 @@ else
 																	</tr>';
                                     }
 
-                                    echo     '</tbody>
+                                    echo     '</template></tbody>
 									   </table>
 									</div></div>';
                                 
