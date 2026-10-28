@@ -8,6 +8,16 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-28 - Index file split from its check
+
+Running `db/post_upload_261026.sql` in phpMyAdmin on live stopped at the first index with "#1044 Access denied for
+user 'root'@'localhost' to database 'information_schema'" - nothing was added. The check query at the end of the file
+reads information_schema, and phpMyAdmin then sent the whole batch there. The check is now its own read-only file,
+`db/post_upload_261026_check.sql`. Run `post_upload_261026.sql`, then the check on its own. Tested on a copy of the
+28-10 dump: the index file runs (and again), all 24 indexes are added, the check lists them.
+
+---
+
 ## 2026-10-27 - Fixes from the list / report audit
 
 The audit of 27-10 (run on `b645fda`, then rolled back) listed reproduced defects. Each one below was confirmed on

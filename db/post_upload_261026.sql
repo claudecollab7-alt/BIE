@@ -33,14 +33,6 @@ CREATE INDEX IF NOT EXISTS item_id ON tbl_purchase_order_details (item_id);
 CREATE INDEX IF NOT EXISTS item_id ON tbl_invoice_details (item_id);
 CREATE INDEX IF NOT EXISTS item_id ON tbl_spare_mapping (item_id);
 
--- check: the indexes now on these tables
-SELECT table_name, index_name, GROUP_CONCAT(column_name ORDER BY seq_in_index) AS columns
-FROM information_schema.statistics
-WHERE table_schema = DATABASE() AND index_name <> 'PRIMARY'
-  AND table_name IN ('tbl_quotation_details', 'tbl_quo_pack_details', 'tbl_invoice_pack_details', 'tbl_sales_order_pack_dts',
-                     'tbl_store_indent_details', 'tbl_po_prepare_dets', 'tbl_po_prepare', 'tbl_po_print_details', 'tbl_package_box_details',
-                     'tbl_item_group_details', 'tbl_attendance', 'tbl_quotation', 'tbl_purchase_order', 'tbl_grn', 'tbl_invoice',
-                     'tbl_sales_order', 'tbl_receipt', 'tbl_dc', 'tbl_sales_order_details', 'tbl_purchase_order_details',
-                     'tbl_invoice_details', 'tbl_spare_mapping')
-GROUP BY table_name, index_name
-ORDER BY table_name, index_name;
+-- the check of the result is in db/post_upload_261026_check.sql - run it on its own afterwards
+-- (2026-10-28 it was at the end of this file: phpMyAdmin then sent the whole batch to the system schema and
+-- stopped at the first index with "#1044 Access denied" - nothing was added)
