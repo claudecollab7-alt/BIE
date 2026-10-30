@@ -2,6 +2,7 @@
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
+// 2026-10-30 invoice row qty may be a part qty - shown up to 3 decimals (fnQty)
 session_start();
 $conn = new dbconnect();
 $dbconn= new dbhandler();
@@ -116,8 +117,8 @@ if(isset($_POST['item_id']) && $_POST['mode']=='inv_save')
                 <td>'.$itm->item_desciption.'
 					<input type="hidden" class="item_desciption" name="item_desciption[]" value="'.$itm->item_desciption.'" />
 				</td>
-				<td class="text-right">'.$_POST['po_qty'].'
-					<input type="hidden" class="temp_qty" name="temp_qty[]" value="'.$_POST['po_qty'].'" />
+				<td class="text-right">'.fnQty($_POST['po_qty']).'
+					<input type="hidden" class="temp_qty" name="temp_qty[]" value="'.fnQty($_POST['po_qty']).'" />
 				</td>
                 <td class="text-right">'.$_POST['po_unit'].'
 					<input type="hidden" class="temp_unit" name="temp_unit[]" value="'.$_POST['po_unit'].'" />

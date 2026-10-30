@@ -12,6 +12,7 @@ isAdmin();
 // 2026-09-25 cash denomination list ordered by value, 2000 retired, 1/2/5 added
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 
+// 2026-10-30 quantity can be a part qty (0.5, 1.25 - up to 3 decimals); tbl_invoice_details.inv_qty is decimal (db/post_upload_301026.sql)
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $conn = new dbconnect();
@@ -834,6 +835,12 @@ if (isset($_REQUEST['inv_id']) && $_REQUEST['inv_id'] != "") {
                 $('#inv_qty').focus();
                 return false;
             }
+            // part qty allowed (0.5, 1.25) - more than 0, at most 3 decimals
+            if (!/^(\d+(\.\d{1,3})?|\.\d{1,3})$/.test($('#inv_qty').val()) || parseFloat($('#inv_qty').val()) <= 0) {
+                alert("Please enter a Quantity above 0, with at most 3 decimals (e.g. 2, 0.5, 1.25) ...!");
+                $('#inv_qty').focus();
+                return false;
+            }
             if ($('#inv_unit_price').val() == "" || $('#inv_unit_price').val() == 0) {
                 alert("Please Check the Unit Price ...!");
                 $('#inv_unit_price').focus();
@@ -915,7 +922,7 @@ if (isset($_REQUEST['inv_id']) && $_REQUEST['inv_id'] != "") {
                         total_val1 = parseFloat(total_val1) + parseFloat(temp_qty);
                     }
                 });
-                $('#show_table tfoot th#lastRow1').html(total_val1.toFixed(0));
+                $('#show_table tfoot th#lastRow1').html(parseFloat(total_val1.toFixed(3)));
                 var total_val2 = 0;
                 $("#show_table tr").each(function() {
                     var temp_unit_price = $(this).closest('tr').find('.temp_unit_price').val();
@@ -1145,7 +1152,7 @@ if (isset($_REQUEST['inv_id']) && $_REQUEST['inv_id'] != "") {
                 total_val1 = parseFloat(total_val1) + parseFloat(temp_qty);
             }
         });
-        $('#show_table tfoot th#lastRow1').html(total_val1.toFixed(2));
+        $('#show_table tfoot th#lastRow1').html(parseFloat(total_val1.toFixed(3)));
         var total_val2 = 0;
         $("#show_table tr").each(function() {
             var temp_unit_price = $(this).closest('tr').find('.temp_unit_price').val();
@@ -1358,7 +1365,7 @@ if (isset($_REQUEST['inv_id']) && $_REQUEST['inv_id'] != "") {
                                                         </div>
                                                         <div class="form-group pl-0 col-md-2">
                                                             <label>Quantity <span class="text-mandatory">*</span><span id="min_qty" style="color:red"></span></label>
-                                                            <input type="text" name="inv_qty" id="inv_qty" class="form-control number_only" maxlength="9">
+                                                            <input type="text" name="inv_qty" id="inv_qty" class="form-control number_only_dot" maxlength="9">
                                                         </div>
                                                         <div class="form-group pl-0 col-md-2">
                                                             <label>Unit <span class="text-mandatory">*</span></label>
@@ -1441,8 +1448,8 @@ if (isset($_REQUEST['inv_id']) && $_REQUEST['inv_id'] != "") {
                                                                     <td>' . $item_desciption . '
                                                                         <input type="hidden" class="item_desciption" name="item_desciption[]" value="' . $item_desciption . '" />
                                                                     </td>
-                                                                    <td class="text-right">' . $itm->inv_qty . '
-                                                                        <input type="hidden" class="temp_qty" name="temp_qty[]" value="' . $itm->inv_qty . '" />
+                                                                    <td class="text-right">' . fnQty($itm->inv_qty) . '
+                                                                        <input type="hidden" class="temp_qty" name="temp_qty[]" value="' . fnQty($itm->inv_qty) . '" />
                                                                     </td>
                                                                     <td class="text-right">' . $itm->inv_unit . '
                                                                         <input type="hidden" class="temp_unit" name="temp_unit[]" value="' . $itm->inv_unit . '" />

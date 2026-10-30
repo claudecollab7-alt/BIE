@@ -6,6 +6,7 @@ require_once("inc/common/userclass.php");
 isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-30 invoice qty may be a part qty (0.5) - shown up to 3 decimals without trailing zeros (fnQty)
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-09-24 try/catch added, handlers had none before
@@ -708,8 +709,8 @@ if (isset($_REQUEST['inv_id'])) {
                                                                     <td>' . $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $obj->item_id) . '</td>
                                                                     <input type="hidden" class="temp_item_id" name="temp_item_id[]" value="' . $obj->item_id . '" />
 
-                                                                    <td class="text-right">' . $obj->inv_qty . '</td>
-                                                                    <input type="hidden" class="temp_qty" name="temp_qty[]" value="' . $obj->inv_qty . '" />
+                                                                    <td class="text-right">' . fnQty($obj->inv_qty) . '</td>
+                                                                    <input type="hidden" class="temp_qty" name="temp_qty[]" value="' . fnQty($obj->inv_qty) . '" />
 
                                                                     <td class="text-right">' . $obj->inv_unit . '</td>
                                                                     <input type="hidden" class="temp_unit" name="temp_unit[]" value="' . $obj->inv_unit . '" />
@@ -744,7 +745,7 @@ if (isset($_REQUEST['inv_id'])) {
                                                     <tfoot>
 														<tr>
 															<th colspan="2" class="text-right">Total </th>
-															<th id="quo_total_qty" class="text-right"><?php echo $tot_qty; ?></th>
+															<th id="quo_total_qty" class="text-right"><?php echo fnQty($tot_qty); ?></th>
 															<th></th>
 															<th></th>
 															<th></th>

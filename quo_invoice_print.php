@@ -11,6 +11,7 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-10-30 invoice qty may be a part qty (0.5) - shown up to 3 decimals without trailing zeros (fnQty)
 
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
@@ -465,7 +466,7 @@ if ($_REQUEST['inv_id'] != "") {
                                                             <td class="text-center"><b>' . $item_code . '</b></td>
                                                             <td class="text-center">' . $hsn . '</td>
                                                             <td class="text-right">' . $inv->unit_price . '</td>
-                                                            <td class="text-center">' . $inv->inv_qty . '</td>
+                                                            <td class="text-center">' . fnQty($inv->inv_qty) . '</td>
                                                             <td class="text-center">' . $inv->inv_unit . '</td>
                                                             <td class="text-right">' . number_format($inv->inv_discount, 2) . '</td>
                                                             <td class="text-right">' . number_format($taxable_val, 2) . '</td>
