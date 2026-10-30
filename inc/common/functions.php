@@ -28,6 +28,12 @@ function fnSqlDir($s)
 	return strtolower((string)$s) === 'desc' ? 'desc' : 'asc';
 }
 
+// 2026-10-30 a quantity for display: up to 3 decimals, no trailing zeros (2.000 -> 2, 0.500 -> 0.5) - items can be sold in part qty
+function fnQty($v)
+{
+	return rtrim(rtrim(number_format((float)$v, 3, '.', ''), '0'), '.');
+}
+
 function fnIsLoggedIn()
 {
 	return isset($_SESSION['_user']) && $_SESSION['_user'] == "crm_user"

@@ -8,6 +8,28 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-10-30 - Invoice: items sold in part quantity (0.2, 0.5, 1.25)
+
+`tbl_invoice_details.inv_qty` was a whole number. On a non-strict server MariaDB silently rounds what goes in, so
+a 0.5 typed on the invoice was saved as 1 and a 0.2 as 0 (checked: 0.5 -> 1, 0.2 -> 0, 1.25 -> 1). The stock columns
+and the stock ledger already hold 3 decimals.
+
+- **`db/post_upload_301026.sql`** (run once on live): `inv_qty` becomes `DECIMAL(12,3)`. Existing quantities keep their
+  value - on the 28-10 copy all 8,145 invoice lines total 412,907 before and after. Safe to run again.
+- **Invoice entry (`mng_invoice.php`)**: the Quantity box takes a decimal point; Add refuses 0, more than 3 decimals or
+  text ("Please enter a Quantity above 0, with at most 3 decimals"). The item total-qty sum keeps decimals.
+- **Display**: quantities show up to 3 decimals without trailing zeros - 0.5 shows 0.5, 2 shows 2 (not 2.000) - on the
+  invoice entry rows, the invoice prints (`invoice_print.php`, `quo_invoice_print.php`) and the SO / DC invoice pages
+  (`quo_invoice.php`, `dc_invoice.php`). New `fnQty()` in `inc/common/functions.php`.
+- Checked in the browser: an invoice for 0.5 of an item (line price half the unit price), saved as draft, reopened,
+  saved - `inv_qty` 0.500, the branch stock went 17 -> 16.5, the stock ledger row reads out 0.500 (17.000 -> 16.500),
+  the print shows 0.5 with taxable value and GST on the half quantity. Existing invoices still print 10, 8 etc.
+
+Not changed: quotation, sales order, DC and proforma quantities are still whole numbers - invoices made from them
+(`quo_invoice.php`, `dc_invoice.php`) take whole quantities as before. Say if those should also take part qty.
+
+---
+
 ## 2026-10-28 - Index file split from its check
 
 Running `db/post_upload_261026.sql` in phpMyAdmin on live stopped at the first index with "#1044 Access denied for
