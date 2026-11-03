@@ -1,4 +1,5 @@
 <?php
+// 2026-11-03 box qty can be a part qty (0.5) - the box qty field takes a dot; total shown via fnQty
 // 2026-10-01 temp table dropped - renders the packing inputs from values sent by the page
 
 ob_start();
@@ -58,7 +59,7 @@ for ($i = 1; $i <= $box_count; $i++) {
 					name="pack_box_no[]" id="pack_box_no' . $i . '" value="' . htmlspecialchars($bn, ENT_QUOTES) . '" />
 			</div>
 			<div class="col-lg-6" style="text-align: center;">
-				<input type="text" class="form-control qty" onKeyPress="return isNumberKey(event)"
+				<input type="text" class="form-control qty" onKeyPress="return isNumberKey_With_Dot(event)"
 					name="pack_item_qty[]" id="pack_item_qty' . $i . '" value="' . htmlspecialchars($bq, ENT_QUOTES) . '" />
 			</div>
 		</div>';
@@ -68,7 +69,7 @@ $modal_dets .= '<div class="row">
 		<div class="col-lg-6" style="font-size: 14px; font-weight: bold; text-align: center;">Total</div>
 		<div class="col-lg-6" style="font-size: 14px; font-weight: bold; text-align: center;">
 			<input readonly type="text" id="total" class="form-control font-weight-bold" name="total"
-				value="' . htmlspecialchars($pack_total, ENT_QUOTES) . '" />
+				value="' . htmlspecialchars($pack_total === '' ? '' : fnQty($pack_total), ENT_QUOTES) . '" />
 		</div>
 	</div>
 	<hr>

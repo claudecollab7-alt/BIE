@@ -9,6 +9,7 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-11-03 part qty (0.5, 1.25 - up to 3 decimals) shown without trailing zeros (fnQty); qty columns are decimal (db/post_upload_031126.sql)
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8; package picker renamed so it cannot override the rows
@@ -1037,8 +1038,8 @@ if (isset($_REQUEST['quo_id'])) {
 																	<td>' . $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $obj->item_id) . '</td>
 																	<input type="hidden" class="temp_item_id" name="temp_item_id[]" value="' . $obj->item_id . '" />
 
-																	<td class="text-right">' . $obj->quo_qty . '</td>
-																	<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . $obj->quo_qty . '" />
+																	<td class="text-right">' . fnQty($obj->quo_qty) . '</td>
+																	<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . fnQty($obj->quo_qty) . '" />
 
 																	<td class="text-right">' . $obj->quo_unit . '</td>
 																	<input type="hidden" class="temp_unit" name="temp_unit[]" value="' . $obj->quo_unit . '" />
@@ -1142,7 +1143,7 @@ if (isset($_REQUEST['quo_id'])) {
 													<tfoot>
 														<tr>
 															<th colspan="2" class="text-right">Total </th>
-															<th id="quo_total_qty" class="text-right"><?php echo $tot_qty; ?></th>
+															<th id="quo_total_qty" class="text-right"><?php echo fnQty($tot_qty); ?></th>
 															<th></th>
 															<th></th>
 															<th></th>
@@ -1919,7 +1920,7 @@ if (isset($_REQUEST['quo_id'])) {
 
 		});
 
-		$('#quo_total_qty').html(quo_total_qty);
+		$('#quo_total_qty').html(parseFloat(quo_total_qty.toFixed(3)));
 		$('#quo_total_amt').html(quo_total_amt.toFixed(2));
 		$('#quo_total_netamt').html(quo_total_net.toFixed(2));
 		$('#txt_quo_total_amt').val(quo_total_amt.toFixed(2));

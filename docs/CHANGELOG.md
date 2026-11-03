@@ -8,6 +8,36 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-03 - Part quantity through quotation, sales order, DC, packing and proforma
+
+Follows the invoice change of 30-10: the same 0.2 / 0.5 / 1.25 (up to 3 decimals) now goes all the way through.
+These quantities were whole numbers too, so a 0.5 on a quotation was saved as 1 and carried on rounded.
+
+- **`db/post_upload_031126.sql`** (run once on live, after `post_upload_301026.sql`): DECIMAL(12,3) for
+  `tbl_quotation_details.quo_qty`, `tbl_sales_order_details.so_qty` / `so_avl_qty`, `tbl_sales_order.so_qty`,
+  `tbl_dc_details.dc_qty` / `dc_dispatch_qty` / `bal_qty`, `tbl_package_box_details.total_qty` / `dispatch_qty`,
+  `tbl_proforma_details.pro_qty`. Existing quantities keep their value - on the 28-10 copy every row count and total
+  is the same before and after. Safe to run again.
+- **Quotation**: the qty box already took a dot - only the table rounded it. Rows, total and print show 1.5.
+- **DC** (`dc_add.php`): the Dispatch Qty box takes a dot; more than 3 decimals is refused; the stock / SO qty /
+  balance checks work on decimals rounded to 3 places (a partial DC of 0.7 after 0.5 of 1.5 leaves 0.3, not
+  0.30000000000000004); the qty left for a partial DC is rounded the same way. Packing: the box qty takes a dot and
+  the box total must equal the dispatch qty to 3 places.
+- **Display** (`fnQty`): quotation rows / total / print, SO rows / total / print, DC rows / print, proforma rows / total /
+  print, invoices made from a quotation or DC, the sales order list dispatched / ordered badge, stock on the SO and DC
+  pages. Existing documents look the same as before: 28 pages compared old against new on the 12-10 copy - no shown
+  value changed, except stock now reads 3 instead of 3.000 on the DC page.
+- Checked in the browser, end to end: quotation for 1.5 (price on 1.5, saved 1.500, reopened and printed 1.5) ->
+  sales order 1.500 -> DC: 2 and 0.1234 refused, 0.5 dispatched (balance 1), partial DC: 1.1 refused, 0.7 dispatched
+  (balance exactly 0.3) -> invoice from the first DC: 0.500, stock 127 -> 126.5, ledger out 0.500, print 0.5 ->
+  proforma from the quotation 1.500, print 1.5. The Sales Order report popup shows ordered 1.5, DC 0.5 + 0.7 in
+  approval, invoiced 0.5, to DC 0.3.
+
+Seen, not changed: saving a DC throws "document.thisForm.submit is not a function" in the browser console (old,
+the DC still saves).
+
+---
+
 ## 2026-10-30 - Invoice: items sold in part quantity (0.2, 0.5, 1.25)
 
 `tbl_invoice_details.inv_qty` was a whole number. On a non-strict server MariaDB silently rounds what goes in, so

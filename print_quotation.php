@@ -8,6 +8,7 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-11-03 part qty (0.5, 1.25 - up to 3 decimals) shown without trailing zeros (fnQty); qty columns are decimal (db/post_upload_031126.sql)
 
 // 2026-10-13 approve / reject for approvers in Task Settings (QUOTATION A) - was admin or the quotation's branch
 // 2026-10-15 revoke button for Revokers (QUOTATION R) once approved - back to draft
@@ -447,7 +448,7 @@ if ($obj->quo_id > 0) {
                                                                 <td colspan = "" align="center">' . $itm->item_code . '</td>
                                                                 <td colspan = "" align="center" >' . $hsn->hsn_code . '</td>
                                                                 <td colspan = ""align="right">' . $quo->selling_price . '</td>
-                                                                <td colspan = "" align="center">' . $quo->quo_qty . '</td>
+                                                                <td colspan = "" align="center">' . fnQty($quo->quo_qty) . '</td>
                                                                 <td colspan = "" align="center">' . $uom_name . '</td>';
                                                         if ($dis_count > 0) {
                                                             echo '<td align="center">' . number_format($quo->quo_discount, 0) . " %" . '
