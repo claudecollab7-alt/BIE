@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 
+// 2026-11-03 dispatched / ordered qty shown via fnQty (part qty)
 // 2026-10-27 search / sort input through fnSqlText / fnSqlColumn / fnSqlDir - a ' in a search box broke the query
 // 2026-10-26 DC / invoice / qty / quotation lookups read once for the page's SOs, not about 11 queries per SO
 // 2026-10-13 all branches for viewers in Task Settings (SALES_ORDER W) - was admin or head office
@@ -185,7 +186,7 @@ foreach ($so_page as $row) {
     //DC End 
     $full_dc ='';
     if ($row->so_status == 5  && $row->so_approve_status == 1) {
-        $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
+        $full_dc = '<span class="badge bg-success">'.($approve_count === null ? '' : fnQty($approve_count)). ' / ' .($total_count === null ? '' : fnQty($total_count)).'</span>';
 		$item_status = '<span class="badge bg-primary">Processing</span>';
 
        // $dc_link = '<a href="dc_add.php?so_id=' . $row->so_id . '" class="tip" title="Generate DC" ><i class="fas fa-truck"></i></a>';
@@ -208,14 +209,14 @@ foreach ($so_page as $row) {
             {
                 if($total_count == $approve_count)
                 {
-                    $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
+                    $full_dc = '<span class="badge bg-success">'.($approve_count === null ? '' : fnQty($approve_count)). ' / ' .($total_count === null ? '' : fnQty($total_count)).'</span>';
 					$item_status = '<span class="badge bg-success">Despatched</span>';
 
                     $dc_add_link = '<a href="javascript:;" class="tip disable" title="Generate DC"><i class="fas fa-truck bg-edit-disabled"></i></a>';
                 }
                 elseif($total_count > $approve_count)
                 {
-                    $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
+                    $full_dc = '<span class="badge bg-success">'.($approve_count === null ? '' : fnQty($approve_count)). ' / ' .($total_count === null ? '' : fnQty($total_count)).'</span>';
 				    $item_status = '<span class="badge bg-secondary">Partially Despatched</span>';
                     
                     $max_dc_approve = $dbconn->MapValue($m_dc_approve, $max_dc_id);
@@ -252,7 +253,7 @@ foreach ($so_page as $row) {
         //$dc_link = '<a href="dc_add.php?so_id=' . $row->so_id . '" class="tip" title="Generate DC" ><i class="fas fa-truck"></i></a>'; 
         $so_print = '<a href="print_sales_order.php?so_id=' . $row->so_id . '" class="tip" title="Print Sales Order"><i class="icon-printer bg-edit mr-2"></i></a>';
         $credit = '<span style="color:red;">Credit Sales<span>';
-        $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
+        $full_dc = '<span class="badge bg-success">'.($approve_count === null ? '' : fnQty($approve_count)). ' / ' .($total_count === null ? '' : fnQty($total_count)).'</span>';
 		$item_status = '<span class="badge bg-primary">Processing</span>';
 
 
@@ -275,14 +276,14 @@ foreach ($so_page as $row) {
             {
                 if($total_count == $approve_count)
                 {
-                    $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
+                    $full_dc = '<span class="badge bg-success">'.($approve_count === null ? '' : fnQty($approve_count)). ' / ' .($total_count === null ? '' : fnQty($total_count)).'</span>';
 					$item_status = '<span class="badge bg-success">Despatched</span>';
 
                     $dc_add_link = '<a href="javascript:;" class="tip disable" title="Generate DC"><i class="fas fa-truck bg-edit-disabled"></i></a>';
                 }
                 elseif($total_count > $approve_count)
                 {
-                    $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
+                    $full_dc = '<span class="badge bg-success">'.($approve_count === null ? '' : fnQty($approve_count)). ' / ' .($total_count === null ? '' : fnQty($total_count)).'</span>';
 				    $item_status = '<span class="badge bg-secondary">Partially Despatched</span>';
                     $max_dc_approve = $dbconn->MapValue($m_dc_approve, $max_dc_id);
 
@@ -318,7 +319,7 @@ foreach ($so_page as $row) {
         //$dc_link = '<a href="dc_add.php?so_id=' . $row->so_id . '" class="tip" title="Generate DC" ><i class="fas fa-truck"></i></a>'; 
         $so_print = '<a href="print_sales_order.php?so_id=' . $row->so_id . '" class="tip" title="Print Sales Order"><i class="icon-printer bg-edit mr-2"></i></a>'; 
         $credit = '<span style="color:red;">Credit Sales<span>';
-        $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
+        $full_dc = '<span class="badge bg-success">'.($approve_count === null ? '' : fnQty($approve_count)). ' / ' .($total_count === null ? '' : fnQty($total_count)).'</span>';
 		$item_status = '<span class="badge bg-primary">Processing</span>';
 
 
@@ -341,14 +342,14 @@ foreach ($so_page as $row) {
             {
                 if($total_count == $approve_count)
                 {
-                    $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
+                    $full_dc = '<span class="badge bg-success">'.($approve_count === null ? '' : fnQty($approve_count)). ' / ' .($total_count === null ? '' : fnQty($total_count)).'</span>';
 					$item_status = '<span class="badge bg-success">Despatched</span>';
 
                     $dc_add_link = '<a href="javascript:;" class="tip disable" title="Generate DC"><i class="fas fa-truck bg-edit-disabled"></i></a>';
                 }
                 elseif($total_count > $approve_count)
                 {
-                    $full_dc = '<span class="badge bg-success">'.$approve_count. ' / ' .$total_count.'</span>';
+                    $full_dc = '<span class="badge bg-success">'.($approve_count === null ? '' : fnQty($approve_count)). ' / ' .($total_count === null ? '' : fnQty($total_count)).'</span>';
 				    $item_status = '<span class="badge bg-secondary">Partially Despatched</span>';
                     
                     $max_dc_approve = $dbconn->MapValue($m_dc_approve, $max_dc_id);

@@ -6,6 +6,7 @@ isAdmin();
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-11-03 part qty (0.5, 1.25 - up to 3 decimals) shown without trailing zeros (fnQty); qty columns are decimal (db/post_upload_031126.sql)
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -389,7 +390,7 @@ if ($_REQUEST['pro_id'] != "") {
                                                             <td class="text-center"><b>' . $item_code . '</b></td>
                                                             <td class="text-center">'  . $hsn . '</td>
                                                             <td class="text-right">'   . $inv->unit_price . '</td>
-                                                            <td class="text-center">'  . $inv->pro_qty . '</td>
+                                                            <td class="text-center">'  . fnQty($inv->pro_qty) . '</td>
                                                             <td class="text-center">'  . $inv->pro_unit . '</td>
                                                             <td class="text-right">'   . number_format($inv->pro_discount, 2) . '</td>
                                                             <td class="text-right">'   . number_format($taxable_val, 2) . '</td>
