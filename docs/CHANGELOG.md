@@ -8,6 +8,37 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-11 - Created by / created dtm / modified by / modified dtm on every main table
+
+Most tables had no record of who made or last changed a row; documents kept only `modify_by` + `modify_date_time`,
+written when the document is made.
+
+- **`db/post_upload_111126_audit.sql`** (run once on live, after `post_upload_111126.sql`): 54 tables - every master
+  and document header the forms save to (masters, quotation / SO / DC / proforma / invoice / receipt / repair,
+  store indent / PO prepare / PO / GRN / GRN payment / purchase return / stock adjustment, accounts, HR advances /
+  debit notes / salary / attendance, users, items, unit prices, tasks).
+  - adds `created_by`, `created_dtm`, `modify_by`, `modify_dtm` where missing (existing columns are kept as they are);
+  - fills `created_by` / `created_dtm` of existing rows from `modify_by` / `modify_date_time` (or `update_by` /
+    `update_dtm`, `created_dt`) - on these tables those are written when the record is made;
+  - adds two triggers per table: on insert `created_by` = logged-in user, `created_dtm` = now; on update `modify_by` =
+    logged-in user, `modify_dtm` = now, and `created_*` stay as they were. Times are India time whatever the server
+    zone. A value a form writes itself is kept. So every form, page and popup fills them with no change to the form.
+  - detail rows (item lines) are left out: they belong to their document, are deleted and written again on edit, and
+    are read together with it (`SELECT *` joins - their own created / modified columns would replace the document's).
+  - the triggers are dropped before the old rows are filled and made again after, so it is safe to run again.
+- **Connection** (`inc/common/dbconnect.php`, `inc/common/dbhandler.php`): `fnDbSetUser()` puts the logged-in user on
+  the database connection (`@bie_user_id`), which the triggers read. Every page that saves starts the session first.
+- **Prints** - "Created by ... on" now reads `created_by` / `created_dtm` (`fnCreatedUser` / `fnCreatedDtm`, old
+  `modify_*` for a row without them), because `modify_by` now changes on every edit or approval: invoice, quotation
+  invoice, proforma, PO, DC, sales order, store indent, GRN view, purchase return view, sales repair.
+- Checked on the 11-11 copy: every original column of the 54 tables reads the same before and after (row counts and
+  checksums); 96 pages (every menu page plus 30 prints / forms) give the same text as before - the only difference is
+  the order of same-date rows in the GRN payment list (the tables are rebuilt by ALTER). HSN made by Kerala ->
+  created_by Kerala; changed by admin -> modify_by admin, created kept; PO made by Kerala prints "Created by Kerala"
+  and still does after admin changes it.
+
+---
+
 ## 2026-11-11 - Price per extra unit (multiple UOM) and PO Prepare prices
 
 PO/0269/BIE/KL/2627 went out at 0: PUT-B-12-8-B (main unit NOS, extra unit MTR) was indented in MTR, PO Prepare

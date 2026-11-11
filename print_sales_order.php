@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 // 2026-10-13 approve / reject for approvers in Task Settings (SALES_ORDER A) - was admin
 // 2026-10-13 approve / reject buttons follow the same role - they showed to every user (every user holds it to begin with)
 // 2026-10-15 revoke button for Revokers (SALES_ORDER R) once approved - back to in approval
+// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change)
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -978,7 +979,7 @@ if ($obj->branch_id > 0) {
                         </div>
                         <div class="row">
                             <div class="text-left col-lg-6">
-                                <div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", $obj->modify_by) . ' on ' . date('d-M-y @ H:i', strtotime($obj->modify_date_time)); ?></b><br><b>Remarks : </b> <?php echo $obj->so_remarks; ?>
+                                <div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", fnCreatedUser($obj)) . ' on ' . date('d-M-y @ H:i', strtotime(fnCreatedDtm($obj))); ?></b><br><b>Remarks : </b> <?php echo $obj->so_remarks; ?>
                                 </div>
                             </div>
                             <div class="text-right col-lg-6">

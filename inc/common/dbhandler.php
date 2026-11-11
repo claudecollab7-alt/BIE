@@ -1,5 +1,6 @@
 <?php
 require_once(dirname(__FILE__) . '/error_log.php');
+require_once(dirname(__FILE__) . '/dbconnect.php');	// 2026-11-11 fnDbSetUser()
 
 /**
  * Class to handle all db operations
@@ -20,11 +21,15 @@ class dbhandler
 	// 2026-10-26 one connection shared by every dbhandler of a request - a page made 5-7 of them, each one a new connection
 	// (only reads and single inserts go through it, no transactions, so sharing changes nothing)
 	private static $shared = null;
+	private static $user_set = false;	// 2026-11-11 @bie_user_id set on the shared connection
 
 	public function __construct()
 	{	
 		if (self::$shared) {
 			$this->conn = self::$shared;
+			if (!self::$user_set) {
+				self::$user_set = fnDbSetUser($this->conn);	// made before the session started
+			}
 			return;
 		}
 		try
@@ -41,6 +46,7 @@ class dbhandler
 			$this->conn->setAttribute( PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_OBJ);
 
 			self::$shared = $this->conn;
+			self::$user_set = fnDbSetUser($this->conn);
 		}
 
 		catch(PDOException  $e)
