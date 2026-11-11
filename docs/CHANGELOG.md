@@ -8,6 +8,49 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-11 - Price per extra unit (multiple UOM) and PO Prepare prices
+
+PO/0269/BIE/KL/2627 went out at 0: PUT-B-12-8-B (main unit NOS, extra unit MTR) was indented in MTR, PO Prepare
+took the price only from the multi-UOM price history, no MTR price was ever entered, so the line was 0 and was sent
+to admin and made into a PO without a stop.
+
+- **`db/post_upload_111126.sql`** (run once on live, after `post_upload_031126.sql`): new `tbl_item_uom_price` - one
+  current price per item + extra unit + branch (item price, discount, cost, selling, margin, created / modified by and
+  time). Carries over the latest saved price where it is a real extra unit of the item (1 row on the 11-11 copy - the
+  other 11 history rows were "NOT APPLICABLE" or the main unit). Safe to run again.
+- **Item Price screen** (`mst_itemprice_history.php`): under the main price, one card per extra unit with every
+  branch in a row (main-unit cost shown beside it), one SAVE UNIT PRICES button. A changed row updates its price and
+  writes the old / new values to `tbl_multiuom_itemprice_history`; an unchanged row writes nothing; an empty row stays
+  "Not set" (red). Price must be above 0 and discount below 100 - checked on the page and again on save.
+  Before: each save added a history row and readers took the oldest one (a corrected price was never used), the
+  form's validation posted the main form instead, and the branch select loaded any item's price for that unit.
+- **Extra Unit Prices** report (`rpt_uom_price_missing.php`, button on the Item Price History list): items with an
+  extra unit and the cost per branch, "Not set" in red, Set price link, Excel. 163 item units on the 11-11 copy have
+  no price for at least one branch.
+- **PO Prepare** (`po_prepare.php`): unit / price / GST of a line from one function (`fnPoPrepareLine`) for the screen
+  and for every save - main unit: branch cost price; extra unit: its price for the indent's branch. A line with no
+  price is red with the reason and a "set price" link; Send to Admin is refused (page and save) while a line to order
+  has no price, and the page says which. The unit code now follows the indent unit (1268 had MTR saved as NOS).
+  The line values are worked out on save, not taken from the page: with an item split between two suppliers the page
+  posts one price per item but one qty per supplier row, so the save failed ("Column uom cannot be null") while the
+  page said it was saved; now each supplier row is saved with its own qty x price.
+- **PO** (`po_prepare_print.php`): a line in an extra unit gets that unit's list price in the item price column
+  (was the main unit's).
+- `inc/cis_ajax/jquery_get_item_details.php`: multi_uom mode reads this item's price (was any item's) and no longer
+  runs on every call.
+- **`db/fix_po_1333_111126.sql`**: after the MTR price for Kerala is set, puts it on PO 1333 and prepare 1268 (only
+  while the PO is not approved).
+- Checked: PO 1333's indent re-prepared on the 11-11 copy - red with "No MTR price for Kerala", Send to Admin stopped
+  on the page and by the save, then MTR 55 set -> 20 x 55 = 1100 + 18% = 1298, sent, PO made at 55. 50 recent prepares
+  (KL and HO) open with the same values as before; the only change is a red line on GT-BTS-12X14 (first stock row has
+  KL cost 0) and an older MTR prepare of the same item now showing the current MTR price.
+
+Seen, not changed: 4 items have two `tbl_item_stock` rows (TGT-LDS-1/2-20, GT-BTS-12X14, TGT-CP-1621-6,
+TGT-EB-75-1743); pages read the first. The PO Prepare page logs "$err_found is not defined" on submit (old, the
+form still submits).
+
+---
+
 ## 2026-11-03 - Part quantity through quotation, sales order, DC, packing and proforma
 
 Follows the invoice change of 30-10: the same 0.2 / 0.5 / 1.25 (up to 3 decimals) now goes all the way through.

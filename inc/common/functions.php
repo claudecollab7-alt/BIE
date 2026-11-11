@@ -1,5 +1,6 @@
 <?php
 // 2026-10-14 isAdmin also needs the user id and branch - a session with only _user="crm_user" ran pages with no user or branch
+// 2026-11-11 fnItemExtraUoms / fnItemUomPrice - extra unit list and price per extra unit per branch
 require_once(dirname(__FILE__) . '/error_log.php');
 ob_start();
 date_default_timezone_set('Asia/Calcutta');
@@ -32,6 +33,41 @@ function fnSqlDir($s)
 function fnQty($v)
 {
 	return rtrim(rtrim(number_format((float)$v, 3, '.', ''), '0'), '.');
+}
+
+// 2026-11-11 extra units (multiple UOM) of an item: uom_id => {uom_id, uom_name, uom_code}
+// only units that exist - not 0, not the main unit, no repeats (multi_uom_id is text like "12,2")
+function fnItemExtraUoms($conn, $item_id)
+{
+	$st = $conn->prepare("SELECT item_uom, multi_uom_id FROM tbl_item_details WHERE item_id = ?");
+	$st->execute(array((int)$item_id));
+	$item = $st->fetch(PDO::FETCH_OBJ);
+	$list = array();
+	if (!$item) {
+		return $list;
+	}
+	$ids = array();
+	foreach (explode(',', (string)$item->multi_uom_id) as $v) {
+		$v = (int)trim($v);
+		if ($v > 0 && $v != (int)$item->item_uom && !in_array($v, $ids)) {
+			$ids[] = $v;
+		}
+	}
+	if (count($ids) > 0) {
+		$res = $conn->query("SELECT uom_id, uom_name, uom_code FROM mst_uom WHERE uom_id IN (" . implode(',', $ids) . ") ORDER BY uom_name");
+		while ($u = $res->fetch(PDO::FETCH_OBJ)) {
+			$list[(int)$u->uom_id] = $u;
+		}
+	}
+	return $list;
+}
+
+// 2026-11-11 price of an item in one of its extra units for a branch (tbl_item_uom_price); false when not set
+function fnItemUomPrice($conn, $item_id, $uom_id, $branch_id)
+{
+	$st = $conn->prepare("SELECT * FROM tbl_item_uom_price WHERE item_id = ? AND uom_id = ? AND branch_id = ?");
+	$st->execute(array((int)$item_id, (int)$uom_id, (int)$branch_id));
+	return $st->fetch(PDO::FETCH_OBJ);
 }
 
 function fnIsLoggedIn()

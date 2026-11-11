@@ -1,4 +1,5 @@
 <?php
+// 2026-11-11 multi_uom mode reads tbl_item_uom_price for this item only
 ob_start();
 session_start();
 require_once("../common/dbconnect.php");
@@ -46,13 +47,11 @@ if (isset($_POST['branch_id']) && $_POST['mode'] == "single_uom") {
 			}
 		}
 	}
-} else if ($_POST['mode'] == "multi_uom")
-	$item_id = $_POST['item_id'];
-
-$SQL = "SELECT * FROM tbl_multiuom_itemprice_history WHERE branch_id = '" . $user_branch . "' AND new_item_uom = '" . $new_item_uom . "' ";
-$result = $conn->query($SQL);
-if ($result->rowCount() > 0) {
-	$obj1 = $result->fetch(PDO::FETCH_OBJ);
-
-	echo trim("$obj1->new_price~$obj1->new_discount~$obj1->new_cost_price~$obj1->new_selling_price~$obj1->new_margin_percent~$obj1->new_min_discount~$obj1->new_max_discount");
+} else if ($_POST['mode'] == "multi_uom") {
+	// 2026-11-11 this item's price in that unit for the branch (was any item's price; ran for every mode - no braces)
+	$uom_id = $dbconn->GetSingleReconrd("mst_uom", "uom_id", "uom_name", $new_item_uom);
+	$obj1 = fnItemUomPrice($conn, $_POST['item_id'], $uom_id, $user_branch);
+	if ($obj1) {
+		echo trim("$obj1->item_price~$obj1->item_discount~$obj1->cost_price~$obj1->selling_price~$obj1->margin_percent~0~0");
+	}
 }

@@ -19,78 +19,86 @@ $dbconn = new dbhandler();
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 // 2026-10-16 margin % on cost price (was on item price); selling price changes only when margin or selling is edited
+// 2026-11-11 extra unit prices: all branches per unit in one form, saved to tbl_item_uom_price (was a new history row per save, read oldest first; the form posted the main form)
 
 //  ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
 
-if (isset($_POST['SAVE'])) {
+// 2026-11-11 price per extra unit: one current row per item / unit / branch in tbl_item_uom_price,
+// each change also written to tbl_multiuom_itemprice_history (old / new values)
+if (isset($_POST['SAVE_UOM'])) {
+	$item_id = (int)$_POST['item_id'];
 	if (!csrf_check('itemprice_history')) {
-		csrf_fail('mst_itemprice_history_list.php');
+		csrf_fail('mst_itemprice_history.php?item_id=' . $item_id);
 	}
-	// print_r($_POST);
-	// exit;
 	try {
 		db_begin($conn);
-		$result = $conn->query("SELECT * FROM tbl_item_details WHERE item_id = " . $_REQUEST['item_id']);
-		if ($result->rowCount() > 0) {
-			$obj = $result->fetch(PDO::FETCH_OBJ);
-		}
-
-
-		if (
-			$_REQUEST['branch_new_price'] != $obj->item_price || $_REQUEST['branch_new_discount'] != $obj->item_discount || $_REQUEST['branch_new_cost_price'] != $obj->item_cost_price ||
-			$_REQUEST['branch_new_selling_price'] != $obj->item_selling_price || $_REQUEST['new_msq'] != $obj->item_min_qty || $_REQUEST['new_maq'] != $obj->item_max_qty ||
-			$_REQUEST['new_moq'] != $obj->item_order_min_qty || $_REQUEST['new_item_curr_stock'] != $obj->item_curr_stock || $_REQUEST['new_item_uom'] != $obj->item_uom ||
-			$_REQUEST['new_item_hsn'] != $obj->item_hsn
-		) {
-
-
-			// $_REQUEST['created_dtm'] = date('Y-m-d H:i:s');
-			// $_REQUEST['created_by'] = $_SESSION['_user_id'];
-
-			if (isset($_REQUEST['branch_new_discount'])) {
-				for ($x = 0; $x < fnRowCount('branch_new_discount'); $x++) {
-
-					$_REQUEST['created_dtm'] = date('Y-m-d H:i:s');
-					$_REQUEST['created_by'] = $_SESSION['_user_id'];
-					$stmt1 = null;
-					$stmt1 = $conn->prepare("INSERT INTO tbl_multiuom_itemprice_history (item_id, branch_id, new_price, new_discount, new_min_discount, new_max_discount, new_cost_price, new_selling_price, new_margin_percent, new_item_uom, 
-						created_dtm, created_by) 
-						VALUES (:item_id, :branch_id, :new_price, :new_discount, :new_min_discount, :new_max_discount, :new_cost_price, :new_selling_price, :new_margin_percent, :new_item_uom, :created_dtm, :created_by)");
-					$data1 = array(
-						':item_id' => $_REQUEST['item_id'],
-						':branch_id' =>  $_REQUEST['branch_id'][$x],
-						':new_price' => $_REQUEST['branch_new_price'][$x],
-						':new_discount' => $_REQUEST['branch_new_discount'][$x],
-						':new_min_discount' => isset($_REQUEST['branch_new_min_discount'][$x]) ? $_REQUEST['branch_new_min_discount'][$x] : 0,
-						':new_max_discount' => isset($_REQUEST['branch_new_max_discount'][$x]) ? $_REQUEST['branch_new_max_discount'][$x] : 0,
-						':new_cost_price' => $_REQUEST['branch_new_cost_price'][$x],
-						':new_selling_price' => $_REQUEST['branch_new_selling_price'][$x],
-						':new_margin_percent' => $_REQUEST['margin_percent'][$x],
-						':new_item_uom' => $_REQUEST['new_item_uom'][$x],
-						':created_dtm' => $_REQUEST['created_dtm'],
-						':created_by' => $_REQUEST['created_by']
-					);
-					$stmt1->execute($data1);
-					// print_r($data1);
-					// die();
+		$uoms = fnItemExtraUoms($conn, $item_id);
+		$branches = $conn->query("SELECT branch_id, branch_name FROM mst_branch WHERE branch_status = 1 ORDER BY branch_id")->fetchAll(PDO::FETCH_OBJ);
+		$now = date('Y-m-d H:i:s');
+		$user = (int)$_SESSION['_user_id'];
+		$changed = 0;
+		$errors = array();
+		foreach ($uoms as $uom_id => $u) {
+			foreach ($branches as $b) {
+				$r = isset($_POST['up'][$uom_id][$b->branch_id]) ? $_POST['up'][$uom_id][$b->branch_id] : null;
+				if (!is_array($r)) {
+					continue;
 				}
+				$price = trim($r['price']);
+				$disc = trim($r['discount']);
+				$sell = trim($r['selling']);
+				if ($price === '' && $disc === '' && $sell === '') {
+					continue;	// row left empty - not set
+				}
+				$price = round((float)$price, 2);
+				$disc = round((float)$disc, 2);
+				$sell = round((float)$sell, 2);
+				$cost = round($price - $price * $disc / 100, 2);	// same as js/price_calc.js
+				if ($price <= 0 || $disc < 0 || $disc >= 100 || $cost <= 0) {
+					$errors[] = $u->uom_name . ' / ' . $b->branch_name;
+					continue;
+				}
+				$margin = ($sell > 0) ? round(($sell - $cost) / $cost * 100, 2) : round((float)$r['margin'], 2);
+				$old = fnItemUomPrice($conn, $item_id, $uom_id, $b->branch_id);
+				if ($old && (float)$old->item_price == $price && (float)$old->item_discount == $disc && (float)$old->cost_price == $cost
+					&& (float)$old->selling_price == $sell && (float)$old->margin_percent == $margin) {
+					continue;	// no change
+				}
+				if ($old) {
+					$st = $conn->prepare("UPDATE tbl_item_uom_price SET item_price = ?, item_discount = ?, cost_price = ?, selling_price = ?, margin_percent = ?,
+						modify_by = ?, modify_dtm = ? WHERE uom_price_id = ?");
+					$st->execute(array($price, $disc, $cost, $sell, $margin, $user, $now, $old->uom_price_id));
+				} else {
+					$st = $conn->prepare("INSERT INTO tbl_item_uom_price (item_id, uom_id, branch_id, item_price, item_discount, cost_price, selling_price, margin_percent,
+						created_by, created_dtm, modify_by, modify_dtm) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+					$st->execute(array($item_id, $uom_id, $b->branch_id, $price, $disc, $cost, $sell, $margin, $user, $now, $user, $now));
+				}
+				$st = $conn->prepare("INSERT INTO tbl_multiuom_itemprice_history (item_id, branch_id, new_price, new_discount, new_cost_price, new_selling_price,
+					new_margin_percent, new_item_uom, old_price, old_discount, old_cost_price, old_selling_price, old_margin_percent, old_item_uom, created_dtm, created_by)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				$st->execute(array(
+					$item_id, $b->branch_id, $price, $disc, $cost, $sell, $margin, $u->uom_name,
+					$old ? $old->item_price : 0, $old ? $old->item_discount : 0, $old ? $old->cost_price : 0, $old ? $old->selling_price : 0,
+					$old ? $old->margin_percent : 0, $old ? $u->uom_name : '', $now, $user
+				));
+				$changed++;
 			}
-
-
-			// print_r($data);
-			// die();
-			$_SESSION['_msg'] = "Item Price History successfully saved..!";
+		}
+		if (count($errors) > 0) {
+			throw new Exception('Enter a price above 0 and a discount below 100 for: ' . implode(', ', $errors) . '. Nothing was saved.');
 		}
 		db_commit($conn);
+		$_SESSION['_msg'] = $changed > 0 ? "Unit prices saved ($changed changed)..!" : "No unit price was changed..!";
 	} catch (Exception $e) {
-		fnLogError($e);
+		if (strpos($e->getMessage(), 'Enter a price') !== 0) {
+			fnLogError($e);	// a wrong entry is not an error to log
+		}
 		db_rollback($conn);
-		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
-		echo $_SESSION['_msg_err'] = $str;
+		$_SESSION['_msg_err'] = str_replace("'", "", $e->getMessage());
 	}
-	header("location:mst_itemprice_history_list.php");
+	header("location:mst_itemprice_history.php?item_id=" . $item_id);
 	die();
 }
 
@@ -522,6 +530,28 @@ if ($_REQUEST['item_id'] != "") {
 			return /[0-9]/.test(charStr);
 		}
 
+		// 2026-11-11 unit price rows: an empty row is left as not set; a filled row needs a price above 0 and a discount below 100
+		function fnValidateUom() {
+			var bad = '';
+			$('#thisForm2 .uom_row').each(function() {
+				var price = $.trim($(this).find('.uom_price').val());
+				var disc = $.trim($(this).find('.uom_discount').val());
+				var sell = $.trim($(this).find('.uom_selling').val());
+				if (price === '' && disc === '' && sell === '') {
+					return;
+				}
+				if (!(parseFloat(price) > 0) || parseFloat(disc || 0) >= 100) {
+					bad = $(this).data('label');
+					return false;
+				}
+			});
+			if (bad !== '') {
+				alert('Enter a price above 0 and a discount below 100 for ' + bad + '..!');
+				return false;
+			}
+			return true;
+		}
+
 		function fnValidate() {
 			// alert("validation")
 
@@ -755,177 +785,78 @@ if ($_REQUEST['item_id'] != "") {
 
 						</form>
 
-						<form name='thisForm2' id='thisForm2' class="form-horizontal" method='POST' action="" onSubmit="return fnValidate();" enctype="multipart/form-data">
+						<?php
+						// 2026-11-11 price per extra unit (multiple UOM): every branch in one card per unit, one SAVE for all
+						$extra_uoms = ($obj->item_id != '') ? fnItemExtraUoms($conn, $obj->item_id) : array();
+						if (count($extra_uoms) > 0) {
+							$main_uom = $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $obj->item_id));
+							$uom_branches = $conn->query("SELECT * FROM mst_branch WHERE branch_status = 1 ORDER BY branch_id")->fetchAll(PDO::FETCH_OBJ);
+							$stock_row = $conn->query("SELECT * FROM tbl_item_stock WHERE item_id = " . (int)$obj->item_id . " ORDER BY stock_id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+						?>
+						<form name='thisForm2' id='thisForm2' class="form-horizontal" method='POST' action="mst_itemprice_history.php?item_id=<?php echo (int)$obj->item_id; ?>" onSubmit="return fnValidateUom();">
 							<?php csrf_fields('itemprice_history'); ?>
-
-							<?php $multi_uom_id = $dbconn->GetSingleReconrd("tbl_item_details", "multi_uom_id", "item_id", $obj->item_id);
-							// $new_item_uom = explode(",", $multi_uom_id);
-							// if ($multi_uom_id != '') {
-							if (!empty($multi_uom_id)) {
-								$new_item_uom = array_filter(
-									explode(',', $multi_uom_id),
-									function ($value) {
-										return is_numeric($value) && (int)$value != 0;
-									}
-								);
-
-								// Optional: reindex array
-								$new_item_uom = array_values($new_item_uom);
-								// }
-								for ($x = 0; $x < count($new_item_uom); $x++) {
-									$uom_name = $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $new_item_uom[$x]);
-
-									if ($obj->item_id != "") {
-										$result1 = $conn->query("SELECT * FROM tbl_multiuom_itemprice_history WHERE item_id = '" . $obj->item_id . "' AND new_item_uom = '" . $uom_name . "' ");
-										if ($result1->rowCount() > 0) {
-											$row = $result1->fetch(PDO::FETCH_OBJ);
-											// $item_id=$obj->item_id;
-											$uom_name = $row->new_item_uom;
-											$margin_percent = $row->new_margin_percent;
-											$branch_id = $row->branch_id;
-											// $new_item_hsn=$obj->new_item_hsn;
-
-
-										}
-									}
-
-							?>
-									<br>
-
-									<div class="card">
-
-
-										<div class="card-body">
-
-											<div class="form-group row pt-2">
-
-												<label class="col-lg-2 col-form-label ">Branch<span class="text-mandatory"> *</span></label>
-
-												<div class="col-lg-4">
-													<select name="branch_id[]" id="branch_id<?php echo $x; ?>" data-placeholder="Choose a Item Type.." class="select">
-														<option value="">--- Select Branch ---</option>
-														<?php
-
-														echo $dbconn->fnFillComboFromTable_Where("branch_id", "branch_name", "mst_branch", "branch_id", " WHERE branch_status = 1"); ?>
-													</select>
-													<script>
-														document.thisForm.branch_id.value = "<?php echo $branch_id; ?>"
-													</script>
-													<input type="hidden" name="item_id" id="item_id" value="<?php echo $_REQUEST['item_id']; ?>">
-
-													<!-- <input type="hidden" class="form-control"  name="branch_id" id="branch_id"  maxlength="9" value="<?php // echo $branch_id; 
-																																							?>" /> -->
-												</div>
-
-
-
-											</div>
-											<div class="form-group row pt-2 hide_price">
-												<label class="col-lg-2 col-form-label">Item Discount<span class="text-mandatory"> </span></label>
-												<div class="col-lg-4">
-													<div class="input-group">
-														<span class="input-group-append">
-															<input type="text" class="form-control" name="branch_new_discount[]" id="branch_new_discount<?php echo $x; ?>" maxlength="9" value="<?php echo $row->new_discount; ?>" placeholder="Enter Discount" onKeyPress="return isNumberKey_with_dot(event)" />
-														</span>
-														<span class="input-group-text">%</span>
-													</div>
-												</div>
-												<label class="col-lg-2 col-form-label">Margin (%)<span class="text-mandatory"> *</span></label>
-												<div class="col-lg-4">
-													<div class="input-group">
-														<span class="input-group-append">
-															<input type="text" class="form-control" name="margin_percent[]" id="margin_percent<?php echo $x; ?>" maxlength="9" value="<?php echo $margin_percent; ?>" placeholder="Enter Margin" onKeyPress="return isNumberKey_with_dot(event)" />
-														</span>
-														<span class="input-group-text">%</span>
-													</div>
-												</div>
-
-
-											</div>
-											<div class="form-group row pt-2 hide_price">
-												<label class="col-lg-2 col-form-label">Item Price<span class="text-mandatory"> *</span></label>
-												<div class="col-lg-4">
-													<input type="text" class="form-control" name="branch_new_price[]" id="branch_new_price<?php echo $x; ?>" maxlength="9" value="<?php echo $row->new_price; ?>" onKeyPress="return isNumberKey_with_dot(event)" placeholder="Enter Price" />
-												</div>
-												<label class="col-lg-2 col-form-label">Selling Price<span class="text-mandatory"> * </span></label>
-												<div class="col-lg-4">
-													<input type="text" class="form-control" name="branch_new_selling_price[]" id="branch_new_selling_price<?php echo $x; ?>" maxlength="9" value="<?php echo $row->new_selling_price; ?>" placeholder="Enter Selling Price" onKeyPress="return isNumberKey_with_dot(event)" />
-												</div>
-											</div>
-
-
-											<div class="form-group row pt-2">
-												<label class="col-lg-2 col-form-label">UOM</label>
-
-												<div class="col-lg-4">
-													<input type="text" class="form-control" name="new_item_uom[]" id="new_item_uom<?php echo $x; ?>" maxlength="" value="<?php echo $uom_name; ?>" tabindex="-1" readonly placeholder="Enter Cost Price" onKeyPress="return isNumberKey_with_dot(event)" />
-												</div>
-
-												<label class="col-lg-2 col-form-label">Cost Price<span class="text-mandatory"> *</span></label>
-												<div class="col-lg-4">
-													<input type="text" class="form-control" name="branch_new_cost_price[]" id="branch_new_cost_price<?php echo $x; ?>" maxlength="9" value="<?php echo $row->new_cost_price; ?>" onKeyPress="return isNumberKey_with_dot(event)" placeholder="Enter Cost Price" readonly />
-												</div>
-
-											</div>
-
-
-										</div>
+							<input type="hidden" name="item_id" value="<?php echo (int)$obj->item_id; ?>">
+							<?php foreach ($extra_uoms as $uom_id => $u) { ?>
+								<div class="card">
+									<div class="card-header bg-light header-elements-inline">
+										<h6 class="card-title">Price per <b><?php echo $u->uom_name; ?></b> (extra unit) <span class="text-muted ml-2">main unit: <?php echo $main_uom; ?></span></h6>
 									</div>
-									<script>
-										$("#branch_id<?php echo $x; ?>").change(function() {
-
-											var branch_id = $(this).val();
-											var item_id = $('#item_id').val();
-											var new_item_uom = $('#new_item_uom<?php echo $x; ?>').val();
-											// alert(branch_id);
-											$.ajax({
-												type: "POST",
-												url: "inc/cis_ajax/jquery_get_item_details.php",
-												data: {
-													"branch_id": branch_id,
-													"item_id": item_id,
-													"new_item_uom": new_item_uom,
-													"mode": "multi_uom"
-												}
-											}).done(function(msg) {
-												// alert(msg);
-												var data = msg.split('~');
-												$('#branch_new_price<?php echo $x; ?>').val(data[0]);
-												$('#branch_new_discount<?php echo $x; ?>').val(data[1]);
-												$('#branch_new_min_discount<?php echo $x; ?>').val(data[5]);
-												$('#branch_new_max_discount<?php echo $x; ?>').val(data[6]);
-												$('#branch_new_cost_price<?php echo $x; ?>').val(data[2]);
-												$('#branch_new_selling_price<?php echo $x; ?>').val(data[3]);
-												$('#margin_percent<?php echo $x; ?>').val(data[4]);
-												fnUomPrice<?php echo $x; ?>();
-
-											});
-										}).trigger('change');
-										var fnUomPrice<?php echo $x; ?> = fnPrice.link({ price: '#branch_new_price<?php echo $x; ?>', discount: '#branch_new_discount<?php echo $x; ?>', cost: '#branch_new_cost_price<?php echo $x; ?>', margin: '#margin_percent<?php echo $x; ?>', selling: '#branch_new_selling_price<?php echo $x; ?>' });
-									</script>
-								<?php } ?>
-
-
-								<div class="card-footer text-center pt-2">
-									<?php if ($_REQUEST["auto_id"] != '') { ?>
-										<INPUT class="btn btn-info" type="submit" name="UPDATE" value="UPDATE">
-										<INPUT class="btn btn-light" type="button" name="cancel" value="Cancel" onClick="javascript:window.location.href='lst_item_details.php'">
-										<input type="hiddden" name="txtHid" id="txtHid" value="<?php echo $_REQUEST['auto_id']; ?>">
-									<?php } else { ?>
-										<INPUT class="btn btn-info" type="submit" name="SAVE" value="SAVE">
-										<INPUT class="btn btn-light" type="button" name="cancel" value="Cancel" onClick="javascript:window.location.href='lst_item_details.php'">
-										<input type="hidden" name="txtHid" value="0">
-									<?php } ?>
+									<div class="card-body p-0">
+										<table class="table table-xs table-bordered uom_price_table mb-0">
+											<thead>
+												<tr class="bg-teal">
+													<th>Branch</th>
+													<th class="text-right">Cost per <?php echo $main_uom; ?></th>
+													<th>Item Price <span class="text-mandatory">*</span></th>
+													<th>Discount %</th>
+													<th>Cost Price</th>
+													<th>Margin %</th>
+													<th>Selling Price</th>
+													<th>Last Change</th>
+												</tr>
+											</thead>
+											<tbody>
+												<?php foreach ($uom_branches as $b) {
+													$p = fnItemUomPrice($conn, $obj->item_id, $uom_id, $b->branch_id);
+													$main_cost = ($stock_row && $b->branch_item_cost_price != '' && isset($stock_row[$b->branch_item_cost_price])) ? $stock_row[$b->branch_item_cost_price] : '';
+													$fid = $uom_id . '_' . $b->branch_id;
+													$fname = 'up[' . $uom_id . '][' . $b->branch_id . ']';
+													if ($p) {
+														$who = $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id", $p->modify_by > 0 ? $p->modify_by : $p->created_by);
+														$when = $p->modify_dtm ? $p->modify_dtm : $p->created_dtm;
+														$last = ($when ? date('d-m-Y H:i', strtotime($when)) : '') . ($who != '' ? ' / ' . $who : '');
+													}
+												?>
+													<tr class="uom_row<?php echo $p ? '' : ' table-danger'; ?>" data-label="<?php echo $u->uom_name . ' / ' . $b->branch_name; ?>">
+														<td><?php echo $b->branch_name; ?></td>
+														<td class="text-right"><?php echo $main_cost; ?></td>
+														<td><input type="text" class="form-control form-control-sm uom_price" name="<?php echo $fname; ?>[price]" id="up_price_<?php echo $fid; ?>" maxlength="9" value="<?php echo $p ? $p->item_price : ''; ?>" onKeyPress="return isNumberKey_with_dot(event)" placeholder="Not set" /></td>
+														<td><input type="text" class="form-control form-control-sm uom_discount" name="<?php echo $fname; ?>[discount]" id="up_discount_<?php echo $fid; ?>" maxlength="6" value="<?php echo $p ? $p->item_discount : ''; ?>" onKeyPress="return isNumberKey_with_dot(event)" /></td>
+														<td><input type="text" class="form-control form-control-sm uom_cost" name="<?php echo $fname; ?>[cost]" id="up_cost_<?php echo $fid; ?>" value="<?php echo $p ? $p->cost_price : ''; ?>" readonly tabindex="-1" /></td>
+														<td><input type="text" class="form-control form-control-sm" name="<?php echo $fname; ?>[margin]" id="up_margin_<?php echo $fid; ?>" maxlength="9" value="<?php echo $p ? $p->margin_percent : ''; ?>" onKeyPress="return isNumberKey_with_dot(event)" /></td>
+														<td><input type="text" class="form-control form-control-sm uom_selling" name="<?php echo $fname; ?>[selling]" id="up_selling_<?php echo $fid; ?>" maxlength="9" value="<?php echo $p ? $p->selling_price : ''; ?>" onKeyPress="return isNumberKey_with_dot(event)" /></td>
+														<td class="small"><?php echo $p ? $last : '<span class="text-danger">Not set</span>'; ?></td>
+													</tr>
+													<script>
+														// cost / margin / selling as the main price form
+														fnPrice.link({ price: '#up_price_<?php echo $fid; ?>', discount: '#up_discount_<?php echo $fid; ?>', cost: '#up_cost_<?php echo $fid; ?>', margin: '#up_margin_<?php echo $fid; ?>', selling: '#up_selling_<?php echo $fid; ?>' });
+														if ($('#up_price_<?php echo $fid; ?>').val() === '') $('#up_cost_<?php echo $fid; ?>').val('');	// not set stays empty
+													</script>
+												<?php } ?>
+											</tbody>
+										</table>
+									</div>
 								</div>
-
 							<?php } ?>
-
-
-
-
-
-
+							<div class="card">
+								<div class="card-footer text-center pt-2">
+									<span class="text-muted d-block mb-2">A branch left empty has no price in that unit - PO Prepare will not send an indent line in that unit to admin until it is set.</span>
+									<INPUT class="btn btn-info" type="submit" name="SAVE_UOM" value="SAVE UNIT PRICES">
+									<INPUT class="btn btn-light" type="button" name="cancel" value="Cancel" onClick="javascript:window.location.href='lst_item_details.php'">
+								</div>
+							</div>
 						</form>
+						<?php } ?>
 
 					</div>
 

@@ -9,6 +9,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-13 _userid (never set at login) replaced by _user_id
+// 2026-11-11 a line indented in an extra unit gets that unit's list price (item_price) from tbl_item_uom_price
 //ini_set('display_errors', '1');
 //ini_set('display_startup_errors', '1');
 //error_reporting(E_ALL);
@@ -153,6 +154,12 @@ if (isset($_REQUEST['GEN_PO'])) {
 
                                 $branch_item_price = $dbconn->GetSingleReconrd("mst_branch","branch_item_price","branch_id",$_SESSION['_user_branch']);
                                 $item_price =  $dbconn->GetSingleReconrd("tbl_item_stock","$branch_item_price","item_id",$pod->item_id);
+                                // 2026-11-11 indented in an extra unit: list price of that unit (was the main unit's)
+                                $main_uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $pod->item_id);
+                                if ($si_unit > 0 && $si_unit != $main_uom) {
+                                    $uom_price = fnItemUomPrice($conn, $pod->item_id, $si_unit, $_SESSION['_user_branch']);
+                                    $item_price = $uom_price ? $uom_price->item_price : 0;
+                                }
 
 
                                 // $unit_price = $dbconn->GetSingleReconrd("tbl_item_details", "item_cost_price", "item_status = '1' AND item_id", $pod->item_id);
