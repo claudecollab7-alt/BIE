@@ -1,6 +1,7 @@
 <?php
 // 2026-10-14 isAdmin also needs the user id and branch - a session with only _user="crm_user" ran pages with no user or branch
 // 2026-11-11 fnItemExtraUoms / fnItemUomPrice - extra unit list and price per extra unit per branch
+// 2026-11-11 fnCreatedUser / fnCreatedDtm - created by / on for prints
 require_once(dirname(__FILE__) . '/error_log.php');
 ob_start();
 date_default_timezone_set('Asia/Calcutta');
@@ -33,6 +34,17 @@ function fnSqlDir($s)
 function fnQty($v)
 {
 	return rtrim(rtrim(number_format((float)$v, 3, '.', ''), '0'), '.');
+}
+
+// 2026-11-11 who made a record and when, for "Created by" on prints: created_by / created_dtm, or the old modify_by /
+// modify_date_time on a row from before those were kept
+function fnCreatedUser($obj)
+{
+	return (isset($obj->created_by) && $obj->created_by > 0) ? $obj->created_by : (isset($obj->modify_by) ? $obj->modify_by : 0);
+}
+function fnCreatedDtm($obj)
+{
+	return (isset($obj->created_dtm) && $obj->created_dtm >= '2000-01-01') ? $obj->created_dtm : (isset($obj->modify_date_time) ? $obj->modify_date_time : '');
 }
 
 // 2026-11-11 extra units (multiple UOM) of an item: uom_id => {uom_id, uom_name, uom_code}
