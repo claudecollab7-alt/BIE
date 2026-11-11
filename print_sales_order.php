@@ -6,6 +6,7 @@ require_once("inc/common/userclass.php");
 isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-11-03 part qty (0.5, 1.25 - up to 3 decimals) shown without trailing zeros (fnQty); qty columns are decimal (db/post_upload_031126.sql)
 
 // 2026-10-13 approve / reject for approvers in Task Settings (SALES_ORDER A) - was admin
 // 2026-10-13 approve / reject buttons follow the same role - they showed to every user (every user holds it to begin with)
@@ -482,7 +483,7 @@ if ($obj->branch_id > 0) {
                                                                 <td colspan = "" align="center">' . $itm->item_code . '</td>
                                                                 <td colspan = "" align="center" >' . $hsn->hsn_code . '</td>
                                                                 <td colspan = ""align="right">' . $quo->so_selling_price . '</td>
-                                                                <td colspan = "" align="center">' . $quo->so_qty . '</td>
+                                                                <td colspan = "" align="center">' . fnQty($quo->so_qty) . '</td>
                                                                 <td colspan = "" align="center">' . $uom_name . '</td>';
 
                                                         if ($dis_count > 0) {

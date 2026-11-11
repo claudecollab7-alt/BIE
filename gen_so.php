@@ -6,6 +6,7 @@ require_once("inc/common/userclass.php");
 isAdmin();
 $conn = new dbconnect();
  $dbconn = new dbhandler();
+// 2026-11-03 part qty (0.5, 1.25 - up to 3 decimals) shown without trailing zeros (fnQty); qty columns are decimal (db/post_upload_031126.sql)
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-09-24 try/catch added, handlers had none before
@@ -454,11 +455,11 @@ if (isset($_REQUEST['quo_id'])) {
                                                                     $item_avl_qty = $dbconn->GetSingleReconrd("tbl_item_stock","$field_name","item_id",$obj->item_id);
                                                                     if($item_avl_qty<$obj->quo_qty)
                                                                     {
-                                                                        $in_stock='<span style="color:red;"><b>'.round($item_avl_qty).'</b></span>';
+                                                                        $in_stock='<span style="color:red;"><b>'.fnQty($item_avl_qty).'</b></span>';
                                                                     }
                                                                     else
                                                                     {
-                                                                        $in_stock='<span style="color:green;">'.round($item_avl_qty).'</span>';
+                                                                        $in_stock='<span style="color:green;">'.fnQty($item_avl_qty).'</span>';
                                                                     }
 
                                                                     echo '<tr id="' . $obj->item_id . '" class="g' . $obj->group_id . '">
@@ -470,8 +471,8 @@ if (isset($_REQUEST['quo_id'])) {
 
                                                                     <td class="text-right">'.$in_stock.'</td>
 
-																	<td class="text-right">' . $obj->quo_qty . '</td>
-																	<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . $obj->quo_qty . '" />
+																	<td class="text-right">' . fnQty($obj->quo_qty) . '</td>
+																	<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . fnQty($obj->quo_qty) . '" />
 
 																	<td class="text-right">' . $obj->quo_unit . '</td>
 																	<input type="hidden" class="temp_unit" name="temp_unit[]" value="' . $obj->quo_unit . '" />
@@ -527,8 +528,8 @@ if (isset($_REQUEST['quo_id'])) {
 
                                                                     <td class="text-right">'.$in_stock.'</td>
 
-																	<td class="text-right">' . $obj->so_qty . '</td>
-																	<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . $obj->so_qty . '" />
+																	<td class="text-right">' . fnQty($obj->so_qty) . '</td>
+																	<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . fnQty($obj->so_qty) . '" />
 
 																	<td class="text-right">' . $obj->so_unit . '</td>
 																	<input type="hidden" class="temp_unit" name="temp_unit[]" value="' . $obj->so_unit . '" />
@@ -566,7 +567,7 @@ if (isset($_REQUEST['quo_id'])) {
                                                     <tfoot>
                                                         <tr>
                                                             <th colspan="3" class="text-right">Total </th>
-                                                            <th id="quo_total_qty" class="text-right"><?php echo $tot_qty; ?></th>
+                                                            <th id="quo_total_qty" class="text-right"><?php echo fnQty($tot_qty); ?></th>
                                                             <th></th>
                                                             <th></th>
                                                             <th></th>

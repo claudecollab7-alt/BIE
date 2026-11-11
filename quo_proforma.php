@@ -6,6 +6,7 @@ require_once("inc/common/userclass.php");
 isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-11-03 part qty (0.5, 1.25 - up to 3 decimals) shown without trailing zeros (fnQty); qty columns are decimal (db/post_upload_031126.sql)
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-09-24 try/catch added, handlers had none before
@@ -342,8 +343,8 @@ if (isset($_REQUEST['pro_id'])) {
 																	<td class="text-right">' . $curr_stock . '</td>
 																	<input type="hidden" class="temp_item_qty" name="temp_item_qty[]" value="' . $curr_stock . '" />
 
-																	<td class="text-right">' . $obj->quo_qty . '</td>
-																	<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . $obj->quo_qty . '" />
+																	<td class="text-right">' . fnQty($obj->quo_qty) . '</td>
+																	<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . fnQty($obj->quo_qty) . '" />
 
 																	<td class="text-right">' . $obj->quo_unit . '</td>
 																	<input type="hidden" class="temp_unit" name="temp_unit[]" value="' . $obj->quo_unit . '" />
@@ -388,8 +389,8 @@ if (isset($_REQUEST['pro_id'])) {
                                                                     <input type="hidden" class="temp_item_id" name="temp_item_id[]" value="' . $obj->item_id . '" />
                                                                     <td class="text-left">' . $curr_stock . '</td>
 																	<input type="hidden" class="temp_item_qty" name="temp_item_qty[]" value="' . $curr_stock . '" />
-                                                                    <td class="text-right">' . $obj->pro_qty . '</td>
-                                                                    <input type="hidden" class="temp_qty" name="temp_qty[]" value="' . $obj->pro_qty . '" />
+                                                                    <td class="text-right">' . fnQty($obj->pro_qty) . '</td>
+                                                                    <input type="hidden" class="temp_qty" name="temp_qty[]" value="' . fnQty($obj->pro_qty) . '" />
 
                                                                     <td class="text-right">' . $obj->pro_unit . '</td>
                                                                     <input type="hidden" class="temp_unit" name="temp_unit[]" value="' . $obj->pro_unit . '" />
@@ -424,7 +425,7 @@ if (isset($_REQUEST['pro_id'])) {
                                                     <tfoot>
                                                         <tr>
                                                             <th colspan="2" class="text-right">Total </th>
-                                                            <th id="quo_total_qty" class="text-right"><?php echo $tot_qty; ?></th>
+                                                            <th id="quo_total_qty" class="text-right"><?php echo fnQty($tot_qty); ?></th>
                                                             <th></th>
                                                             <th></th>
                                                             <th></th>

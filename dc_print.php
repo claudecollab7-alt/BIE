@@ -6,6 +6,7 @@ require_once("inc/common/userclass.php");
 isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-11-03 part qty (0.5, 1.25 - up to 3 decimals) shown without trailing zeros (fnQty); qty columns are decimal (db/post_upload_031126.sql)
 
 // 2026-10-13 approve / reject for approvers in Task Settings (DC A) - was admin or the DC's branch
 // 2026-10-15 revoke button for Revokers (DC R) once approved - back to draft
@@ -315,7 +316,7 @@ if($obj->cus_branch_id > 0){
                                                                 <td align="left" style=" border: 1px solid black !important;">' . $item_name . '</b></td>
                                                                 <td align="center" style=" border: 1px solid black !important;">' . $item_code . '</td>
                                                                 <td align="center" style=" border: 1px solid black !important;">' . $hsn_code . '</td>
-                                                                <td align="center"style=" border: 1px solid black !important;">' . $dc->dc_dispatch_qty . '</td>
+                                                                <td align="center"style=" border: 1px solid black !important;">' . fnQty($dc->dc_dispatch_qty) . '</td>
                                                                 <td align="center"style=" border: 1px solid black !important;">' . $item_uom . '</td>
                                                                 <td align="center"style=" border: 1px solid black !important;">' . $box_type . ' - <b>' . $dc->no_of_box . '</b></td>
                                                                 <td align="left"style=" border: 1px solid black !important;">' . $dc->dc_remarks . '</td>

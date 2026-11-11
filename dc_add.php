@@ -15,6 +15,7 @@ $dbconn = new dbhandler();
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 
+// 2026-11-03 dispatch qty can be a part qty (0.5, 1.25 - up to 3 decimals): box takes a dot, checks rounded to 3 places, shown via fnQty
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -455,9 +456,9 @@ if (isset($_REQUEST['dc_id']))
                 'dc_remarks'       => $value['dc_remarks'],
                 'pack_box_no'      => $pk ? $pk['pack_box_no'] : '',
                 'pack_item_qty'    => $pk ? $pk['pack_item_qty'] : '',
-                'pack_total_qty'   => $pk ? $pk['total_qty'] : '',
+                'pack_total_qty'   => $pk ? fnQty($pk['total_qty']) : '',
                 'pack_box_id'      => $pk ? $pk['box_id'] : '',
-                'pack_dispatch_qty'=> $pk ? $pk['dispatch_qty'] : ''
+                'pack_dispatch_qty'=> $pk ? fnQty($pk['dispatch_qty']) : ''
             );
         }
 
@@ -511,7 +512,7 @@ elseif (isset($_REQUEST['so_id']))
                                           AND dc_item_id = :item_id");
             $already->execute(array(':so_id' => $_REQUEST['so_id'], ':item_id' => $value['item_id']));
             $obj1 = $already->fetch(PDO::FETCH_OBJ);
-            $dc_dispatch_qty = $value['so_qty'] - $obj1->total_dispatch_qty;
+            $dc_dispatch_qty = round($value['so_qty'] - $obj1->total_dispatch_qty, 3);   // part qty: 1.5 - 1.2 without float noise
         } elseif ($avl_qty >= $value['so_qty']) {
             $dc_dispatch_qty = $value['so_qty'];
         }
@@ -719,15 +720,15 @@ elseif (isset($_REQUEST['so_id']))
 
                                                                             <td style = "text-align:center;">'.$obj->dc_unit.'</td>
 
-                                                                            <td style = "text-align:center;">'.$temp_avl_qty.'<input type="hidden" name="temp_avl_qty" class="temp_avl_qty" value="'.$temp_avl_qty.'"></td>
+                                                                            <td style = "text-align:center;">'.fnQty($temp_avl_qty).'<input type="hidden" name="temp_avl_qty" class="temp_avl_qty" value="'.fnQty($temp_avl_qty).'"></td>
 
-                                                                            <td style = "text-align:center;">'.$obj->dc_qty.'<input type="hidden" name="hide_dc_qty" class="hide_dc_qty" value="'.$obj->dc_qty.'"></td>
+                                                                            <td style = "text-align:center;">'.fnQty($obj->dc_qty).'<input type="hidden" name="hide_dc_qty" class="hide_dc_qty" value="'.fnQty($obj->dc_qty).'"></td>
 
-                                                                            <td style = "text-align:center;">'.$obj1->total_dispatch_qty.'<input type="hidden" name="hide_tot_dispatch_qty" class="hide_tot_dispatch_qty" value="'.$obj1->total_dispatch_qty.'"></td>
+                                                                            <td style = "text-align:center;">'.($obj1->total_dispatch_qty === null || $obj1->total_dispatch_qty === '' ? '' : fnQty($obj1->total_dispatch_qty)).'<input type="hidden" name="hide_tot_dispatch_qty" class="hide_tot_dispatch_qty" value="'.($obj1->total_dispatch_qty === null || $obj1->total_dispatch_qty === '' ? '' : fnQty($obj1->total_dispatch_qty)).'"></td>
 
-                                                                            <td><input type="text" name="dc_dispatch_qty[]" id="dc_dispatch_qty" readonly style="width:75px;" tabindex="-1" class="form-control validate[required] dc_dispatch_qty" value="'.$obj->dc_dispatch_qty.'"><input type="hidden" name="hide_dispatch_qty" class="hide_dispatch_qty" value="'.$obj->dc_dispatch_qty.'"></td>
+                                                                            <td><input type="text" name="dc_dispatch_qty[]" id="dc_dispatch_qty" readonly style="width:75px;" tabindex="-1" class="form-control validate[required] dc_dispatch_qty" value="'.fnQty($obj->dc_dispatch_qty).'"><input type="hidden" name="hide_dispatch_qty" class="hide_dispatch_qty" value="'.fnQty($obj->dc_dispatch_qty).'"></td>
 
-                                                                            <td><input type="text" readonly name="bal_qty[]" tabindex="-1" id="bal_qty" class="form-control bal_qty" style="width:75px;" value="'.$obj->bal_qty.'"></td>
+                                                                            <td><input type="text" readonly name="bal_qty[]" tabindex="-1" id="bal_qty" class="form-control bal_qty" style="width:75px;" value="'.fnQty($obj->bal_qty).'"></td>
 
                                                                             <td>
                                                                                 <select name="box_id[]" 
@@ -742,7 +743,7 @@ elseif (isset($_REQUEST['so_id']))
 
                                                                             <td><div class="input-append"><input type="text" readonly tabindex="-1" style="width:85px;" name="no_of_box[]" class="form-control no_of_box"  id= "no_of_box_'.$iSno.'" onkeypress="return isNumberKey_With_Dot(event)" value="'.$obj->no_of_box.'" ></div></td>
 
-                                                                            <td><input type="text" readonly tabindex="-1" class="form-control" name="dc_remarks[]" id="dc_remarks" value="'.$obj->dc_remarks.'"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.$obj->dc_qty.'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"><input type="hidden" name="pack_box_no_csv[]" class="pack_box_no_csv" value="'.htmlspecialchars($obj->pack_box_no, ENT_QUOTES).'"><input type="hidden" name="pack_item_qty_csv[]" class="pack_item_qty_csv" value="'.htmlspecialchars($obj->pack_item_qty, ENT_QUOTES).'"><input type="hidden" name="pack_total_qty[]" class="pack_total_qty" value="'.htmlspecialchars($obj->pack_total_qty, ENT_QUOTES).'"><input type="hidden" name="pack_box_id[]" class="pack_box_id" value="'.htmlspecialchars($obj->pack_box_id, ENT_QUOTES).'"><input type="hidden" name="pack_dispatch_qty[]" class="pack_dispatch_qty" value="'.htmlspecialchars($obj->pack_dispatch_qty, ENT_QUOTES).'"></td>
+                                                                            <td><input type="text" readonly tabindex="-1" class="form-control" name="dc_remarks[]" id="dc_remarks" value="'.$obj->dc_remarks.'"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.fnQty($obj->dc_qty).'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"><input type="hidden" name="pack_box_no_csv[]" class="pack_box_no_csv" value="'.htmlspecialchars($obj->pack_box_no, ENT_QUOTES).'"><input type="hidden" name="pack_item_qty_csv[]" class="pack_item_qty_csv" value="'.htmlspecialchars($obj->pack_item_qty, ENT_QUOTES).'"><input type="hidden" name="pack_total_qty[]" class="pack_total_qty" value="'.htmlspecialchars($obj->pack_total_qty, ENT_QUOTES).'"><input type="hidden" name="pack_box_id[]" class="pack_box_id" value="'.htmlspecialchars($obj->pack_box_id, ENT_QUOTES).'"><input type="hidden" name="pack_dispatch_qty[]" class="pack_dispatch_qty" value="'.htmlspecialchars($obj->pack_dispatch_qty, ENT_QUOTES).'"></td>
                                                                         </tr>';
                                                                     }
                                                                     else
@@ -753,16 +754,16 @@ elseif (isset($_REQUEST['so_id']))
                                                                         <td style = "text-align:left;">'.$temp_item_name.' - <b>'.$temp_item_code.'</b></td>
                                                                         <td style = "text-align:center;">'.$obj->dc_unit.'</td>
 
-                                                                        <td style = "text-align:center;">'.$temp_avl_qty.'<input type="hidden" name="temp_avl_qty" class="temp_avl_qty" value="'.$temp_avl_qty.'"></td>
+                                                                        <td style = "text-align:center;">'.fnQty($temp_avl_qty).'<input type="hidden" name="temp_avl_qty" class="temp_avl_qty" value="'.fnQty($temp_avl_qty).'"></td>
 
                                                                         
-                                                                        <td style = "text-align:center;">'.$obj->dc_qty.'<input type="hidden" name="hide_dc_qty" class="hide_dc_qty" value="'.$obj->dc_qty.'"></td>
+                                                                        <td style = "text-align:center;">'.fnQty($obj->dc_qty).'<input type="hidden" name="hide_dc_qty" class="hide_dc_qty" value="'.fnQty($obj->dc_qty).'"></td>
 
-                                                                        <td style = "text-align:center;">'.$obj1->total_dispatch_qty.'<input type="hidden" name="hide_tot_dispatch_qty" class="hide_tot_dispatch_qty" value="'.$obj1->total_dispatch_qty.'"></td>
+                                                                        <td style = "text-align:center;">'.($obj1->total_dispatch_qty === null || $obj1->total_dispatch_qty === '' ? '' : fnQty($obj1->total_dispatch_qty)).'<input type="hidden" name="hide_tot_dispatch_qty" class="hide_tot_dispatch_qty" value="'.($obj1->total_dispatch_qty === null || $obj1->total_dispatch_qty === '' ? '' : fnQty($obj1->total_dispatch_qty)).'"></td>
 
-                                                                        <td><input type="text" name="dc_dispatch_qty[]" id="dc_dispatch_qty" onKeyPress="return isNumberKey(event)" style="width:75px;" class="form-control validate[required] dc_dispatch_qty" value="'.$obj->dc_dispatch_qty.'"><input type="hidden" name="hide_dispatch_qty" class="hide_dispatch_qty" value="'.$obj->dc_dispatch_qty.'"></td>
+                                                                        <td><input type="text" name="dc_dispatch_qty[]" id="dc_dispatch_qty" onKeyPress="return isNumberKey_With_Dot(event)" style="width:75px;" class="form-control validate[required] dc_dispatch_qty" value="'.fnQty($obj->dc_dispatch_qty).'"><input type="hidden" name="hide_dispatch_qty" class="hide_dispatch_qty" value="'.fnQty($obj->dc_dispatch_qty).'"></td>
 
-                                                                        <td><input type="text" readonly name="bal_qty[]" tabindex="-1" id="bal_qty" class="form-control bal_qty" style="width:75px;" value="'.$obj->bal_qty.'"></td>
+                                                                        <td><input type="text" readonly name="bal_qty[]" tabindex="-1" id="bal_qty" class="form-control bal_qty" style="width:75px;" value="'.fnQty($obj->bal_qty).'"></td>
 
 
                                                                         <td>
@@ -783,7 +784,7 @@ elseif (isset($_REQUEST['so_id']))
                                                                        
 
 
-                                                                       <td><input type="text"  class="form-control" tabindex="-1" name="dc_remarks[]" id="dc_remarks" value="' . $obj->dc_remarks . '"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.$obj->dc_qty.'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"><input type="hidden" name="pack_box_no_csv[]" class="pack_box_no_csv" value="'.htmlspecialchars($obj->pack_box_no, ENT_QUOTES).'"><input type="hidden" name="pack_item_qty_csv[]" class="pack_item_qty_csv" value="'.htmlspecialchars($obj->pack_item_qty, ENT_QUOTES).'"><input type="hidden" name="pack_total_qty[]" class="pack_total_qty" value="'.htmlspecialchars($obj->pack_total_qty, ENT_QUOTES).'"><input type="hidden" name="pack_box_id[]" class="pack_box_id" value="'.htmlspecialchars($obj->pack_box_id, ENT_QUOTES).'"><input type="hidden" name="pack_dispatch_qty[]" class="pack_dispatch_qty" value="'.htmlspecialchars($obj->pack_dispatch_qty, ENT_QUOTES).'"></td>
+                                                                       <td><input type="text"  class="form-control" tabindex="-1" name="dc_remarks[]" id="dc_remarks" value="' . $obj->dc_remarks . '"><input type="hidden" name="dc_item_id[]" value="'.$obj->dc_item_id.'"><input type="hidden" name="dc_qty_h[]" value="'.fnQty($obj->dc_qty).'"><input type="hidden" name="dc_unit_h[]" value="'.$obj->dc_unit.'"><input type="hidden" name="pack_box_no_csv[]" class="pack_box_no_csv" value="'.htmlspecialchars($obj->pack_box_no, ENT_QUOTES).'"><input type="hidden" name="pack_item_qty_csv[]" class="pack_item_qty_csv" value="'.htmlspecialchars($obj->pack_item_qty, ENT_QUOTES).'"><input type="hidden" name="pack_total_qty[]" class="pack_total_qty" value="'.htmlspecialchars($obj->pack_total_qty, ENT_QUOTES).'"><input type="hidden" name="pack_box_id[]" class="pack_box_id" value="'.htmlspecialchars($obj->pack_box_id, ENT_QUOTES).'"><input type="hidden" name="pack_dispatch_qty[]" class="pack_dispatch_qty" value="'.htmlspecialchars($obj->pack_dispatch_qty, ENT_QUOTES).'"></td>
 
                                                                        <input type="hidden" name="hide_item_id" class="hide_item_id" value="'.$obj->dc_item_id.'">
                                                                        <input type="hidden" name="item_type" class="item_type" id="item_type" value="'.$item_type.'">
@@ -879,6 +880,14 @@ elseif (isset($_REQUEST['so_id']))
 
         $(".dc_dispatch_qty").change(function(){
             // alert();
+            // part qty allowed (0.5, 1.25): at most 3 decimals, sums rounded to 3 places
+            var q3 = function(v) { return Math.round((parseFloat(v) || 0) * 1000) / 1000; };
+            if ($(this).val() !== '' && !/^(\d+(\.\d{1,3})?|\.\d{1,3})$/.test($(this).val())) {
+                alert('Dispatch Qty: a number with at most 3 decimals (e.g. 2, 0.5, 1.25)');
+                $(this).val('');
+                $(this).closest('tr').find('.bal_qty').val('');
+                return false;
+            }
             var dispatch_qty = $(this).val();
             var hide_dispatch_qty = $(this).closest('tr').find('.hide_dispatch_qty').val();
             var hide_dc_qty = $(this).closest('tr').find('.hide_dc_qty').val();
@@ -889,7 +898,7 @@ elseif (isset($_REQUEST['so_id']))
            //
            //alert(item_type);
 			if(item_type !=8){
-				if(parseInt(dispatch_qty) > parseInt(temp_avl_qty))
+				if(q3(dispatch_qty) > q3(temp_avl_qty))
 				{
 					
 					alert('Current Stock not Available for this DC Item');
@@ -904,9 +913,9 @@ elseif (isset($_REQUEST['so_id']))
 
             if(hide_tot_dispatch_qty != '')
             {
-                var validate_qty = parseInt(hide_dc_qty)-parseInt(hide_tot_dispatch_qty);
+                var validate_qty = q3(q3(hide_dc_qty)-q3(hide_tot_dispatch_qty));
                 //alert("dispatch_qty: "+dispatch_qty+" validate_qty:"+validate_qty);
-                if(parseInt(dispatch_qty) > parseInt(validate_qty))
+                if(q3(dispatch_qty) > q3(validate_qty))
                 {
                     alert('Dispatch Qty Must be Less Than the SO Qty');
                     $(this).val('');
@@ -914,12 +923,12 @@ elseif (isset($_REQUEST['so_id']))
                     return false;
                 }
 
-                var bal_qty = parseInt(hide_dc_qty)-(parseInt(dispatch_qty)+parseInt(hide_tot_dispatch_qty));
+                var bal_qty = q3(q3(hide_dc_qty)-(q3(dispatch_qty)+q3(hide_tot_dispatch_qty)));
                 
             }
             else
             {
-                if(parseInt(dispatch_qty) > parseInt(hide_dc_qty))
+                if(q3(dispatch_qty) > q3(hide_dc_qty))
                 {
                     alert('Dispatch Qty Must be Less Than the SO Qty');
                     $(this).val('');
@@ -927,7 +936,7 @@ elseif (isset($_REQUEST['so_id']))
                     return false;
                 }
 
-                var bal_qty = parseInt(hide_dc_qty)-parseInt(dispatch_qty);
+                var bal_qty = q3(q3(hide_dc_qty)-q3(dispatch_qty));
             }
 
             $(this).closest('tr').find('.bal_qty').val(bal_qty);
@@ -1006,6 +1015,7 @@ elseif (isset($_REQUEST['so_id']))
                 if ($(this).val() === '') { $(this).val(0); }
                 sum += parseFloat($(this).val()) || 0;
             });
+            sum = Math.round(sum * 1000) / 1000;   // part qty per box (0.1 + 0.2 = 0.3)
             $('#total').val(sum);
 
             if (sum > parseFloat($('#pack_dispatch_qty').val() || 0)) {
@@ -1029,7 +1039,7 @@ elseif (isset($_REQUEST['so_id']))
             }
 
             var total = parseFloat($('#total').val() || 0);
-            if (total !== parseFloat($('#pack_dispatch_qty').val() || 0)) {
+            if (Math.round(total * 1000) !== Math.round(parseFloat($('#pack_dispatch_qty').val() || 0) * 1000)) {
                 alert("Total qty and dispatch qty must be same");
                 return false;
             }

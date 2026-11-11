@@ -8,6 +8,7 @@ require_once("../common/dbhandler.php");
 
 $conn = new dbconnect();
 $dbconn = new dbhandler();
+// 2026-11-03 part qty (0.5, 1.25 - up to 3 decimals) shown without trailing zeros (fnQty); qty columns are decimal (db/post_upload_031126.sql)
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -48,8 +49,8 @@ if ($_POST['mode'] == 'save' && isset($_POST['item_id'])) {
 				<input type="hidden" class="temp_item_id" name="temp_item_id[]" value="' . $itm->item_id . '" />
 			</td>
 			
-			<td class="text-right">' . $_POST['quo_qty'] . '</span>
-				<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . $_POST['quo_qty'] . '" />
+			<td class="text-right">' . fnQty($_POST['quo_qty']) . '</span>
+				<input type="hidden" class="temp_qty" name="temp_qty[]" value="' . fnQty($_POST['quo_qty']) . '" />
 			</td>
 			<td class="text-right">' . $_POST['quo_unit'] . '
 				<input type="hidden" class="temp_unit" name="temp_unit[]" value="' . $_POST['quo_unit'] . '" />
