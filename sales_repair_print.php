@@ -9,7 +9,7 @@ $dbconn = new dbhandler();
 // 2026-10-13 send for approval (SALES_REPAIR V) and approve (SALES_REPAIR A) from Task Settings - were admin
 // 2026-10-13 buttons checked against the repair's branch (company_id)
 // 2026-10-15 revoke under send for approval (back to draft) and approve (back to in approval) for Revokers (SALES_REPAIR R)
-// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change)
+// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
 
 if (isset($_REQUEST['sal_repair_id']) && $_REQUEST['sal_repair_id'] != '') {
 
@@ -282,7 +282,7 @@ $(function() {
                                                         <p>
                                                             <?php
                                                             echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id", fnCreatedUser($obj))
-                                                                 . '<br/> On ' . date("d-m-Y", strtotime(fnCreatedDtm($obj)));
+                                                                 . fnCreatedOn($obj, '<br/> On ', "d-m-Y");
                                                             ?>
                                                         </p>
                                                     </td>
@@ -349,7 +349,7 @@ $(function() {
                                 <div class="rec_create_dets">
                                     <b>Created by : </b>
                                     <?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id", fnCreatedUser($obj))
-                                              . ' on ' . date('d-M-y @ H:i', strtotime(fnCreatedDtm($obj))); ?>
+                                              . fnCreatedOn($obj, ' on ', 'd-M-y @ H:i'); ?>
                                 </div>
                             </div>
                         </div>

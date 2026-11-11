@@ -8,6 +8,36 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-11 - Fixes from a test run (PO generation, unit prices, PO Prepare qty, prints, HSN / Designation / Division)
+
+- **Generate PO** (`po_prepare_print.php`): the PO takes the branch selected at the top (number, branch, prices), so it is
+  refused when that is not the indent's branch ("This indent is for Kerala - select that branch ..."); a Head Office
+  admin made a Head Office PO for a Kerala indent, with the Head Office extra-unit price (0). A line to order still at 0
+  takes the price set since on the Item Price screen; with none, the PO is not generated and the message names the
+  lines (a prepare sent at 0 before the Send to Admin check made a 0 PO). Unit price read for the indent's branch.
+  `fnPoPrepareLine` / `fnPoPrepareDetsData` moved to `inc/common/functions.php` for this.
+- **Extra unit prices** (`mst_itemprice_history.php`): numbers only - a pasted `100abc` was saved as 100, discount
+  `abc` as 0; a negative selling price (the number keys allow a leading minus) is refused. Checked on the page and on
+  save. Main price form: its check used field names that do not exist (`new_price`) and threw, so it never ran; now it
+  checks Item / Cost / Selling Price and lets the form post normally.
+- **PO Prepare** (`po_prepare.php`): the save refuses a qty above the store indent (all supplier rows of an item
+  together) - it was checked on the page only. A refused save goes back to the page with the reason. The page's
+  `$err_found is not defined` error is gone (it was what let the form post; a normal submit now keeps the pressed button).
+- **Prints**: "Created by ... on" shows no date when the row has none (PO 1333 printed "30-Nov--1") - `fnCreatedOn`;
+  also on the quotation print.
+- **HSN** (`mst_hsn.php`): a new HSN saved the code as the description; the duplicate check on add compared nothing -
+  now the same code with the same rates is refused; the save script error (`document.hsnForm`) is gone.
+- **Designation** (`mst_designation.php`): the duplicate check on edit had no AND before the name, so the SQL failed and
+  a duplicate name was saved.
+- **Division** (`mst_division.php`): the duplicate check on edit used a column that does not exist (`division`); now
+  name or code as on add. A blank code is not compared (every division on live has a blank code).
+- Not changed: `mst_product_add.php` reads `mst_products`, which does not exist; the page is on no menu or link.
+- Checked in the browser on the 11-11 copy: each case above refused / saved as described; full PO Prepare flow
+  (new save, red line, Send refused, price set, sent) and Generate PO (wrong branch refused, 0 line refused, price set
+  -> PO at 55.10) with no script errors.
+
+---
+
 ## 2026-11-11 - Created by / created dtm / modified by / modified dtm on every main table
 
 Most tables had no record of who made or last changed a row; documents kept only `modify_by` + `modify_date_time`,

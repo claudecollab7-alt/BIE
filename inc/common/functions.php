@@ -42,9 +42,78 @@ function fnCreatedUser($obj)
 {
 	return (isset($obj->created_by) && $obj->created_by > 0) ? $obj->created_by : (isset($obj->modify_by) ? $obj->modify_by : 0);
 }
+// 2026-11-11 the "on <date>" part, or nothing when the row has no real date (0000-00-00 printed as 30-Nov--1)
+function fnCreatedOn($obj, $prefix, $fmt)
+{
+	$dtm = fnCreatedDtm($obj);
+	return ($dtm >= '2000-01-01') ? $prefix . date($fmt, strtotime($dtm)) : '';
+}
 function fnCreatedDtm($obj)
 {
 	return (isset($obj->created_dtm) && $obj->created_dtm >= '2000-01-01') ? $obj->created_dtm : (isset($obj->modify_date_time) ? $obj->modify_date_time : '');
+}
+
+// 2026-11-11 unit, price and gst of one indent line - the same for the screen and for every save
+// indent unit = main unit -> branch cost price; an extra unit -> its price in tbl_item_uom_price (Item Price screen)
+// 'missing' says why the price is 0 - such a line cannot be sent to admin
+function fnPoPrepareLine($conn, $dbconn, $si_id, $item_id)
+{
+    $st = $conn->prepare("SELECT s.branch_id, d.si_unit, i.item_uom, i.item_hsn FROM tbl_store_indent s
+        JOIN tbl_store_indent_details d ON d.si_id = s.si_id
+        JOIN tbl_item_details i ON i.item_id = d.item_id
+        WHERE s.si_id = ? AND d.item_id = ? LIMIT 1");
+    $st->execute(array((int)$si_id, (int)$item_id));
+    $r = $st->fetch(PDO::FETCH_OBJ);
+    $line = array('uom' => 0, 'uom_code' => '', 'unit_price' => 0, 'item_discount' => 0, 'gst' => 0, 'gst_id' => 0, 'missing' => '');
+    if (!$r) {
+        $line['missing'] = 'Item not found in the store indent';
+        return $line;
+    }
+    $branch_id = $r->branch_id > 0 ? $r->branch_id : $_SESSION['_user_branch'];
+    $branch = $conn->query("SELECT * FROM mst_branch WHERE branch_id = " . (int)$branch_id)->fetch(PDO::FETCH_OBJ);
+    $unit = $r->si_unit > 0 ? (int)$r->si_unit : (int)$r->item_uom;
+    $line['uom'] = $unit;
+    $line['uom_code'] = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_id", $unit);
+    $line['gst_id'] = $r->item_hsn;
+    $line['gst'] = $dbconn->GetSingleReconrd("mst_hsn", "igst", "hsn_status = '1' AND hsn_id", $r->item_hsn);
+    if ($unit != (int)$r->item_uom) {
+        $p = fnItemUomPrice($conn, $item_id, $unit, $branch_id);
+        if ($p && (float)$p->cost_price > 0) {
+            $line['unit_price'] = $p->cost_price;	// decimal text as stored, shown as before
+            $line['item_discount'] = $p->item_discount;
+        } else {
+            $line['missing'] = 'No ' . $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $unit) . ' price for ' . ($branch ? $branch->branch_name : 'this branch');
+        }
+    } else {
+        // first stock row, as everywhere else
+        $stock = $conn->query("SELECT * FROM tbl_item_stock WHERE item_id = " . (int)$item_id . " ORDER BY stock_id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        if ($stock && $branch) {
+            $line['unit_price'] = isset($stock[$branch->branch_item_cost_price]) ? $stock[$branch->branch_item_cost_price] : 0;
+            $line['item_discount'] = isset($stock[$branch->branch_item_discount]) ? $stock[$branch->branch_item_discount] : 0;
+        }
+        if ((float)$line['unit_price'] <= 0) {
+            $line['missing'] = 'No cost price for ' . ($branch ? $branch->branch_name : 'this branch');
+        }
+    }
+    return $line;
+}
+
+// 2026-11-11 the detail row values worked out here, not taken from the page: the page has one price per item but one
+// qty per supplier row, so with an item split between suppliers the posted prices went to the wrong items
+function fnPoPrepareDetsData($conn, $dbconn, $si_id, $item_id, $qty)
+{
+    $line = fnPoPrepareLine($conn, $dbconn, $si_id, $item_id);
+    $price = round((float)$line['unit_price'] * (float)$qty, 2);
+    return array(
+        ':uom' => $line['uom'],
+        ':uom_code' => $line['uom_code'],
+        ':item_discount' => $line['item_discount'],
+        ':unit_price' => $line['unit_price'],
+        ':price' => $price,
+        ':gst' => $line['gst'],
+        ':gst_id' => $line['gst_id'],
+        ':net_amt' => round($price + $price * (float)$line['gst'] / 100, 2)
+    );
 }
 
 // 2026-11-11 extra units (multiple UOM) of an item: uom_id => {uom_id, uom_name, uom_code}

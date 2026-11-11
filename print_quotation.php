@@ -12,6 +12,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-13 approve / reject for approvers in Task Settings (QUOTATION A) - was admin or the quotation's branch
 // 2026-10-15 revoke button for Revokers (QUOTATION R) once approved - back to draft
+// 2026-11-11 Created by / on through fnCreatedUser / fnCreatedOn - a row with no date printed 30-Nov--1
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -922,7 +923,7 @@ if ($obj->quo_id > 0) {
                         </div>
                         <div class="row">
                             <div class="text-left col-lg-6">
-                                <div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", $obj->created_by) . ' on ' . date('d-M-y @ H:i', strtotime($obj->created_dtm)); ?></b><br>
+                                <div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", fnCreatedUser($obj)) . fnCreatedOn($obj, ' on ', 'd-M-y @ H:i'); ?></b><br>
                                 <b>Remarks : </b> <?php echo $obj->quo_remarks; ?>
                                 </div>
                             </div>

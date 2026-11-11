@@ -7,7 +7,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-11-03 part qty (0.5, 1.25 - up to 3 decimals) shown without trailing zeros (fnQty); qty columns are decimal (db/post_upload_031126.sql)
-// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change)
+// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -579,7 +579,7 @@ if ($_REQUEST['pro_id'] != "") {
                                 <div class="rec_create_dets">
                                     <b>Created by : </b>
                                     <?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id", fnCreatedUser($obj))
-                                              . ' on ' . date('d-M-y @ H:i', strtotime(fnCreatedDtm($obj))); ?>
+                                              . fnCreatedOn($obj, ' on ', 'd-M-y @ H:i'); ?>
                                 </div>
                             </div>
                         </div>
