@@ -12,6 +12,7 @@ $dbconn= new dbhandler();
 
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
+// 2026-11-11 Extra Unit Prices button - items with an extra unit and the price per branch
 
 ?>
 <!DOCTYPE html>
@@ -177,6 +178,7 @@ var dataTable = $('#history_table').DataTable({
                                 <h6 class="card-title">List of Item Price History </h6>
                                 <div class="header-elements">
                                     <div class="list-icons">
+                                        <a class="btn btn-light btn-sm mr-2" href="rpt_uom_price_missing.php" title="Items with an extra unit and their price per branch">Extra Unit Prices</a><!-- 2026-11-11 -->
                                         <a class="list-icons-item" href="lst_item_details.php" title="Item Details List"><i class="icon-arrow-left52 mr-2"></i></a>
                                         <a class="list-icons-item" data-action="fullscreen"></a>
                                     </div>

@@ -14,9 +14,73 @@ $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-06 prepared qty read on $conn - it left out the lines just saved, so a complete po went to admin as partial
 // 2026-10-13 _userid (never set at login) replaced by _user_id
+// 2026-11-11 extra unit price from tbl_item_uom_price; line values worked out on save; no-price lines in red and kept from Send to Admin
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 $po_pre_date = date("Y-m-d");
+
+// 2026-11-11 unit, price and gst of one indent line - the same for the screen and for every save
+// indent unit = main unit -> branch cost price; an extra unit -> its price in tbl_item_uom_price (Item Price screen)
+// 'missing' says why the price is 0 - such a line cannot be sent to admin
+function fnPoPrepareLine($conn, $dbconn, $si_id, $item_id)
+{
+    $st = $conn->prepare("SELECT s.branch_id, d.si_unit, i.item_uom, i.item_hsn FROM tbl_store_indent s
+        JOIN tbl_store_indent_details d ON d.si_id = s.si_id
+        JOIN tbl_item_details i ON i.item_id = d.item_id
+        WHERE s.si_id = ? AND d.item_id = ? LIMIT 1");
+    $st->execute(array((int)$si_id, (int)$item_id));
+    $r = $st->fetch(PDO::FETCH_OBJ);
+    $line = array('uom' => 0, 'uom_code' => '', 'unit_price' => 0, 'item_discount' => 0, 'gst' => 0, 'gst_id' => 0, 'missing' => '');
+    if (!$r) {
+        $line['missing'] = 'Item not found in the store indent';
+        return $line;
+    }
+    $branch_id = $r->branch_id > 0 ? $r->branch_id : $_SESSION['_user_branch'];
+    $branch = $conn->query("SELECT * FROM mst_branch WHERE branch_id = " . (int)$branch_id)->fetch(PDO::FETCH_OBJ);
+    $unit = $r->si_unit > 0 ? (int)$r->si_unit : (int)$r->item_uom;
+    $line['uom'] = $unit;
+    $line['uom_code'] = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_id", $unit);
+    $line['gst_id'] = $r->item_hsn;
+    $line['gst'] = $dbconn->GetSingleReconrd("mst_hsn", "igst", "hsn_status = '1' AND hsn_id", $r->item_hsn);
+    if ($unit != (int)$r->item_uom) {
+        $p = fnItemUomPrice($conn, $item_id, $unit, $branch_id);
+        if ($p && (float)$p->cost_price > 0) {
+            $line['unit_price'] = $p->cost_price;	// decimal text as stored, shown as before
+            $line['item_discount'] = $p->item_discount;
+        } else {
+            $line['missing'] = 'No ' . $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $unit) . ' price for ' . ($branch ? $branch->branch_name : 'this branch');
+        }
+    } else {
+        // first stock row, as everywhere else
+        $stock = $conn->query("SELECT * FROM tbl_item_stock WHERE item_id = " . (int)$item_id . " ORDER BY stock_id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        if ($stock && $branch) {
+            $line['unit_price'] = isset($stock[$branch->branch_item_cost_price]) ? $stock[$branch->branch_item_cost_price] : 0;
+            $line['item_discount'] = isset($stock[$branch->branch_item_discount]) ? $stock[$branch->branch_item_discount] : 0;
+        }
+        if ((float)$line['unit_price'] <= 0) {
+            $line['missing'] = 'No cost price for ' . ($branch ? $branch->branch_name : 'this branch');
+        }
+    }
+    return $line;
+}
+
+// 2026-11-11 the detail row values worked out here, not taken from the page: the page has one price per item but one
+// qty per supplier row, so with an item split between suppliers the posted prices went to the wrong items
+function fnPoPrepareDetsData($conn, $dbconn, $si_id, $item_id, $qty)
+{
+    $line = fnPoPrepareLine($conn, $dbconn, $si_id, $item_id);
+    $price = round((float)$line['unit_price'] * (float)$qty, 2);
+    return array(
+        ':uom' => $line['uom'],
+        ':uom_code' => $line['uom_code'],
+        ':item_discount' => $line['item_discount'],
+        ':unit_price' => $line['unit_price'],
+        ':price' => $price,
+        ':gst' => $line['gst'],
+        ':gst_id' => $line['gst_id'],
+        ':net_amt' => round($price + $price * (float)$line['gst'] / 100, 2)
+    );
+}
 
 if (isset($_POST['SAVE'])) {
     if (!csrf_check('po_prepare')) {
@@ -73,20 +137,13 @@ if (isset($_POST['SAVE'])) {
                 ':supp_id' => $supp_id,
                 ':item_id' => $_POST['new_item_id'][$key],
                 ':si_qty' => $pi_new_qty,
-                ':uom' => $_POST['uom'][$key],
-                ':uom_code' => $_POST['uom_code'][$key],
-                ':item_discount' => $_POST['item_discount'][$key],
-                ':unit_price' => $_POST['unit_price'][$key],
-                ':price' => $_POST['price'][$key],
-                ':gst' => $_POST['vat'][$key],
-                ':gst_id' => $_POST['vat_id'][$key],
-                ':net_amt' => $_POST['net_amt'][$key],
                 ':item_prepare_status' => $item_prepare_status
 
 
             );
 
 
+            $data = array_merge($data, fnPoPrepareDetsData($conn, $dbconn, $_REQUEST['si_id'], $data[':item_id'], $data[':si_qty']));	// 2026-11-11
             $stmt2->execute($data);
             //print_r($data);
             //die();
@@ -169,18 +226,11 @@ if (isset($_POST['UPDATE'])) {
                     ':supp_id' => $supp_id,
                     ':item_id' => $item_id,
                     ':si_qty' => $pi_new_qty,
-                    ':uom' => $_POST['uom'][$key],
-					':uom_code' => $_POST['uom_code'][$key],
-					':item_discount' => $_POST['item_discount'][$key],
-					':unit_price' => $_POST['unit_price'][$key],
-					':price' => $_POST['price'][$key],
-					':gst' => $_POST['vat'][$key],
-					':gst_id' => $_POST['vat_id'][$key],
-					':net_amt' => $_POST['net_amt'][$key],
                     ':item_prepare_status' => $item_prepare_status
                 );
                 //echo $gen_po_status;
-                $stmt2->execute($data);
+                $data = array_merge($data, fnPoPrepareDetsData($conn, $dbconn, $_REQUEST['si_id'], $data[':item_id'], $data[':si_qty']));	// 2026-11-11
+            $stmt2->execute($data);
             }
         }
         //print_r($data);
@@ -230,6 +280,7 @@ if (isset($_POST['send_to_admin'])) {
         /* ------------ SAVE tbl_po_prepare_dets  for multiple supplier dets and item,qty dets  -----------*/
 
         $del_qry = $conn->query("DELETE FROM tbl_po_prepare_dets WHERE po_prepare_id = " . $update_id . " AND gen_po_status = 0 ");
+        $no_price = array();
 
 
         foreach ($_POST['supp_supp_id'] as $key => $value) {
@@ -258,18 +309,19 @@ if (isset($_POST['send_to_admin'])) {
                     ':supp_id' => $supp_id,
                     ':item_id' => $item_id,
                     ':si_qty' => $pi_new_qty,
-                    ':uom' => $_POST['uom'][$key],
-					':uom_code' => $_POST['uom_code'][$key],
-					':item_discount' => $_POST['item_discount'][$key],
-					':unit_price' => $_POST['unit_price'][$key],
-					':price' => $_POST['price'][$key],
-					':gst' => $_POST['vat'][$key],
-					':gst_id' => $_POST['vat_id'][$key],
-					':net_amt' => $_POST['net_amt'][$key],
                     ':item_prepare_status' => $item_prepare_status
                 );
-                $stmt2->execute($data);
+                $data = array_merge($data, fnPoPrepareDetsData($conn, $dbconn, $_REQUEST['si_id'], $data[':item_id'], $data[':si_qty']));	// 2026-11-11
+            $stmt2->execute($data);
+                // 2026-11-11 a line to order with no price stops the send - it went to admin and into the PO at 0
+                if ((float)$pi_new_qty > 0 && (float)$data[':unit_price'] <= 0) {
+                    $line = fnPoPrepareLine($conn, $dbconn, $_REQUEST['si_id'], $item_id);
+                    $no_price[] = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", (int)$item_id) . ' (' . $line['missing'] . ')';
+                }
             }
+        }
+        if (count($no_price) > 0) {
+            throw new Exception('Not sent to admin - no price for: ' . implode(', ', array_unique($no_price)) . '. Set it on the Item Price screen and send again.');
         }
         $sum_pi_qty = db_value($conn, "SELECT SUM(si_qty) FROM tbl_po_prepare_dets WHERE si_id = :si_id", array(':si_id' => $_REQUEST['si_id']));
         $sum_po_qty = $dbconn->GetSingleReconrd("tbl_store_indent_details", "SUM(si_qty)", "si_id", $_REQUEST['si_id']);
@@ -294,10 +346,14 @@ if (isset($_POST['send_to_admin'])) {
         }
     	db_commit($conn);
     } catch (Exception $e) {
-    	fnLogError($e);
     	db_rollback($conn);
-        $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
-        echo $_SESSION['_msg_err'] = $str;
+        // 2026-11-11 back to the prepare with the reason (was the list with a success message as well)
+        if (strpos($e->getMessage(), 'Not sent to admin') !== 0) {
+            fnLogError($e);
+        }
+        $_SESSION['_msg_err'] = str_replace("'", "", $e->getMessage());
+        header("location:po_prepare.php?po_prepare_id=" . (int)$update_id);
+        die();
     }
     $_SESSION['_msg'] = "Purchase Order Prepare succesfully updated..!";
     header("location:po_prepare_list.php");
@@ -583,6 +639,27 @@ if ($_REQUEST['si_id'] != "") {
 
 
 
+            // 2026-11-11 a line to order with no price cannot go to admin (the save checks it too)
+            if ($('.po_line_missing').length > 0) {
+                $('#no_price_note').show();
+            }
+            $('input[name=send_to_admin]').click(function() {
+                var items = [];
+                $('.po_line_missing').each(function() {
+                    var qty = 0;
+                    $('.qty_' + $(this).data('itemid')).each(function() {
+                        qty += parseFloat($(this).val()) || 0;
+                    });
+                    if (qty > 0) {
+                        items.push($.trim($(this).find('td').eq(1).text()));
+                    }
+                });
+                if (items.length > 0) {
+                    alert('These lines have no price - set it on the Item Price screen first:\n\n' + items.join('\n'));
+                    return false;
+                }
+            });
+
             $(document).on('click', '.delete', function() {
                 $(this).closest('tr').remove();
             });
@@ -730,6 +807,9 @@ if ($_REQUEST['si_id'] != "") {
 
 
 
+                                        <div id="no_price_note" class="alert alert-danger py-2" style="display:none;">
+                                            Lines in red have no price (shown as 0). Set the price on the Item Price screen, then reopen this page - it cannot be sent to admin until then.
+                                        </div>
                                         <div class="form-group row">
                                             <div id="show_table" class="col-md-12">
                                                 <table class="table table-xs table-bordered" style="font-size: small !important;">
@@ -761,6 +841,7 @@ if ($_REQUEST['si_id'] != "") {
 
                                                             $iSno = 1;
                                                             $netTotal = 0;
+                                                            $missing_lines = 0;
                                                             while ($pod = $result->fetch()) {
 
                                                                 $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "CONCAT(item_desciption,' - ',item_code)", "item_status = '1' AND item_id", $pod->item_id);
@@ -769,9 +850,14 @@ if ($_REQUEST['si_id'] != "") {
                                                                 $item_uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
 
                                                                 $uom = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status='1' AND uom_id", $item_uom);
+                                                                // 2026-11-11 unit / price / gst of the line, as the save works it out
+                                                                $line = fnPoPrepareLine($conn, $dbconn, $si_id, $pod->item_id);
+                                                                if ($line['missing'] != '') {
+                                                                    $missing_lines++;
+                                                                }
 
                                                         ?>
-                                                                <tr>
+                                                                <tr class="<?php echo $line['missing'] != '' ? 'table-danger po_line_missing' : ''; ?>" data-itemid="<?php echo $pod->item_id; ?>">
                                                                     <td>
                                                                         <?php echo $iSno; ?>
                                                                     </td>
@@ -920,93 +1006,15 @@ if ($_REQUEST['si_id'] != "") {
                                                                         </table>
                                                                        
                                                                         <?php
-																        $item_uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $pod->item_id);
-
-                                                                        $multi_uom_id = $dbconn->GetSingleReconrd("tbl_item_details", "multi_uom_id", "item_id", $pod->item_id);
-                                                                        //echo $multi_uom_id;
-																		$unit_price=0;
-                                                                        $new_item_uom = explode(",",$multi_uom_id);
-                                                                        if($pod->si_unit != $item_uom){
-                                                                            for($x = 0; $x < count($new_item_uom); $x++ )
-                                                                            {
-                                                                                $uom_name = $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $pod->si_unit);
-                                                                                $uom_name = $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $pod->si_unit);
-
-                                                                                if ($pod->item_id != "")
-                                                                                {
-                                                                                    $result1 = $conn->query("SELECT * FROM tbl_multiuom_itemprice_history WHERE item_id = '".$pod->item_id."' AND new_item_uom = '".$uom_name."' AND branch_id = '".$pod->branch_id."' ");	
-                                                                                    if ($result1->rowCount()>0)
-                                                                                    {
-                                                                                        $row = $result1->fetch(PDO::FETCH_OBJ);	
-
-                                                                                        $unit_price = $row->new_cost_price;
-                                                                                        $uom = $dbconn->GetSingleReconrd("mst_uom","uom_code","uom_status='1' AND uom_id",$pod->si_unit);
-                                                                                        $item_hsn = $dbconn->GetSingleReconrd("tbl_item_details","item_hsn","item_id",$row->item_id);
-                                                                                        $gst  = $dbconn->GetSingleReconrd("mst_hsn","igst","hsn_status = '1' AND hsn_id",$item_hsn);
-                                                                                        
-                                                                                        $po_unit_price = $unit_price;
-                                                                                        $po_vat = $gst;
-                                                                                        $vat_id = $item_hsn;
-                                                                                        $vat= $gst;
-                                                                                        $qty = $si_qty;
-                                                                                        $price = number_format(((float)$po_unit_price * (float)$qty),2,".","");
-                                                                                        $tax_val = (((float)$price * (float)$po_vat) / 100);
-                                                                                        $net_val = $price + $tax_val;
-                                                                                        $no_gst = number_format($price,2,".","");
-                                                                                        $with_gst = number_format($net_val,2,".","");
-                                                                                        $net_amt = $with_gst;
-                                                                                        $item_discount=$row->new_discount;
-
-                                                                                        
-                                                                                                                                                            
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }else
-                                                                        {
-																			
-                                                                            $SQL1 = null;
-                                                                            $SQL1 = "SELECT * FROM tbl_item_details  WHERE item_id=" . $pod->item_id . " ";
-                                                                            $result1 = $conn->query($SQL1);
-                                                                            if ($result1->rowCount() > 0) {
-
-                                                                                $obj1 = $result1->fetch(PDO::FETCH_OBJ);
-
-                                                                                $gst  = $dbconn->GetSingleReconrd("mst_hsn", "igst", "hsn_status = '1' AND hsn_id", $obj1->item_hsn);
-                                                                                // $quo_id = $dbconn->GetLastRecord("tbl_po_quotation a,tbl_po_quotation_details b ","a.quo_id","a.quo_id = b.quo_id  AND b.item_id",$pod->item_id,"a.quo_id DESC");
-                                                                                $branch_item_cost_price = $dbconn->GetSingleReconrd("mst_branch","branch_item_cost_price","branch_id",$_SESSION['_user_branch']);
-                                                                                
-                                                                                $item_cost_price =  $dbconn->GetSingleReconrd("tbl_item_stock","$branch_item_cost_price","item_id",$obj1->item_id);
-                                                                                $branch_item_discount = $dbconn->GetSingleReconrd("mst_branch","branch_item_discount","branch_id",$_SESSION['_user_branch']);
-                                                                                $item_discount =  $dbconn->GetSingleReconrd("tbl_item_stock","$branch_item_discount","item_id",$obj1->item_id);
-
-
-                                                                                // $quo_date = '';
-                                                                                /* modified by 	NAGARAJ */
-                                                                                // if ($quo_id > 0) {
-                                                                                //     $quo_date = $dbconn->GetSingleReconrd("tbl_po_quotation", "quo_date", "quo_id", $quo_id);
-                                                                                //     $unit_price = $dbconn->GetSingleReconrd("tbl_po_quotation_details", "selling_price", "item_id = " . $pod->item_id . " AND quo_id", $quo_id);
-                                                                                // } else {
-                                                                                //     $unit_price = $item_cost_price;
-                                                                                //     $itm_dis = $item_discount;
-                                                                                // }
-                                                                                $unit_price = $item_cost_price;
-                                                                                $uom = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status='1' AND uom_id", $obj1->item_uom);
-
-                                                                                $po_unit_price = $unit_price;
-                                                                                $po_vat = $gst;
-                                                                                $vat_id = $obj1->item_hsn;
-                                                                                $vat = $gst;
-                                                                                $qty = $si_qty;
-                                                                                $price = number_format(((float)$po_unit_price * (float)$qty), 2, ".", "");
-                                                                                $tax_val = (((float)$price * (float)$po_vat) / 100);
-                                                                                $net_val = $price + $tax_val;
-                                                                                $no_gst = number_format($price, 2, ".", "");
-                                                                                $with_gst = number_format($net_val, 2, ".", "");
-                                                                                $net_amt = $with_gst;
-                                                                                $item_discount=$item_discount;
-                                                                            }
-                                                                        }
+                                                                        // 2026-11-11 values from fnPoPrepareLine() - the extra unit price was read from the first (oldest) history row, 0 when there was none
+                                                                        $uom = $line['uom_code'];
+                                                                        $unit_price = $line['unit_price'];
+                                                                        $item_discount = $line['item_discount'];
+                                                                        $vat = $line['gst'];
+                                                                        $vat_id = $line['gst_id'];
+                                                                        $qty = $si_qty;
+                                                                        $price = number_format((float)$unit_price * (float)$qty, 2, ".", "");
+                                                                        $net_amt = number_format($price + $price * (float)$vat / 100, 2, ".", "");
                                                                         ?>
 
 
@@ -1016,10 +1024,11 @@ if ($_REQUEST['si_id'] != "") {
                                                                         <input type="hidden" name="curr_qty[]" class="curr_qty avl_<?php echo $pod->item_id; ?>" id="<?php echo $pod->item_id; ?>" value="<?php echo $si_qty; ?>" />
 
                                                                     </td>
-                                                                    <td><?php echo $uom; ?><input type="hidden" class="uom" name="uom[]" value="<?php echo $pod->si_unit; ?>" />
+                                                                    <td><?php echo $uom; ?><input type="hidden" class="uom" name="uom[]" value="<?php echo $line['uom']; ?>" />
                                                                         <input type="hidden" class="uom_code" name="uom_code[]" value="<?php echo $uom; ?>" />
                                                                     </td>
                                                                     <td style="text-align:right;"><span class="cls_unit_price"><?php echo $unit_price; ?></span>
+                                                                        <?php if ($line['missing'] != '') { ?><div class="text-danger small text-left" style="min-width:140px;"><?php echo $line['missing']; ?> - <a href="mst_itemprice_history.php?item_id=<?php echo $pod->item_id; ?>" target="_blank">set price</a></div><?php } ?>
                                                                         <input type="hidden" class="unit_price" name="unit_price[]" value="<?php echo $unit_price; ?>" />
                                                                     </td>
                                                                     <td style="text-align:right;"><span class="cls_item_discount"><?php echo $item_discount; ?></span>
