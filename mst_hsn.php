@@ -11,6 +11,7 @@ $dbconn= new dbhandler();
 // 2026-10-27 delete cancel uses return false (return false() threw a script error)
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-11-11 new HSN saved the code as the description too; the duplicate check on save compared nothing; save script error
 
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
@@ -27,8 +28,9 @@ if (isset($_POST['SAVE']))
 	try
 	{
 		db_begin($conn);
+		// same code with the same rates already there (the values were compared to nothing - the check never matched)
 		$is_exist = $dbconn->GetSingleReconrd("mst_hsn","hsn_id",
-					  "('".$_REQUEST['hsn_code']."' AND '".$_REQUEST['hsn_description']."' AND '".$_REQUEST['cgst']."' AND '".$_REQUEST['sgst']."' AND '".$_REQUEST['igst']."') AND hsn_status ",1);
+					  "hsn_code = '".fnSqlText($_REQUEST['hsn_code'])."' AND cgst = '".fnSqlText($_REQUEST['cgst'])."' AND sgst = '".fnSqlText($_REQUEST['sgst'])."' AND igst = '".fnSqlText($_REQUEST['igst'])."' AND hsn_status ",1);
 				
 		if($is_exist != ""){
 			$_SESSION['_msg_err'] = "hsn Code  already exist..!";
@@ -42,7 +44,7 @@ if (isset($_POST['SAVE']))
 											(:hsn_code, :hsn_description, :cgst, :sgst, :igst, '1')");		
 		$data = array(				
 			':hsn_code' => strtoupper($_REQUEST['hsn_code']),
-			':hsn_description' => strtoupper($_REQUEST['hsn_code']),
+			':hsn_description' => strtoupper($_REQUEST['hsn_description']),	// was the code
 			':cgst' => strtoupper($_REQUEST['cgst']),
 			':sgst' => strtoupper($_REQUEST['sgst']),
 			':igst' => strtoupper($_REQUEST['igst'])
@@ -81,7 +83,7 @@ if (isset($_POST['UPDATE']))
 	{
 		db_begin($conn);
 		$mst_exist = $dbconn->GetSingleReconrd("mst_hsn","hsn_id","hsn_id <> ".$update_id." AND 
-					  hsn_code ='".$_REQUEST['hsn_code']."' AND hsn_description ='".$_REQUEST['hsn_description']."' AND cgst ='".$_REQUEST['cgst']."' AND sgst ='".$_REQUEST['sgst']."' AND igst ='".$_REQUEST['igst']."' AND hsn_status", 1);
+					  hsn_code ='".fnSqlText($_REQUEST['hsn_code'])."' AND hsn_description ='".fnSqlText($_REQUEST['hsn_description'])."' AND cgst ='".fnSqlText($_REQUEST['cgst'])."' AND sgst ='".fnSqlText($_REQUEST['sgst'])."' AND igst ='".fnSqlText($_REQUEST['igst'])."' AND hsn_status", 1);
 	
 		if($mst_exist != ""){
 			$_SESSION['_msg_err'] = "hsn Already Exist..!";
@@ -258,7 +260,7 @@ function fnValidate()
 	// if(isNull(document.hsnForm.sgst,"SGST...!")){ document.hsnForm.sgst.focus(); return false; }
 	// if(isNull(document.hsnForm.igst,"IGST...!")){ document.hsnForm.igst.focus(); return false; }
 
-	document.hsnForm.submit();
+	return true;	// 2026-11-11 the form has no name hsnForm - document.hsnForm.submit() threw (the browser then sent the form itself)
 
 }
 

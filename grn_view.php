@@ -1,5 +1,5 @@
 <?PHP
-// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change)
+// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
 ob_start();
 session_start();
 require_once("inc/common/userclass.php");
@@ -337,7 +337,7 @@ if (isset($_REQUEST['grn_id']) && $_REQUEST['grn_id'] != "") {
                         </div>
                         <div class="row">
                             <div class="text-left col-lg-6">
-                                <div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", fnCreatedUser($get)) . ' on ' . date('d-M-y @ H:i', strtotime(fnCreatedDtm($get))); ?></b>
+                                <div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", fnCreatedUser($get)) . fnCreatedOn($get, ' on ', 'd-M-y @ H:i'); ?></b>
                                 </div>
                             </div>
                         </div>

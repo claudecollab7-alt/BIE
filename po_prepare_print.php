@@ -10,6 +10,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 // 2026-11-11 a line indented in an extra unit gets that unit's list price (item_price) from tbl_item_uom_price
+// 2026-11-11 Generate PO only in the indent's branch; a line with no price takes the price set since or stops it
 //ini_set('display_errors', '1');
 //ini_set('display_startup_errors', '1');
 //error_reporting(E_ALL);
@@ -39,6 +40,38 @@ if ($_REQUEST['po_prepare_id'] != "") {
     }
 }
 if (isset($_REQUEST['GEN_PO'])) {
+
+    // 2026-11-11 checks before anything is written: the PO takes the selected branch (number, branch, prices), so it must
+    // be the indent's branch; a line to order with no price gets the price set since (Item Price screen) or stops it
+    $gen_id = (int)$_REQUEST['po_prepare_id'];
+    $gen_si = (int)$dbconn->GetSingleReconrd("tbl_po_prepare", "si_id", "po_prepare_id", $gen_id);
+    $gen_branch = (int)$dbconn->GetSingleReconrd("tbl_store_indent", "branch_id", "si_id", $gen_si);
+    if ($gen_branch > 0 && $gen_branch != (int)$_SESSION['_user_branch']) {
+        $_SESSION['_msg_err'] = 'This indent is for ' . $dbconn->GetSingleReconrd("mst_branch", "branch_name", "branch_id", $gen_branch)
+            . ' - select that branch at the top of the page, then generate the PO.';
+        header("Location:po_prepare_print.php?po_prepare_id=" . $gen_id);
+        die();
+    }
+    $no_price = array();
+    $zero = $conn->query("SELECT auto_id, item_id, si_qty FROM tbl_po_prepare_dets WHERE po_prepare_id = " . $gen_id . "
+        AND gen_po_status = 0 AND item_prepare_status = 3 AND si_qty > 0 AND unit_price <= 0");
+    while ($z = $zero->fetch(PDO::FETCH_OBJ)) {
+        $line = fnPoPrepareLine($conn, $dbconn, $gen_si, $z->item_id);
+        if ((float)$line['unit_price'] > 0) {
+            $d = fnPoPrepareDetsData($conn, $dbconn, $gen_si, $z->item_id, $z->si_qty);
+            $st = $conn->prepare("UPDATE tbl_po_prepare_dets SET uom = :uom, uom_code = :uom_code, item_discount = :item_discount,
+                unit_price = :unit_price, price = :price, gst = :gst, gst_id = :gst_id, net_amt = :net_amt WHERE auto_id = :auto_id");
+            $d[':auto_id'] = $z->auto_id;
+            $st->execute($d);
+        } else {
+            $no_price[] = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $z->item_id) . ' (' . $line['missing'] . ')';
+        }
+    }
+    if (count($no_price) > 0) {
+        $_SESSION['_msg_err'] = str_replace("'", "", 'PO not generated - no price for: ' . implode(', ', array_unique($no_price)) . '. Set it on the Item Price screen and generate again.');
+        header("Location:po_prepare_print.php?po_prepare_id=" . $gen_id);
+        die();
+    }
 
     try {
 
@@ -157,7 +190,7 @@ if (isset($_REQUEST['GEN_PO'])) {
                                 // 2026-11-11 indented in an extra unit: list price of that unit (was the main unit's)
                                 $main_uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $pod->item_id);
                                 if ($si_unit > 0 && $si_unit != $main_uom) {
-                                    $uom_price = fnItemUomPrice($conn, $pod->item_id, $si_unit, $_SESSION['_user_branch']);
+                                    $uom_price = fnItemUomPrice($conn, $pod->item_id, $si_unit, $gen_branch > 0 ? $gen_branch : $_SESSION['_user_branch']);	// the indent's branch
                                     $item_price = $uom_price ? $uom_price->item_price : 0;
                                 }
 

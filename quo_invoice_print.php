@@ -12,7 +12,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-10-30 invoice qty may be a part qty (0.5) - shown up to 3 decimals without trailing zeros (fnQty)
-// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change)
+// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
 
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
@@ -718,7 +718,7 @@ if ($_REQUEST['inv_id'] != "") {
 
 						<div class="row">
 							<div class="text-left col-lg-6">
-								<div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", fnCreatedUser($obj)) . ' on ' . date('d-M-y @ H:i', strtotime(fnCreatedDtm($obj))); ?></b>
+								<div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", fnCreatedUser($obj)) . fnCreatedOn($obj, ' on ', 'd-M-y @ H:i'); ?></b>
 								</div>
 							</div>
 						</div>

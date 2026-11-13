@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 // 2026-10-27 delete cancel uses return false (return false() threw a script error)
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-11-11 edit: duplicate check had no AND before the name - the SQL failed and any duplicate was saved
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -26,7 +27,7 @@ if (isset($_POST['SAVE'])) {
     	db_begin($conn);
 
         $is_exist = $dbconn->GetSingleReconrd(
-            "mst_designation","designation_id","(designation_name = '" . $_REQUEST['designation'] . "') AND (department_id = '" . $_REQUEST['department_id'] . "') AND rec_del_status ",
+            "mst_designation","designation_id","(designation_name = '" . fnSqlText($_REQUEST['designation']) . "') AND (department_id = '" . (int)$_REQUEST['department_id'] . "') AND rec_del_status ",
             1
         );
 
@@ -70,7 +71,7 @@ if (isset($_POST['UPDATE'])) {
 
     try {
     	db_begin($conn);
-        $mst_exist = $dbconn->GetSingleReconrd("mst_designation","designation_id","designation_id <> " . $update_id . "(designation_name = '" . $_REQUEST['designation'] . "') AND (department_id = '" . $_REQUEST['department_id'] . "') AND rec_del_status ",1);
+        $mst_exist = $dbconn->GetSingleReconrd("mst_designation","designation_id","designation_id <> " . (int)$update_id . " AND (designation_name = '" . fnSqlText($_REQUEST['designation']) . "') AND (department_id = '" . (int)$_REQUEST['department_id'] . "') AND rec_del_status ",1);	// AND was missing - the check failed and was skipped
 
         if ($mst_exist != "") {
             $_SESSION['_msg_err'] = "designation Name already exist..!";

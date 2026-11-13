@@ -19,6 +19,7 @@ $dbconn = new dbhandler();
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 // 2026-10-16 margin % on cost price (was on item price); selling price changes only when margin or selling is edited
+// 2026-11-11 main form check used field names that do not exist; unit prices refuse text and a negative selling price
 // 2026-11-11 extra unit prices: all branches per unit in one form, saved to tbl_item_uom_price (was a new history row per save, read oldest first; the form posted the main form)
 
 //  ini_set('display_errors', '1');
@@ -52,6 +53,12 @@ if (isset($_POST['SAVE_UOM'])) {
 				if ($price === '' && $disc === '' && $sell === '') {
 					continue;	// row left empty - not set
 				}
+				// 2026-11-11 plain numbers only (a pasted 100abc was read as 100), selling price not negative
+				$num = '/^\d+(\.\d+)?$/';
+				if (!preg_match($num, $price) || ($disc !== '' && !preg_match($num, $disc)) || ($sell !== '' && !preg_match($num, $sell))) {
+					$errors[] = $u->uom_name . ' / ' . $b->branch_name;
+					continue;
+				}
 				$price = round((float)$price, 2);
 				$disc = round((float)$disc, 2);
 				$sell = round((float)$sell, 2);
@@ -60,7 +67,7 @@ if (isset($_POST['SAVE_UOM'])) {
 					$errors[] = $u->uom_name . ' / ' . $b->branch_name;
 					continue;
 				}
-				$margin = ($sell > 0) ? round(($sell - $cost) / $cost * 100, 2) : round((float)$r['margin'], 2);
+				$margin = ($sell > 0) ? round(($sell - $cost) / $cost * 100, 2) : (is_numeric(trim($r['margin'])) ? round((float)$r['margin'], 2) : 0);
 				$old = fnItemUomPrice($conn, $item_id, $uom_id, $b->branch_id);
 				if ($old && (float)$old->item_price == $price && (float)$old->item_discount == $disc && (float)$old->cost_price == $cost
 					&& (float)$old->selling_price == $sell && (float)$old->margin_percent == $margin) {
@@ -87,12 +94,12 @@ if (isset($_POST['SAVE_UOM'])) {
 			}
 		}
 		if (count($errors) > 0) {
-			throw new Exception('Enter a price above 0 and a discount below 100 for: ' . implode(', ', $errors) . '. Nothing was saved.');
+			throw new Exception('Enter numbers only - a price above 0, a discount below 100 and a selling price not below 0 - for: ' . implode(', ', $errors) . '. Nothing was saved.');
 		}
 		db_commit($conn);
 		$_SESSION['_msg'] = $changed > 0 ? "Unit prices saved ($changed changed)..!" : "No unit price was changed..!";
 	} catch (Exception $e) {
-		if (strpos($e->getMessage(), 'Enter a price') !== 0) {
+		if (strpos($e->getMessage(), 'Enter numbers only') !== 0) {
 			fnLogError($e);	// a wrong entry is not an error to log
 		}
 		db_rollback($conn);
@@ -540,13 +547,14 @@ if ($_REQUEST['item_id'] != "") {
 				if (price === '' && disc === '' && sell === '') {
 					return;
 				}
-				if (!(parseFloat(price) > 0) || parseFloat(disc || 0) >= 100) {
+				var num = /^\d+(\.\d+)?$/;	// numbers only, no minus
+				if (!num.test(price) || !(parseFloat(price) > 0) || (disc !== '' && !num.test(disc)) || parseFloat(disc || 0) >= 100 || (sell !== '' && !num.test(sell))) {
 					bad = $(this).data('label');
 					return false;
 				}
 			});
 			if (bad !== '') {
-				alert('Enter a price above 0 and a discount below 100 for ' + bad + '..!');
+				alert('Enter numbers only - a price above 0, a discount below 100 and a selling price not below 0 - for ' + bad + '..!');
 				return false;
 			}
 			return true;
@@ -555,17 +563,17 @@ if ($_REQUEST['item_id'] != "") {
 		function fnValidate() {
 			// alert("validation")
 
-			if (isNull(document.thisForm.new_price, "Item Price..!")) {
+			// 2026-11-11 the fields are branch_new_*: new_price etc. do not exist, the check threw and never ran
+			if (isNull(document.thisForm.branch_new_price, "Item Price..!")) {
 				return false;
 			}
-			if (isNull(document.thisForm.new_cost_price, "Cost Price..!")) {
+			if (isNull(document.thisForm.branch_new_cost_price, "Cost Price..!")) {
 				return false;
 			}
-			if (isNull(document.thisForm.new_selling_price, "Selling Price..!")) {
+			if (isNull(document.thisForm.branch_new_selling_price, "Selling Price..!")) {
 				return false;
 			}
-
-			document.thisForm.submit();
+			return true;	// a normal submit keeps the SAVE1 button in the post (form.submit() left it out)
 		}
 	</script>
 </head>

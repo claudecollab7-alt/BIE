@@ -14,72 +14,45 @@ $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-06 prepared qty read on $conn - it left out the lines just saved, so a complete po went to admin as partial
 // 2026-10-13 _userid (never set at login) replaced by _user_id
+// 2026-11-11 save refuses a qty above the store indent; a refused save returns to the page with the reason
 // 2026-11-11 extra unit price from tbl_item_uom_price; line values worked out on save; no-price lines in red and kept from Send to Admin
 
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 $po_pre_date = date("Y-m-d");
 
-// 2026-11-11 unit, price and gst of one indent line - the same for the screen and for every save
-// indent unit = main unit -> branch cost price; an extra unit -> its price in tbl_item_uom_price (Item Price screen)
-// 'missing' says why the price is 0 - such a line cannot be sent to admin
-function fnPoPrepareLine($conn, $dbconn, $si_id, $item_id)
+// 2026-11-11 fnPoPrepareLine / fnPoPrepareDetsData are in inc/common/functions.php (PO generation uses them too)
+
+// 2026-11-11 the qty of an item over all its supplier rows may not pass the store indent qty (was checked on the page only)
+function fnPoPrepareQtyCheck($conn, $dbconn, $si_id)
 {
-    $st = $conn->prepare("SELECT s.branch_id, d.si_unit, i.item_uom, i.item_hsn FROM tbl_store_indent s
-        JOIN tbl_store_indent_details d ON d.si_id = s.si_id
-        JOIN tbl_item_details i ON i.item_id = d.item_id
-        WHERE s.si_id = ? AND d.item_id = ? LIMIT 1");
-    $st->execute(array((int)$si_id, (int)$item_id));
-    $r = $st->fetch(PDO::FETCH_OBJ);
-    $line = array('uom' => 0, 'uom_code' => '', 'unit_price' => 0, 'item_discount' => 0, 'gst' => 0, 'gst_id' => 0, 'missing' => '');
-    if (!$r) {
-        $line['missing'] = 'Item not found in the store indent';
-        return $line;
+    $sum = array();
+    foreach ((array)$_POST['new_item_id'] as $k => $item_id) {
+        $item_id = (int)$item_id;
+        $sum[$item_id] = (isset($sum[$item_id]) ? $sum[$item_id] : 0) + (float)$_POST['pi_new_qty'][$k];
     }
-    $branch_id = $r->branch_id > 0 ? $r->branch_id : $_SESSION['_user_branch'];
-    $branch = $conn->query("SELECT * FROM mst_branch WHERE branch_id = " . (int)$branch_id)->fetch(PDO::FETCH_OBJ);
-    $unit = $r->si_unit > 0 ? (int)$r->si_unit : (int)$r->item_uom;
-    $line['uom'] = $unit;
-    $line['uom_code'] = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_id", $unit);
-    $line['gst_id'] = $r->item_hsn;
-    $line['gst'] = $dbconn->GetSingleReconrd("mst_hsn", "igst", "hsn_status = '1' AND hsn_id", $r->item_hsn);
-    if ($unit != (int)$r->item_uom) {
-        $p = fnItemUomPrice($conn, $item_id, $unit, $branch_id);
-        if ($p && (float)$p->cost_price > 0) {
-            $line['unit_price'] = $p->cost_price;	// decimal text as stored, shown as before
-            $line['item_discount'] = $p->item_discount;
-        } else {
-            $line['missing'] = 'No ' . $dbconn->GetSingleReconrd("mst_uom", "uom_name", "uom_id", $unit) . ' price for ' . ($branch ? $branch->branch_name : 'this branch');
-        }
-    } else {
-        // first stock row, as everywhere else
-        $stock = $conn->query("SELECT * FROM tbl_item_stock WHERE item_id = " . (int)$item_id . " ORDER BY stock_id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-        if ($stock && $branch) {
-            $line['unit_price'] = isset($stock[$branch->branch_item_cost_price]) ? $stock[$branch->branch_item_cost_price] : 0;
-            $line['item_discount'] = isset($stock[$branch->branch_item_discount]) ? $stock[$branch->branch_item_discount] : 0;
-        }
-        if ((float)$line['unit_price'] <= 0) {
-            $line['missing'] = 'No cost price for ' . ($branch ? $branch->branch_name : 'this branch');
+    $over = array();
+    foreach ($sum as $item_id => $qty) {
+        $si_qty = (float)$dbconn->GetSingleReconrd("tbl_store_indent_details", "SUM(si_qty)", "item_id = '" . $item_id . "' AND si_id", (int)$si_id);
+        if (round($qty, 3) > round($si_qty, 3)) {
+            $over[] = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $item_id) . ' (' . fnQty($qty) . ' for ' . fnQty($si_qty) . ')';
         }
     }
-    return $line;
+    if (count($over) > 0) {
+        throw new Exception('Not saved - qty more than the store indent: ' . implode(', ', $over));
+    }
 }
 
-// 2026-11-11 the detail row values worked out here, not taken from the page: the page has one price per item but one
-// qty per supplier row, so with an item split between suppliers the posted prices went to the wrong items
-function fnPoPrepareDetsData($conn, $dbconn, $si_id, $item_id, $qty)
+// 2026-11-11 a refused save goes back to the page with the reason; any other error is logged as before
+function fnPoPrepareFail($conn, $e, $back)
 {
-    $line = fnPoPrepareLine($conn, $dbconn, $si_id, $item_id);
-    $price = round((float)$line['unit_price'] * (float)$qty, 2);
-    return array(
-        ':uom' => $line['uom'],
-        ':uom_code' => $line['uom_code'],
-        ':item_discount' => $line['item_discount'],
-        ':unit_price' => $line['unit_price'],
-        ':price' => $price,
-        ':gst' => $line['gst'],
-        ':gst_id' => $line['gst_id'],
-        ':net_amt' => round($price + $price * (float)$line['gst'] / 100, 2)
-    );
+    db_rollback($conn);
+    $msg = $e->getMessage();
+    if (strpos($msg, 'Not saved') !== 0 && strpos($msg, 'Not sent to admin') !== 0) {
+        fnLogError($e);
+    }
+    $_SESSION['_msg_err'] = str_replace("'", "", $msg);
+    header("location:" . $back);
+    die();
 }
 
 if (isset($_POST['SAVE'])) {
@@ -89,6 +62,7 @@ if (isset($_POST['SAVE'])) {
 
     try {
     	db_begin($conn);
+        fnPoPrepareQtyCheck($conn, $dbconn, $_REQUEST['si_id']);	// 2026-11-11
         $_REQUEST['po_prepare_date'] = date("Y-m-d", strtotime($_REQUEST['po_prepare_date']));
 
         $_REQUEST['po_prepare_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
@@ -155,10 +129,7 @@ if (isset($_POST['SAVE'])) {
         header("location:po_prepare_list.php");
     	db_commit($conn);
     } catch (Exception $e) {
-    	fnLogError($e);
-    	db_rollback($conn);
-        $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
-        echo $_SESSION['_msg_err'] = $str;
+        fnPoPrepareFail($conn, $e, "po_prepare.php?si_id=" . (int)$_REQUEST['si_id']);	// 2026-11-11 back to the page
     }
 
     $_SESSION['_msg'] = "Purchase Order Prepare succesfully Saved..!";
@@ -171,6 +142,7 @@ if (isset($_POST['UPDATE'])) {
     }
     try {
     	db_begin($conn);
+        fnPoPrepareQtyCheck($conn, $dbconn, $_REQUEST['si_id']);	// 2026-11-11
         $update_id = $_REQUEST['txtHid'];
         $_REQUEST['po_prepare_date'] = date("Y-m-d", strtotime($_REQUEST['po_prepare_date']));
 
@@ -239,10 +211,7 @@ if (isset($_POST['UPDATE'])) {
 
     	db_commit($conn);
     } catch (Exception $e) {
-    	fnLogError($e);
-    	db_rollback($conn);
-        $str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
-        echo $_SESSION['_msg_err'] = $str;
+        fnPoPrepareFail($conn, $e, "po_prepare.php?po_prepare_id=" . (int)$_REQUEST['txtHid']);	// 2026-11-11 back to the page
     }
     $_SESSION['_msg'] = "Purchase Order Prepare succesfully updated..!";
     header("location:po_prepare_list.php");
@@ -255,6 +224,7 @@ if (isset($_POST['send_to_admin'])) {
     }
     try {
     	db_begin($conn);
+        fnPoPrepareQtyCheck($conn, $dbconn, $_REQUEST['si_id']);	// 2026-11-11
         $update_id = $_REQUEST['txtHid'];
         $_REQUEST['po_prepare_date'] = date("Y-m-d", strtotime($_REQUEST['po_prepare_date']));
 
@@ -346,14 +316,7 @@ if (isset($_POST['send_to_admin'])) {
         }
     	db_commit($conn);
     } catch (Exception $e) {
-    	db_rollback($conn);
-        // 2026-11-11 back to the prepare with the reason (was the list with a success message as well)
-        if (strpos($e->getMessage(), 'Not sent to admin') !== 0) {
-            fnLogError($e);
-        }
-        $_SESSION['_msg_err'] = str_replace("'", "", $e->getMessage());
-        header("location:po_prepare.php?po_prepare_id=" . (int)$update_id);
-        die();
+        fnPoPrepareFail($conn, $e, "po_prepare.php?po_prepare_id=" . (int)$_REQUEST['txtHid']);	// 2026-11-11 back to the prepare with the reason
     }
     $_SESSION['_msg'] = "Purchase Order Prepare succesfully updated..!";
     header("location:po_prepare_list.php");
@@ -485,12 +448,11 @@ if ($_REQUEST['si_id'] != "") {
 
 
 
-                if ($err_found == 0) {
-                    if (!wasSubmitted) {
-                        wasSubmitted = true;
-                        document.thisForm.submit();
-                        return true;
-                    }
+                // 2026-11-11 $err_found was never defined - the check threw and the browser sent the form itself;
+                // a normal submit keeps the pressed button (Save / Draft / Send to Admin) in the post, form.submit() leaves it out
+                if (!wasSubmitted) {
+                    wasSubmitted = true;
+                    return true;
                 }
                 return false;
 

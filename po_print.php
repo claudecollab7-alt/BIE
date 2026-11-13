@@ -9,7 +9,7 @@ isAdmin();
 
 // 2026-10-13 approve / reject for approvers in Task Settings (PURCHASE_ORDER A) - was admin
 // 2026-10-15 revoke button for Revokers (PURCHASE_ORDER R) once approved - back to draft
-// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change)
+// 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
 //ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $conn = new dbconnect();
@@ -369,7 +369,7 @@ if (isset($_REQUEST['po_id'])) {
                                                         <p>&nbsp;</p>
                                                         <p align="center">
                                                             <?php
-                                                            echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id", fnCreatedUser($obj)) . '<br/> On ' . date("d-m-Y", strtotime(fnCreatedDtm($obj)));
+                                                            echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id", fnCreatedUser($obj)) . fnCreatedOn($obj, '<br/> On ', "d-m-Y");
                                                             ?>&nbsp;
                                                         </p>
                                                     </td>
@@ -431,7 +431,7 @@ if (isset($_REQUEST['po_id'])) {
                         
                          <div class="row">
                             <div class="text-left col-lg-6">
-                                <div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", fnCreatedUser($obj)) . ' on ' . date('d-M-y @ H:i', strtotime(fnCreatedDtm($obj))); ?></b>
+                                <div class="rec_create_dets"><b>Created by : </b><?php echo $dbconn->GetSingleReconrd("tbl_user", "usr_name", "usr_id ", fnCreatedUser($obj)) . fnCreatedOn($obj, ' on ', 'd-M-y @ H:i'); ?></b>
                                 </div>
                             </div>
                             <div class="text-right col-lg-6">
