@@ -2,6 +2,7 @@
 // 2026-10-14 isAdmin also needs the user id and branch - a session with only _user="crm_user" ran pages with no user or branch
 // 2026-11-11 fnItemExtraUoms / fnItemUomPrice - extra unit list and price per extra unit per branch
 // 2026-11-11 fnCreatedUser / fnCreatedDtm - created by / on for prints
+// 2026-11-13 fnIndentUnit, fnItemUomFactor, fnStockQtyInMainUnit - extra unit conversion for stock
 require_once(dirname(__FILE__) . '/error_log.php');
 ob_start();
 date_default_timezone_set('Asia/Calcutta');
@@ -114,6 +115,98 @@ function fnPoPrepareDetsData($conn, $dbconn, $si_id, $item_id, $qty)
         ':gst_id' => $line['gst_id'],
         ':net_amt' => round($price + $price * (float)$line['gst'] / 100, 2)
     );
+}
+
+// 2026-11-13 store indent unit: a blank / 0 unit is the item's main unit
+function fnIndentUnit($dbconn, $si_unit, $item_id)
+{
+	$si_unit = (int)$si_unit;
+	return $si_unit > 0 ? $si_unit : (int)$dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", (int)$item_id);
+}
+
+// 2026-11-13 extra units to save on an item: real units only, not 0, not the main unit, no repeats (text like "12,6")
+function fnCleanExtraUoms($conn, $ids, $main_uom)
+{
+	$keep = array();
+	foreach ((array)$ids as $v) {
+		$v = (int)$v;
+		if ($v > 0 && $v != (int)$main_uom && !in_array($v, $keep)) {
+			$keep[] = $v;
+		}
+	}
+	if (count($keep) == 0) {
+		return '';
+	}
+	return implode(',', $conn->query("SELECT uom_id FROM mst_uom WHERE uom_id IN (" . implode(',', $keep) . ") ORDER BY FIELD(uom_id, " . implode(',', $keep) . ")")->fetchAll(PDO::FETCH_COLUMN));
+}
+
+// 2026-11-13 GRN line in another unit than the item's: the conversion used for stock, or that none is set
+function fnGrnUnitNote($conn, $item_id, $unit_text)
+{
+	$cv = fnStockQtyInMainUnit($conn, $item_id, $unit_text, 1);
+	$main = $conn->query("SELECT u.uom_code FROM tbl_item_details i JOIN mst_uom u ON u.uom_id = i.item_uom WHERE i.item_id = " . (int)$item_id)->fetchColumn();
+	if ($cv['error'] != '') {
+		return '<div class="small text-danger">No conversion to ' . $main . ' - set it on the Item Price screen</div>';
+	}
+	return $cv['factor'] != 1 ? '<div class="small text-success">1 ' . trim($unit_text) . ' = ' . fnQty($cv['factor']) . ' ' . $main . ' in stock</div>' : '';
+}
+
+// 2026-11-13 the main unit cannot change once the item has stock in any branch or any stock movement
+function fnItemUnitLocked($conn, $item_id)
+{
+	$item_id = (int)$item_id;
+	if ($conn->query("SELECT COUNT(*) FROM tbl_stock_flow WHERE item_id = " . $item_id)->fetchColumn() > 0) {
+		return true;
+	}
+	$fields = array();
+	foreach ($conn->query("SELECT branch_stock_field FROM mst_branch WHERE branch_stock_field <> ''")->fetchAll(PDO::FETCH_COLUMN) as $f) {
+		if (preg_match('/^[a-z_]+$/', $f)) {
+			$fields[] = "`$f` <> 0";
+		}
+	}
+	return count($fields) > 0 && $conn->query("SELECT COUNT(*) FROM tbl_item_stock WHERE item_id = " . $item_id . " AND (" . implode(' OR ', $fields) . ")")->fetchColumn() > 0;
+}
+
+// 2026-11-13 how many of the main unit one extra unit is (1 MTR = 100 NOS -> 100); false when not set
+function fnItemUomFactor($conn, $item_id, $uom_id)
+{
+	$st = $conn->prepare("SELECT uom_factor FROM tbl_item_uom WHERE item_id = ? AND uom_id = ? AND uom_factor > 0");
+	$st->execute(array((int)$item_id, (int)$uom_id));
+	$f = $st->fetchColumn();
+	return $f ? (float)$f : false;
+}
+
+// 2026-11-13 a received qty in the unit written on the PO / GRN (text: code, or a name cut to 4 letters on old POs)
+// as qty of the item's main unit for stock: array(qty, unit id, factor, error)
+// same unit, blank or unknown -> unchanged (as before); an extra unit -> qty x factor; no factor -> error
+function fnStockQtyInMainUnit($conn, $item_id, $unit_text, $qty)
+{
+	$st = $conn->prepare("SELECT i.item_code, u.uom_id, u.uom_code, u.uom_name FROM tbl_item_details i LEFT JOIN mst_uom u ON u.uom_id = i.item_uom WHERE i.item_id = ?");
+	$st->execute(array((int)$item_id));
+	$m = $st->fetch(PDO::FETCH_OBJ);
+	$t = strtoupper(trim((string)$unit_text));
+	$out = array('qty' => (float)$qty, 'uom_id' => $m ? (int)$m->uom_id : 0, 'factor' => 1, 'error' => '');
+	if (!$m || $t === '' || $t === strtoupper($m->uom_code) || $t === strtoupper($m->uom_name) || $t === strtoupper(substr($m->uom_name, 0, 4))) {
+		return $out;
+	}
+	$st = $conn->prepare("SELECT uom_id, uom_name FROM mst_uom WHERE uom_id > 0 AND (UPPER(uom_code) = ? OR UPPER(uom_name) = ? OR UPPER(LEFT(uom_name, 4)) = ?)
+		ORDER BY UPPER(uom_code) = ? DESC, uom_status DESC, uom_id LIMIT 1");
+	$st->execute(array($t, $t, $t, $t));
+	$u = $st->fetch(PDO::FETCH_OBJ);
+	if (!$u || (int)$u->uom_id == (int)$m->uom_id) {
+		return $out;	// not a known unit - kept as before
+	}
+	$f = fnItemUomFactor($conn, $item_id, $u->uom_id);
+	$out['uom_id'] = (int)$u->uom_id;
+	if ($f === false) {
+		$extra = isset(fnItemExtraUoms($conn, $item_id)[(int)$u->uom_id]);
+		$out['error'] = $m->item_code . ': no conversion from ' . $u->uom_name . ' to ' . $m->uom_name
+			. ($extra ? '' : ' (add ' . $u->uom_name . ' as an extra unit in Item Details first)');
+		return $out;
+	}
+	$out['factor'] = $f;
+	$out['qty'] = round((float)$qty * $f, 3);
+	return $out;
 }
 
 // 2026-11-11 extra units (multiple UOM) of an item: uom_id => {uom_id, uom_name, uom_code}

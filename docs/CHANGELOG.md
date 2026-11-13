@@ -8,6 +8,38 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-13 - Extra units (multiple UOM): conversion for stock and clean-ups
+
+Stock was added in whatever unit the PO was in (20 items on the 11-11 copy got MTR / NOS / LEN qty as their main
+unit), and the main unit could be changed with stock already there (PUT-B-12-8-B: 1,222 MTR became 1,222 NOS).
+
+- **`db/post_upload_131126.sql`** (run once on live, after `post_upload_111126_audit.sql`): new `tbl_item_uom` - how
+  many of the main unit one extra unit is (1 MTR = 100 NOS), with created / modified triggers; clears the extra-unit
+  list where it is only the main unit or a unit that does not exist (7 items). Safe to run again.
+- **Conversion** - Item Price screen, on each extra-unit card: "1 MTR = [ ] NOS", saved with SAVE UNIT PRICES; numbers
+  above 0 only; red "GRN cannot receive in MTR until this is set" while empty.
+- **GRN** (`grn_add.php`): stock goes in the main unit - a line in an extra unit is qty x conversion (stock flow
+  remark "GRN receipt (5 MTR x 100)"); with no conversion the GRN is not saved and the message says which item and
+  unit. A red line shows "1 MTR = 100 NOS in stock" or "No conversion". Main-unit lines as before. On live only
+  PO/0269/BIE/KL/2627 is open with a line in another unit.
+- **Main unit locked** (Item Price screen) once the item has stock in any branch or any stock movement; the UOM box is
+  disabled with a note, the save keeps the unit.
+- **Price history**: old HSN / old unit were written into each other's columns; now the right way round. Rows before
+  2026-11-13 keep the old unit in `*_old_item_hsn`.
+- **Store indent units** (`inc/cis_ajax/jquery_multi_uom.php`): main unit first and selected, then the real extra
+  units; no "--Select UOM--" with a junk value (saved as 0) and no "NOT APPLICABLE". A blank unit is saved as the main
+  unit. The MOQ check (main unit) runs only when the main unit is chosen.
+- **PO unit** saved as the unit code (the name was cut to 4 letters: LITE, ROLL, NOT) - also stops LITER lines showing
+  red on the GRN.
+- **Item Details**: extra units saved without the main unit and without units that do not exist.
+- **`db/uom_stock_check_131126.sql`** (read only): items received in another unit (20) and items whose main unit was
+  changed with stock (28 changes) with their stock per branch - for a recount and Stock Adjustment.
+- Checked on the 11-11 copy: unit list NOS (selected) + MTR; conversion `abc` refused, 100 saved; unit box locked on
+  PUT-B-12-8-B, open on an item with no stock; GRN of 5 MTR refused without a conversion, then +500 NOS with it; a
+  normal GRN adds 1 as before; history row has old unit 2 / old HSN 132.
+
+---
+
 ## 2026-11-11 - Fixes from a test run (PO generation, unit prices, PO Prepare qty, prints, HSN / Designation / Division)
 
 - **Generate PO** (`po_prepare_print.php`): the PO takes the branch selected at the top (number, branch, prices), so it is

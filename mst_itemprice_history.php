@@ -19,6 +19,8 @@ $dbconn = new dbhandler();
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 // 2026-10-16 margin % on cost price (was on item price); selling price changes only when margin or selling is edited
+// 2026-11-13 conversion of each extra unit to the main unit (1 MTR = 100 NOS) saved with the unit prices
+// 2026-11-13 main unit locked once the item has stock or stock movements; history old hsn / unit no longer swapped
 // 2026-11-11 main form check used field names that do not exist; unit prices refuse text and a negative selling price
 // 2026-11-11 extra unit prices: all branches per unit in one form, saved to tbl_item_uom_price (was a new history row per save, read oldest first; the form posted the main form)
 
@@ -42,6 +44,18 @@ if (isset($_POST['SAVE_UOM'])) {
 		$changed = 0;
 		$errors = array();
 		foreach ($uoms as $uom_id => $u) {
+			// 2026-11-13 conversion to the main unit (tbl_item_uom); empty leaves it as it is
+			$f = isset($_POST['factor'][$uom_id]) ? trim($_POST['factor'][$uom_id]) : '';
+			if ($f !== '') {
+				if (!preg_match('/^\d+(\.\d+)?$/', $f) || (float)$f <= 0) {
+					$errors[] = '1 ' . $u->uom_name . ' = ?';
+				} elseif (fnItemUomFactor($conn, $item_id, $uom_id) !== round((float)$f, 4)) {
+					$st = $conn->prepare("INSERT INTO tbl_item_uom (item_id, uom_id, uom_factor, created_by, created_dtm) VALUES (?, ?, ?, ?, ?)
+						ON DUPLICATE KEY UPDATE uom_factor = VALUES(uom_factor), modify_by = ?, modify_dtm = ?");
+					$st->execute(array($item_id, $uom_id, round((float)$f, 4), $user, $now, $user, $now));
+					$changed++;
+				}
+			}
 			foreach ($branches as $b) {
 				$r = isset($_POST['up'][$uom_id][$b->branch_id]) ? $_POST['up'][$uom_id][$b->branch_id] : null;
 				if (!is_array($r)) {
@@ -97,7 +111,7 @@ if (isset($_POST['SAVE_UOM'])) {
 			throw new Exception('Enter numbers only - a price above 0, a discount below 100 and a selling price not below 0 - for: ' . implode(', ', $errors) . '. Nothing was saved.');
 		}
 		db_commit($conn);
-		$_SESSION['_msg'] = $changed > 0 ? "Unit prices saved ($changed changed)..!" : "No unit price was changed..!";
+		$_SESSION['_msg'] = $changed > 0 ? "Unit prices / conversion saved ($changed changed)..!" : "No unit price was changed..!";
 	} catch (Exception $e) {
 		if (strpos($e->getMessage(), 'Enter numbers only') !== 0) {
 			fnLogError($e);	// a wrong entry is not an error to log
@@ -160,6 +174,14 @@ if (isset($_POST['SAVE1'])) {
 			);
 		}
 
+		// 2026-11-13 the main unit is kept once the item has stock or stock movements: changing it turned stock in the
+		// old unit into the new one with no conversion (PUT-B-12-8-B: 1,222 MTR became 1,222 NOS)
+		$unit_note = '';
+		if ((int)$_REQUEST['new_item_uom'] != (int)$res->item_uom && fnItemUnitLocked($conn, $_REQUEST['item_id'])) {
+			$_REQUEST['new_item_uom'] = $res->item_uom;
+			$unit_note = ' The unit was not changed - the item already has stock or stock movements.';
+		}
+
 		if (
 			$_REQUEST['branch_new_price'] != $obj->branch_new_price || $_REQUEST['branch_stock_field'] != $old->branch_stock_field || $_REQUEST['branch_new_discount'] != $obj->branch_new_discount || $_REQUEST['branch_new_cost_price'] != $obj->branch_new_cost_price ||
 			$_REQUEST['branch_new_selling_price'] != $obj->branch_new_selling_price || $_REQUEST['margin_percent'] != $obj->branch_new_margin || $_REQUEST['branch_new_msq'] != $obj->branch_new_msq || $_REQUEST['branch_new_maq'] != $obj->branch_new_maq ||
@@ -170,11 +192,12 @@ if (isset($_POST['SAVE1'])) {
 			$_REQUEST['created_by'] = $_SESSION['_user_id'];
 
 			$stmt = null;
+			// 2026-11-13 old hsn / old unit values in the same order as their columns (they were swapped)
 			$stmt = $conn->prepare("INSERT INTO tbl_itemprice_history (item_id, branch_id,  $obj->branch_new_price, $obj->branch_new_discount, $obj->branch_new_min_discount, $obj->branch_new_max_discount, $obj->branch_new_cost_price, $obj->branch_new_selling_price, $obj->branch_new_margin, $obj->branch_new_item_curr_stock, $obj->branch_new_msq, $obj->branch_new_maq, $obj->branch_new_moq, $obj->branch_new_item_uom, 
 			$obj->branch_new_item_hsn, $obj->branch_old_price, $obj->branch_old_discount, $obj->branch_old_min_discount, $obj->branch_old_max_discount, $obj->branch_old_cost_price, $obj->branch_old_selling_price, $obj->branch_old_margin,  $obj->branch_old_item_curr_stock,  $obj->branch_old_msq, $obj->branch_old_maq, $obj->branch_old_moq, $obj->branch_old_item_hsn, $obj->branch_old_item_uom, created_dtm, created_by)
 			VALUES (:item_id, :branch_id, :new_price, :new_discount, :new_min_discount, :new_max_discount, :new_cost_price, :new_selling_price, :new_item_margin,  :branch_stock_field, :new_msq, 
 			:new_maq, :new_moq, :item_uom, :item_hsn, :old_price, :old_discount, :old_min_discount, :old_max_discount,
-			 :old_cost_price, :old_selling_price, :old_item_margin,  :old_branch_stock_field, :old_msq, :old_maq, :old_moq, :old_item_uom, :old_item_hsn, :created_dtm, :created_by)");
+			 :old_cost_price, :old_selling_price, :old_item_margin,  :old_branch_stock_field, :old_msq, :old_maq, :old_moq, :old_item_hsn, :old_item_uom, :created_dtm, :created_by)");
 			$data = array(
 				':item_id' => $_REQUEST['item_id'],
 				':branch_id' =>  $_REQUEST['branch_id'],
@@ -274,7 +297,7 @@ if (isset($_POST['SAVE1'])) {
 
 
 
-			$_SESSION['_msg'] = "Item Price History successfully saved..!";
+			$_SESSION['_msg'] = "Item Price History successfully saved..!" . $unit_note;
 		}
 		db_commit($conn);
 	} catch (Exception $e) {
@@ -553,6 +576,14 @@ if ($_REQUEST['item_id'] != "") {
 					return false;
 				}
 			});
+			// 2026-11-13 conversion: empty (not set) or a number above 0
+			$('#thisForm2 .uom_factor').each(function() {
+				var f = $.trim($(this).val());
+				if (f !== '' && !(/^\d+(\.\d+)?$/.test(f) && parseFloat(f) > 0)) {
+					bad = '1 ' + $(this).data('label') + ' = ?';
+					return false;
+				}
+			});
 			if (bad !== '') {
 				alert('Enter numbers only - a price above 0, a discount below 100 and a selling price not below 0 - for ' + bad + '..!');
 				return false;
@@ -750,7 +781,8 @@ if ($_REQUEST['item_id'] != "") {
 									<div class="form-group row pt-2">
 										<label class="col-lg-2 col-form-label">UOM</label>
 										<div class="col-lg-4">
-											<select name="new_item_uom" id="new_item_uom" data-placeholder="Choose a UOM.." class="select-search">
+											<?php $unit_locked = ($obj->item_id != '') && fnItemUnitLocked($conn, $obj->item_id);	// 2026-11-13 ?>
+											<select name="new_item_uom" id="new_item_uom" data-placeholder="Choose a UOM.." class="select-search" <?php echo $unit_locked ? 'disabled' : ''; ?>>
 												<option value="">--- Select UOM ---</option>
 												<?php
 												echo $dbconn->fnFillComboFromTable_Where("uom_id", "uom_name", "mst_uom", "uom_id", " WHERE uom_status = 1"); ?>
@@ -758,6 +790,7 @@ if ($_REQUEST['item_id'] != "") {
 											<script>
 												document.thisForm.new_item_uom.value = "<?php echo $new_item_uom; ?>";
 											</script>
+											<?php if ($unit_locked) { ?><span class="form-text text-muted">Locked - the item has stock or stock movements</span><?php } ?>
 										</div>
 										<label class="col-lg-2 col-form-label">HSN</label>
 										<div class="col-lg-4">
@@ -808,6 +841,13 @@ if ($_REQUEST['item_id'] != "") {
 								<div class="card">
 									<div class="card-header bg-light header-elements-inline">
 										<h6 class="card-title">Price per <b><?php echo $u->uom_name; ?></b> (extra unit) <span class="text-muted ml-2">main unit: <?php echo $main_uom; ?></span></h6>
+										<?php $factor = fnItemUomFactor($conn, $obj->item_id, $uom_id);	// 2026-11-13 ?>
+										<div class="form-inline">
+											<span class="mr-2">1 <?php echo $u->uom_name; ?> =</span>
+											<input type="text" class="form-control form-control-sm uom_factor<?php echo $factor === false ? ' border-danger' : ''; ?>" style="width:110px;" name="factor[<?php echo $uom_id; ?>]" value="<?php echo $factor === false ? '' : rtrim(rtrim(number_format($factor, 4, '.', ''), '0'), '.'); ?>" maxlength="12" placeholder="Not set" data-label="<?php echo $u->uom_name; ?>" />
+											<span class="ml-2"><?php echo $main_uom; ?></span>
+											<?php if ($factor === false) { ?><span class="text-danger ml-2 small">GRN cannot receive in <?php echo $u->uom_name; ?> until this is set</span><?php } ?>
+										</div>
 									</div>
 									<div class="card-body p-0">
 										<table class="table table-xs table-bordered uom_price_table mb-0">
