@@ -14,6 +14,7 @@ $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-06 new grn commit moved above the redirect - it sat after die; so every new grn was rolled back
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-11-13 stock added in the main unit: a line in an extra unit is converted (Item Price screen), refused when no conversion is set
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -206,6 +207,23 @@ if (isset($_POST['FINALIZE'])) {
 		csrf_fail('grn_list.php');
 	}
 	$update_id = $_REQUEST['txtHid'];
+
+	// 2026-11-13 stock goes in the item's main unit: a line in an extra unit (PO in MTR, item in NOS) is converted with the
+	// conversion set on the Item Price screen; with none set the GRN is not saved (it was added to stock unconverted)
+	$grn_stock_qty = array();
+	$no_conv = array();
+	for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
+		$cv = fnStockQtyInMainUnit($conn, $_REQUEST['temp_item_id'][$x], $_REQUEST['grn_unit'][$x], $_REQUEST['grn_accepted_qty'][$x]);
+		$grn_stock_qty[$x] = $cv;
+		if ($cv['error'] != '' && (float)$_REQUEST['grn_accepted_qty'][$x] > 0) {
+			$no_conv[] = $cv['error'];
+		}
+	}
+	if (count($no_conv) > 0) {
+		$_SESSION['_msg_err'] = str_replace("'", "", 'GRN not saved - ' . implode(', ', $no_conv) . '. Set the conversion on the Item Price screen, then save again.');
+		header("location:grn_add.php?" . ($update_id > 0 ? "grn_id=" . (int)$update_id : "po_id=" . (int)$_REQUEST['po_id']));
+		die();
+	}
 	if ($update_id != '' && $update_id > 0) {
 		try {
 			db_begin($conn);
@@ -273,14 +291,14 @@ if (isset($_POST['FINALIZE'])) {
 					'item_id'    => $_REQUEST['temp_item_id'][$x],
 					'branch_id'  => $_SESSION['_user_branch'],
 					'dir'        => 'I',
-					'qty'        => $_REQUEST['grn_accepted_qty'][$x],
+					'qty'        => $grn_stock_qty[$x]['qty'],	// 2026-11-13 in the main unit
 					'rcvd_qty'   => $_REQUEST['grn_recived_qty'][$x],
 					'reje_qty'   => $_REQUEST['grn_rejected_qty'][$x],
 					'pend_qty'   => $_REQUEST['grn_pending_qty'][$x],
 					'trans_type' => STOCK_TRANS_GRN,
 					'trans_id'   => $update_id,
 					'item_price' => $dbconn->GetSingleReconrd('tbl_item_details', 'item_cost_price', 'item_id', $_REQUEST['temp_item_id'][$x]),
-					'remarks'    => 'GRN receipt'
+					'remarks'    => 'GRN receipt' . ($grn_stock_qty[$x]['factor'] != 1 ? ' (' . fnQty($_REQUEST['grn_accepted_qty'][$x]) . ' ' . trim($_REQUEST['grn_unit'][$x]) . ' x ' . fnQty($grn_stock_qty[$x]['factor']) . ')' : '')
 				));
 			}
 
@@ -423,14 +441,14 @@ if (isset($_POST['FINALIZE'])) {
 					'item_id'    => $_REQUEST['temp_item_id'][$x],
 					'branch_id'  => $_SESSION['_user_branch'],
 					'dir'        => 'I',
-					'qty'        => $_REQUEST['grn_accepted_qty'][$x],
+					'qty'        => $grn_stock_qty[$x]['qty'],	// 2026-11-13 in the main unit
 					'rcvd_qty'   => $_REQUEST['grn_recived_qty'][$x],
 					'reje_qty'   => $_REQUEST['grn_rejected_qty'][$x],
 					'pend_qty'   => $_REQUEST['grn_pending_qty'][$x],
 					'trans_type' => STOCK_TRANS_GRN,
 					'trans_id'   => $grn_id,
 					'item_price' => $dbconn->GetSingleReconrd('tbl_item_details', 'item_cost_price', 'item_id', $_REQUEST['temp_item_id'][$x]),
-					'remarks'    => 'GRN receipt'
+					'remarks'    => 'GRN receipt' . ($grn_stock_qty[$x]['factor'] != 1 ? ' (' . fnQty($_REQUEST['grn_accepted_qty'][$x]) . ' ' . trim($_REQUEST['grn_unit'][$x]) . ' x ' . fnQty($grn_stock_qty[$x]['factor']) . ')' : '')
 				));
 			}
 
@@ -1051,7 +1069,7 @@ if (isset($_REQUEST['po_id']) && $_REQUEST['po_id'] != "") {
 																						<td class="text-center">' . $itm->po_unit . '
 																							<input class="form-control text-center po_unit number_only"  name="po_unit[]" type="hidden" 
 																							value="' . $itm->po_unit . '" maxlength="3">
-																							<input type="hidden" class="grn_unit" name="grn_unit[]" value="' . $itm->po_unit . '" />
+																							<input type="hidden" class="grn_unit" name="grn_unit[]" value="' . $itm->po_unit . '" />' . fnGrnUnitNote($conn, $itm->item_id, $itm->po_unit) . '
 																						</td>
 																						<td class="text-center">' . $obj1->total_recived_qty. '
 																							<input type="hidden" class="prev_rec_qty" name="prev_rec_qty[]" value="' . $obj1->total_recived_qty . '" />

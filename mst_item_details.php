@@ -15,6 +15,7 @@ $dbconn = new dbhandler();
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 // 2026-10-13 price block check uses Task Settings (ITEM C) - was user 1; both branches show it
 // 2026-10-16 margin % on cost price; selling price changes only when margin or selling is edited
+// 2026-11-13 extra units saved without the main unit and units that do not exist
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL); 
 
@@ -57,8 +58,7 @@ if (isset($_POST['SAVE'])) {
 
 		if (isset($_REQUEST['multi_uom_id'])) {
 			foreach ($_REQUEST['multi_uom_id'] as $key => $value) {
-				$uom_ids = implode(',', array_diff($_REQUEST['multi_uom_id'], [0]));
-				// $uom_ids = implode(',', $_REQUEST['multi_uom_id']);
+				$uom_ids = fnCleanExtraUoms($conn, $_REQUEST['multi_uom_id'], $_REQUEST['item_uom']);	// 2026-11-13 not the main unit, real units only
 			}
 		} else {
 			$uom_ids = '';
@@ -221,8 +221,7 @@ if (isset($_POST['UPDATE'])) {
 
 		if (isset($_REQUEST['multi_uom_id'])) {
 			foreach ($_REQUEST['multi_uom_id'] as $key => $value) {
-			$uom_ids = implode(',', array_diff($_REQUEST['multi_uom_id'], [0]));	
-			// $uom_ids = implode(',', $_REQUEST['multi_uom_id']);
+			$uom_ids = fnCleanExtraUoms($conn, $_REQUEST['multi_uom_id'], $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", (int)$update_id));	// 2026-11-13
 			}
 		} else {
 			$uom_ids = '';

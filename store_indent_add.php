@@ -82,7 +82,7 @@ if (isset($_POST['SAVE'])) {
 				':si_qty' => $_REQUEST['temp_si_qty'][$n],
 				':item_moq' => $_REQUEST['item_moq'][$n],
 				':item_uom' => $_REQUEST['temp_item_uom'][$n],
-				':si_unit' => $_REQUEST['temp_si_unit'][$n],
+				':si_unit' => fnIndentUnit($dbconn, $_REQUEST['temp_si_unit'][$n], $_REQUEST['temp_item_id'][$n]),	// 2026-11-13 blank -> main unit
 				':curr_stock' => $_REQUEST['curr_stock'][$n]
 				
 			);
@@ -156,7 +156,7 @@ if (isset($_POST['UPDATE'])) {
 				':si_qty' => $_REQUEST['temp_si_qty'][$x],
 				':item_moq' => $_REQUEST['item_moq'][$x],
 				':item_uom' => $_REQUEST['temp_item_uom'][$x],
-				':si_unit' => $_REQUEST['temp_si_unit'][$x],
+				':si_unit' => fnIndentUnit($dbconn, $_REQUEST['temp_si_unit'][$x], $_REQUEST['temp_item_id'][$x]),	// 2026-11-13 blank -> main unit
 				':curr_stock' => $_REQUEST['curr_stock'][$x],
 				
 			);
@@ -234,7 +234,7 @@ if (isset($_POST['FINALIZE'])) {
 					':si_qty' => $_REQUEST['temp_si_qty'][$x],
 					':item_moq' => $_REQUEST['item_moq'][$x],
 					':item_uom' => $_REQUEST['temp_item_uom'][$x],
-                    ':si_unit' => $_REQUEST['temp_si_unit'][$x],
+                    ':si_unit' => fnIndentUnit($dbconn, $_REQUEST['temp_si_unit'][$x], $_REQUEST['temp_item_id'][$x]),	// 2026-11-13 blank -> main unit
 					':curr_stock' => $_REQUEST['curr_stock'][$x]
 					
 				);
@@ -314,7 +314,8 @@ $('#add_items').click(function() {
         if (isNull(document.thisForm.si_qty, "Quantity...!")) {
             return false;
         }
-        if(si_qty < item_moq)
+        // 2026-11-13 MOQ is in the main unit - checked only when the main unit (first in the list) is chosen
+        if(si_qty < item_moq && $('#si_unit').prop('selectedIndex') <= 0)
         {
             alert("Please check the Quantity (MOQ " + item_moq + ")");
             $("#si_qty").val('');

@@ -10,6 +10,7 @@ $dbconn = new dbhandler();
 
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 // 2026-11-11 a line indented in an extra unit gets that unit's list price (item_price) from tbl_item_uom_price
+// 2026-11-13 PO unit saved / shown as the unit code
 // 2026-11-11 Generate PO only in the indent's branch; a line with no price takes the price set since or stops it
 //ini_set('display_errors', '1');
 //ini_set('display_startup_errors', '1');
@@ -175,7 +176,7 @@ if (isset($_REQUEST['GEN_PO'])) {
                                     $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
                                     $item_uom = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status='1' AND uom_id", $uom);
                                 }else{
-                                    $item_uom = $dbconn->GetSingleReconrd("mst_uom","uom_name","uom_id",$si_unit);
+                                    $item_uom = $dbconn->GetSingleReconrd("mst_uom","uom_code","uom_id",$si_unit);	// 2026-11-13 code (the name was cut to 4 letters: LITE, ROLL)
 
                                 }
                                 //$unit_price = $dbconn->GetSingleReconrd("tbl_item_details","item_selling_price","item_status = '1' AND item_id",$pod->item_id);
@@ -561,7 +562,7 @@ if (isset($_REQUEST['GEN_PO'])) {
                                                                                         $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
                                                                                         $item_uom = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status='1' AND uom_id", $uom);
                                                                                     }else{
-                                                                                        $item_uom = $dbconn->GetSingleReconrd("mst_uom","uom_name","uom_id",$si_unit);
+                                                                                        $item_uom = $dbconn->GetSingleReconrd("mst_uom","uom_code","uom_id",$si_unit);	// 2026-11-13 code (the name was cut to 4 letters: LITE, ROLL)
                             
                                                                                     }
                                                                                     // $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
