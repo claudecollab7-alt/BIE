@@ -8,6 +8,38 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-16 - Service call register (the same flow as Benzear) and transfer from Benzear
+
+- **`db/post_upload_161126_service_call.sql`** (run once on live): `tbl_service_call_register`, `tbl_sc_complaints`,
+  `tbl_sc_complaint_details` (Benzear's columns, plus the transfer fields `src_system`, `src_sc_id`, `src_sc_no`,
+  `src_*_name`, `src_transfer_by / _dtm`, `bie_received`, `src_complaint_id`), created / modified triggers,
+  Task Settings `SERVICE_CALL` (V send for approval, A approve, R revoke), menu Service > Service Call Register and
+  Report > Service Call Report (admins see them; give other users in User Rights). Safe to run again.
+- **Pages** (Benzear's logic, BIE's layout): `service_call_list.php` (date / pending / from Benzear filter),
+  `service_call_register.php` (state -> number `BIE-<state>-<finyr>-NNN`, customer from the list fills the details or a
+  typed customer is found by GST / mobile / name or made new with its own Sundry Debtors ledger, address, service
+  details, complaints added / removed on the page and saved together), `service_call_complete_list.php`,
+  `service_call_complete.php` (phone / on site / in house, solving date, engineer, chart no, amounts, visits, spares used
+  on site - recorded only, stock does not move - and a PDF / image review copy), `service_call_print.php` (send for
+  approval when every complaint is completed, approve, revoke), `service_call_complaint_print.php`,
+  `service_call_rept.php` (one row per complaint, filters, Excel). A call can't be changed once sent for approval.
+- **Ajax**: `jquery_sc_complaints`, `jquery_sc_complaint_details`, `jquery_get_sc_no`, `jquery_get_invoices_by_supp`,
+  `jquery_sc_customer`, `jquery_sc_approval_status`, `inc/auto/select_sc_items.php`; helpers in
+  `inc/common/service_call.php`; revoke entries `SC_V` / `SC_A`.
+- **Transfer from Benzear** (`docs/service_call_transfer.md`): Benzear writes the call and its open complaints into BIE's
+  tables (same server) and reads the status back. The BIE list takes a transferred call in when it opens: BIE number,
+  BIE branch of the state, state / district / city / principal ids by name (the two databases number them differently),
+  customer found or made.
+- Checked in the browser on the 11-11 copy: new call (blank / no complaint refused, `Oil <b>leak</b>` kept as text,
+  customer C1405 made), second call with the same GST used the same customer, edit (complaint removed / added, number
+  kept), complaint over phone, complaint on site (no engineer refused, qty 0 and a non-spare refused, a .php review copy
+  refused, PDF saved, no stock movement), edit of spares, send for approval -> edit locked, approve, revoke, a repeated
+  send refused, report. Transfer of Benzear KL-2627-019 and AP-2627-003 from the Benzear live copy: taken in as
+  BIE-KL-2627-001 (Kerala branch, existing customer) and BIE-AP-2627-001 (Head Office, new customer); KL completed in
+  BIE and read back from the Benzear side as completed.
+
+---
+
 ## 2026-11-13 - Extra units (multiple UOM): conversion for stock and clean-ups
 
 Stock was added in whatever unit the PO was in (20 items on the 11-11 copy got MTR / NOS / LEN qty as their main

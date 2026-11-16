@@ -1,5 +1,6 @@
 <?php
-// 2026-10-15 new - revoke a wrong approve / verify (Task Settings role R, admin only until users are given it)
+// 2026-10-15 new - revoke a wrong approve / verify
+// 2026-11-16 service call (SC_V / SC_A) (Task Settings role R, admin only until users are given it)
 // one entry per form: state it must be in, what blocks it, the state it goes back to; every revoke is logged in tbl_revoke_log
 // approve / verify never moves stock (stock moves at GRN and invoice), so a revoke is refused once those are made
 
@@ -118,6 +119,27 @@ function fnRevokeDocs()
 			'set' => "sal_repair_approve_status = 0, sal_repair_approve_by = 0",
 			'blocks' => array(),
 			'done' => "Sales repair approval revoked - back to in approval..!",
+		),
+		// 2026-11-16 service call approve: approved -> in approval (completed)
+		'SC_A' => array(
+			'task' => 'SERVICE_CALL', 'table' => 'tbl_service_call_register', 'id' => 'sc_id', 'ref' => 'sc_no', 'branch' => 'branch_id',
+			'state' => "sc_verify_status = 1 AND sc_approve_status = 1",
+			'cols' => array('sc_status', 'sc_approve_status', 'sc_approve_by', 'sc_approve_date_time'),
+			'set' => "sc_status = 2, sc_approve_status = 0, sc_approve_by = 0",
+			'blocks' => array(),
+			'done' => "Service call approval revoked - back to in approval..!",
+		),
+		// 2026-11-16 service call send for approval: in approval -> completed, not sent
+		'SC_V' => array(
+			'task' => 'SERVICE_CALL', 'table' => 'tbl_service_call_register', 'id' => 'sc_id', 'ref' => 'sc_no', 'branch' => 'branch_id',
+			'state' => "sc_verify_status = 1 AND sc_approve_status = 0",
+			'cols' => array('sc_verify_status', 'sc_verify_by', 'sc_verify_date_time'),
+			'set' => "sc_verify_status = 0, sc_verify_by = 0",
+			'blocks' => array(),
+			'wrong_state' => array(
+				array("SELECT COUNT(*) FROM tbl_service_call_register WHERE sc_id = :id AND sc_approve_status = 1", "The service call is approved - revoke the approval first..!"),
+			),
+			'done' => "Send for approval revoked..!",
 		),
 		// sales repair send for approval: in approval -> draft
 		'REPAIR_V' => array(
