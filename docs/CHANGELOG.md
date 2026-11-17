@@ -8,6 +8,25 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-17 - Check of the 17-11 live database and files against git
+
+`bie_db_171126.sql` and `BIE_171126.zip` compared with everything done so far.
+
+- **Database**: every script is in except `db/post_upload_031126.sql` - quotation / SO / DC / packing / proforma
+  quantities are still whole numbers (`int`) on live, so a part qty (0.5) on those is still rounded. Invoice qty is
+  already decimal. Present: the 24 indexes, `tbl_item_uom_price`, `tbl_item_uom`, the 54 audit tables with their 108
+  triggers (new rows have `created_by` set), the service call tables, task `SERVICE_CALL` and the two menus.
+- **Files**: 428 files identical, 366 differ only in line endings, 7 differ in content: `config.php` (live name
+  `bie_db` - confirmed), `excel_insert.php`, the icon css (formatting only), `dbhandler - Copy.php` (unused), and three
+  that matter - `jquery_select_po_item.php` and `modal_update_items.php` (live has a fix git did not - now in git) and
+  `select_spare_mapping_items.php` (live has the old copy - the 07-10 version is still to be uploaded).
+- **Data**: PO/0269/BIE/KL/2627 is still at 0 - the MTR price and conversion for PUT-B-12-8-B are not set yet; no GRN
+  in another unit since the fix; no service call yet; 4 items still have two stock rows.
+- Tables used by code but not in live: old unused code only (`mst_products`, `mst_supplier`, `tbl_enquiry`, `tbl_amc`,
+  `tbl_user_actions`, old `dbhandler` methods).
+
+---
+
 ## 2026-11-16 - Service call register (the same flow as Benzear) and transfer from Benzear
 
 - **`db/post_upload_161126_service_call.sql`** (run once on live): `tbl_service_call_register`, `tbl_sc_complaints`,

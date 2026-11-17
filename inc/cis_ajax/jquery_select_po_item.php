@@ -1,4 +1,5 @@
 <?php
+// 2026-11-17 items of the supplier or of the item's current supplier (the current supplier part was on live only); search term bound
 ob_start();
 
 session_start();
@@ -15,8 +16,9 @@ $dbconn= new dbhandler();
 	{
 		$supp_id = $_POST["supp_id"];
 		$stmt = null;
-		$stmt = $conn->prepare("SELECT * FROM tbl_item_details WHERE supp_id LIKE '%".$supp_id."%' ");
-		$stmt->execute();
+		// 2026-11-17 items of the supplier, or whose current supplier is this one (was on live only); term bound
+		$stmt = $conn->prepare("SELECT * FROM tbl_item_details WHERE (supp_id LIKE :s OR current_supp_id LIKE :s) ");
+		$stmt->execute(array(':s' => '%' . $supp_id . '%'));
 		$string = "";
 		$string .= "" . "~" . "-- Select Item --" . "#";
 		$count = $stmt->rowCount();
