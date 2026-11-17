@@ -1,5 +1,6 @@
 <?php
 ob_start();
+// 2026-11-17 price history popup also selects created_by (it shows who changed the price; was on live only)
 
 session_start();
 
@@ -121,7 +122,7 @@ $html_output .= '	<table class="table table-xs table-hover table-bordered mt-2 m
 		            {
 						$result = $conn->query("SELECT  ".$branch_data->branch_old_maq." as old_item_max_qty , ".$branch_data->branch_old_price." as old_item_price,
 						".$branch_data->branch_old_discount." as old_item_discount, ".$branch_data->branch_old_cost_price." as old_item_cost_price, ".$branch_data->branch_old_selling_price." as old_item_selling_price,
-						".$branch_data->branch_old_item_curr_stock." as ho_old_item_curr_stock, ".$branch_data->branch_old_msq." as old_item_min_qty, ".$branch_data->branch_old_moq." as old_item_order_min_qty, created_dtm FROM tbl_itemprice_history WHERE item_id = ".$item_id ." AND branch_id = ".$user_branch." Order by auto_id desc limit 10");	
+						".$branch_data->branch_old_item_curr_stock." as ho_old_item_curr_stock, ".$branch_data->branch_old_msq." as old_item_min_qty, ".$branch_data->branch_old_moq." as old_item_order_min_qty, created_dtm, created_by FROM tbl_itemprice_history WHERE item_id = ".$item_id ." AND branch_id = ".$user_branch." Order by auto_id desc limit 10");	
 				    }
 
 					    $result1 = $conn->query("SELECT ".$branch_data->branch_item_maq." as item_max_qty ,".$branch_data->branch_item_price." as item_price, ".$branch_data->branch_item_discount." as item_discount,
