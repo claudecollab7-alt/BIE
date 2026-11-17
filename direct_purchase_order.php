@@ -7,6 +7,7 @@ require_once("inc/common/userclass.php");
 isAdmin();
 
 
+// 2026-11-17 draft / update / finalize refused without Task Settings PURCHASE_ORDER creator
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 // 2026-10-13 named approver from Task Settings (PURCHASE_ORDER A, else admin) - was tbl_task_user 1
@@ -19,6 +20,11 @@ $dbconn = new dbhandler();
 
 $po_date = date("Y-m-d");
 
+// 2026-11-17 saving a direct PO (draft, update, finalize) needs Task Settings PURCHASE_ORDER creator for the user's branch
+// (the list hides the New PO button and edit links, the posts were open)
+if ((isset($_POST['Draft']) || isset($_POST['UPDATE']) || isset($_POST['FINALIZE'])) && !fnTaskCan('PURCHASE_ORDER', 'C', $_SESSION['_user_branch'])) {
+	fnAccessDenied(false, 'lst_direct_po.php');
+}
 
 if (isset($_POST['Draft'])) {
 	if (!csrf_check('direct_po')) {
