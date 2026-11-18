@@ -6,9 +6,12 @@ require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
 require_once("../common/csrf.php");
+require_once("../common/error_log.php");
+require_once("../common/access.php");
 
 // 2026-09-22 column names validated, cannot touch a qty column
 // 2026-09-24 login + csrf check added
+// 2026-11-17 save refused without Task Settings STOCK_LOCATION creator
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -22,6 +25,12 @@ $dbconn = new dbhandler();
 // login + csrf required before any write
 if (empty($_SESSION['_user_id']) || !csrf_check_ajax()) {
     echo "Session expired. Please reload the page.";
+    die();
+}
+
+// 2026-11-17 the location button shows only for STOCK_LOCATION creators, the post was open to any user
+if (!fnTaskCan('STOCK_LOCATION', 'C')) {
+    echo "You are not allowed to update the location..!";
     die();
 }
 

@@ -6,6 +6,7 @@ require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
 
+// 2026-11-17 location save shows a refusal instead of closing silently
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -96,6 +97,12 @@ echo $stock;
 				}
 			})
 			.done(function(msg) {
+				// 2026-11-17 a refusal is shown, success replies nothing
+				msg = $.trim(msg);
+				if (msg != '') {
+					alert(msg);
+					return;
+				}
 				$('.close').trigger('click');
 			});
 	});

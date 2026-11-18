@@ -8,6 +8,34 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-17 - Fixes from the 17-11 smoke test
+
+Five findings, all confirmed in the code and fixed on the server side (the page checks stay as they were).
+
+- **Salary issued twice** (`issue_salary.php`): a second post for the same employee, month and type (double click,
+  two tabs) made a second salary and a second accounts entry. Now refused with "Salary for ... is already issued",
+  inside one transaction with the employee row locked. No duplicates exist on live.
+- **Receipt balance from the page** (`pay_receipt.php`): the new balance was the page's hidden field, so a changed
+  page could clear an unpaid balance. Now worked out from the sales order (row locked), and "paid in full" is set when
+  that balance reaches 0.
+- **Negative receipts and overpayments** (`pay_receipt.php`): amount must be above 0 with up to 2 decimals, the pay
+  mode one of the five, and not more than the balance + Rs. 10 (round-off, as live already has). A receipt on a paid
+  order is refused. Six older orders on live have two full receipts minutes apart (SO ids 52, 288, 315, 536, 545,
+  570) - their balance is minus the order value; for accounts to review.
+- **Task Settings not checked on the save** (the buttons were hidden, the posts were open):
+  - `mst_item_details.php` update - ITEM creator.
+  - `direct_purchase_order.php` draft / update / finalize - PURCHASE_ORDER creator for the user's branch.
+  - `inc/cis_ajax/jquery_store_location_dets.php` - STOCK_LOCATION creator (`jquery_modal_stock_det.php` shows the
+    refusal instead of closing).
+  - `grn_pay_receipt.php` - changing a bill amount already entered needs GRN_PAYMENT approver for the GRN's branch;
+    the first entry stays open to every user.
+- **Negative credit days** (`modal_so_det.php`): credit days must be a whole number 0 - 365 (a negative value made a
+  due date before the order date).
+- No database change. Tested on a copy of the 17-11 live database as admin and as the Kerala user (18 checks), and
+  every menu page opened as both users without a PHP error.
+
+---
+
 ## 2026-11-17 - Check of the 17-11 live database and files against git
 
 `bie_db_171126.sql` and `BIE_171126.zip` compared with everything done so far.

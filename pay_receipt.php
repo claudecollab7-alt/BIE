@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
 // 2026-10-13 mark as credit button for verifiers in Task Settings (SALES_RECEIPT V) - showed to every user (every user holds it to begin with)
+// 2026-11-17 receipt: amount above 0 and not above the balance (+ Rs. 10 round-off); balance from the sales order, not the page
 // 2026-10-15 revoke payment confirm / mark as credit (SALES_RECEIPT R) and credit approval (CREDIT_SALES R)
 
 // ini_set('display_errors', '1');
@@ -25,6 +26,34 @@ if (isset($_POST['SAVE'])) {
 	if (!csrf_check('pay_receipt')) {
 		csrf_fail('lst_sales_receipt.php');
 	}
+    // 2026-11-17 the amount is checked and the balance worked out here from the sales order, under a row lock:
+    // the page's hidden balance could clear an unpaid balance, a negative amount or a second full receipt was accepted
+    $back = "pay_receipt.php?so_id=" . (int)$_REQUEST['so_id'];
+    try {
+        db_begin($conn);
+        $so_row = $conn->query("SELECT so_id, bal_value FROM tbl_sales_order WHERE so_id = " . (int)$_REQUEST['so_id'] . " FOR UPDATE")->fetch(PDO::FETCH_OBJ);
+        if (!$so_row) {
+            throw new Exception("Sales order not found..!");
+        }
+        $pay_in = trim((string)$_REQUEST['pay_amount']);
+        if (!preg_match('/^\d+(\.\d{1,2})?$/', $pay_in) || (float)$pay_in <= 0) {
+            throw new Exception("Please enter an amount above 0..!");
+        }
+        if (!in_array($_REQUEST['pay_type'], array('C', 'Q', 'B', 'N', 'A'), true)) {
+            throw new Exception("Please select the Payment Mode..!");
+        }
+        $cur_bal = round((float)$so_row->bal_value, 2);
+        // up to Rs. 10 over the balance is taken as round-off (live has such receipts); more is refused
+        if ($cur_bal <= 0 || (float)$pay_in > $cur_bal + 10) {
+            throw new Exception("The amount is more than the balance of " . number_format(max($cur_bal, 0), 2, '.', '') . " - nothing saved..!");
+        }
+        $new_bal = round($cur_bal - (float)$pay_in, 2);
+    } catch (Exception $e) {
+        db_rollback($conn);
+        $_SESSION['_msg_err'] = str_replace("'", "", $e->getMessage());
+        header("location:" . $back);
+        die();
+    }
     $_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
     $_REQUEST['pay_date'] = date("Y-m-d", strtotime($_REQUEST['pay_date']));
     $_REQUEST['pay_finyr'] = $dbconn->GetSingleReconrd("mst_finyear", "finyr", "finyr_active", 1);
@@ -85,7 +114,7 @@ if (isset($_POST['SAVE'])) {
     $stmt->execute($data);
     $last_id = $conn->lastInsertId();
 
-    $conn->query("UPDATE tbl_sales_order set bal_value ='" . $_REQUEST['bal_value_hidd'] . "' WHERE so_id=" . $_REQUEST['so_id']);
+    $conn->prepare("UPDATE tbl_sales_order SET bal_value = :bal WHERE so_id = :id")->execute(array(':bal' => $new_bal, ':id' => (int)$_REQUEST['so_id']));	// 2026-11-17 was the page's hidden value
     // print_r($conn); die();
     if ($_REQUEST['pay_type'] == 'C') {
         $stmt = null;
@@ -103,11 +132,12 @@ if (isset($_POST['SAVE'])) {
         }
     }
 
-    if ($_REQUEST['pay_amount'] >= $_REQUEST['bal']) {
+    if ($new_bal <= 0) {	// 2026-11-17 paid in full by the worked-out balance (was the page's balance)
         $status_update = $conn->prepare("UPDATE tbl_sales_order SET pay_status = 1, so_user_approve_by = 'E', so_verify_status = 1 	WHERE so_id = '" . $_REQUEST['so_id'] . "'");
         // print_r($status_update );die();
         $status_update->execute();
     }
+    db_commit($conn);
     header("location:lst_sales_receipt.php");
     die();
 }

@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn= new dbhandler();
 
 
+// 2026-11-17 a salary already issued for the employee, month and type is refused (a second post made a second salary + accounts entry)
 // 2026-10-13 csrf + salary approver for the employee's branch (Task Settings SALARY A) - only the button was hidden before
 
 // ini_set('display_errors', '1');
@@ -50,6 +51,15 @@ $_REQUEST['salary_type'];*/
 $_REQUEST['bio_id'] = $dbconn->GetSingleReconrd("mst_employee","bio_id","rec_del_status = 1 AND emp_id",$_REQUEST['emp_id']);
 //echo $_REQUEST['bio_id'];exit;
 try {
+	// 2026-11-17 one salary per employee, month and type: a second post (double click, two tabs) made a second
+	// salary and a second accounts entry. The employee row is locked so two posts at once cannot both pass.
+	db_begin($conn);
+	$conn->query("SELECT emp_id FROM mst_employee WHERE emp_id = " . (int)$_REQUEST['emp_id'] . " FOR UPDATE");
+	$already = db_value($conn, "SELECT emp_sal_id FROM tbl_emp_monthly_salary WHERE emp_id = :e AND salary_for = :f AND salary_type = :t AND salary_status = 1",
+		array(':e' => (int)$_REQUEST['emp_id'], ':f' => (string)$_REQUEST['salary_for'], ':t' => (string)$_REQUEST['salary_type']));
+	if ($already != '') {
+		throw new Exception("Salary for " . $_REQUEST['salary_for'] . " is already issued to this employee..!");
+	}
 	if($_REQUEST['salary_type'] == 'WOPF' || $_REQUEST['salary_type'] == 'WPF'){
 		$stmt = null;				
 		$stmt = $conn->prepare("INSERT INTO tbl_emp_monthly_salary (emp_id, bio_id, branch_id, salary_for, total_working_days, paid_days, work_days, fh_days, emp_lwp,  emp_ctc, earned_salary, basic_salary, da_salary, basic_da, hra_salary, convay_salary, epf_amount, advance_amount, deduction_amount, balance_amount,debit_amount, debit_deduction_payment, balance_debit_amount, net_amount, salary_type, salary_status, issued_by,issued_dtm) VALUES (:emp_id, :bio_id, :branch_id, :salary_for, :total_working_days, :paid_days, :work_days, :fh_days, :emp_lwp, :emp_ctc, :earned_salary, :basic_salary, :da_salary, :basic_da, :hra_salary, :convay_salary, :epf_amount, :advance_amount, :deduction_amount, :balance_amount,:debit_amount, :debit_deduction_payment, :balance_debit_amount, :net_amount, :salary_type, :salary_status, :issued_by, :issued_dtm)");		
@@ -141,10 +151,14 @@ try {
 
 		$_SESSION['_msg'] = "Salary issued successfully..!";
 	}
+	db_commit($conn);
 }catch(Exception $e){
-	fnLogError($e);
-		$str= filter_var($e->getMessage(), FILTER_SANITIZE_STRING);			
-		 $_SESSION['_msg_err'] = $str;		
+	db_rollback($conn);
+	if (strpos($e->getMessage(), 'already issued') === false) {
+		fnLogError($e);
+	}
+	$_SESSION['_msg'] = '';
+	$_SESSION['_msg_err'] = str_replace("'", "", $e->getMessage());
 }
 		
 ?>

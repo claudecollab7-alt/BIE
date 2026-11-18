@@ -17,6 +17,7 @@ $dbconn = new dbhandler();
 // 2026-10-22 payment save: balance worked out here, not taken from the page
 // 2026-10-22 payments table balance: bill less all payments (it took only the first one), paise no longer rounded off
 // 2026-10-22 multiple grn bill: picked grns linked by supplier and branch (were only linked on the same PO), dropdown leaves out grns on another bill
+// 2026-11-17 bill amount already entered: changing it needs GRN_PAYMENT approver
 // 2026-10-22 no bill yet checked as amount 0, not the text '0.000' - with '0.00' the bill amount was locked and Save hidden
 
 // ini_set('display_errors', '1');
@@ -65,6 +66,12 @@ if (isset($_POST['SAVE'])) {
 		// grns on one bill: same supplier and branch as this grn, from any PO - they were only linked when on the same
 		// PO, so a grn picked from another PO stayed unbilled (Not Yet) though paid on this bill. Ids as numbers.
 		$main_id = (int)$_REQUEST['grn_id'];
+		// 2026-11-17 changing a bill amount already entered needs Task Settings GRN_PAYMENT approver for the GRN's branch
+		// (the edit buttons were hidden, the post was open); the first entry stays open to every user
+		$was = $conn->query("SELECT grn_pay_amount, branch_id FROM tbl_grn WHERE grn_id = " . $main_id . " FOR UPDATE")->fetch(PDO::FETCH_OBJ);
+		if ($was && (float)$was->grn_pay_amount > 0 && !fnTaskCan('GRN_PAYMENT', 'A', $was->branch_id)) {
+			throw new Exception("You are not allowed to change the bill amount..!");
+		}
 		$main = $conn->prepare("SELECT supp_id, branch_id FROM tbl_grn WHERE grn_id = :id");
 		$main->execute(array(':id' => $main_id));
 		$main = $main->fetch(PDO::FETCH_OBJ);
@@ -124,7 +131,9 @@ if (isset($_POST['SAVE'])) {
 		db_commit($conn);
 	} catch (Exception $e) {
 		db_rollback($conn);
-		fnLogError($e);
+		if (strpos($e->getMessage(), 'not allowed') === false) {	// 2026-11-17 a refusal is not an error
+			fnLogError($e);
+		}
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}

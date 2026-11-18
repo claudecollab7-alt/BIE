@@ -9,6 +9,7 @@ isAdmin();
 $conn = new dbconnect();
 $dbconn = new dbhandler();
 
+// 2026-11-17 item update refused without Task Settings ITEM creator
 // 2026-09-22 stock row for a new item created via fnEnsureItemStockRow()
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-12 branch All option, principal code in dropdown, min/max discount on new item
@@ -179,6 +180,10 @@ if (isset($_POST['SAVE'])) {
 if (isset($_POST['UPDATE'])) {
 	if (!csrf_check('mst_item_details')) {
 		csrf_fail('lst_item_details.php');
+	}
+	// 2026-11-17 editing an item needs Task Settings ITEM creator (the list hides the edit link, the post was open)
+	if (!fnTaskCan('ITEM', 'C')) {
+		fnAccessDenied(false, 'lst_item_details.php');
 	}
 	$update_id = $_REQUEST['txtHid'];
 	try {

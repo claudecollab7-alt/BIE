@@ -21,6 +21,7 @@ $dbconn= new dbhandler();
 // 2026-10-13 session started when posted directly - every confirm failed the csrf check since 2026-10-01
 // 2026-10-13 credit approval allowed only for the users on the credit-approval dashboard tile; approver saved as the user
 // 2026-10-13 credit approval for approvers in Task Settings (CREDIT_SALES A)
+// 2026-11-17 credit days checked: whole number 0 - 365
 // 2026-10-13 only a sales order waiting for credit approval (pay_status 3)
 
 // ini_set('display_errors', '1');
@@ -38,6 +39,12 @@ if (isset($_POST['CONFIRM']))
 
 	try {
 		db_begin($conn);
+		// 2026-11-17 credit days a whole number 0 - 365: a negative value made a due date before the order date
+		$_REQUEST['so_credit_days'] = trim((string)$_REQUEST['so_credit_days']);
+		if (!preg_match('/^\d{1,3}$/', $_REQUEST['so_credit_days']) || (int)$_REQUEST['so_credit_days'] > 365) {
+			throw new Exception("Credit days must be a whole number from 0 to 365..!");
+		}
+		$_REQUEST['so_credit_days'] = (int)$_REQUEST['so_credit_days'];
 		$so_date = $dbconn->GetSingleReconrd("tbl_sales_order","so_date","so_id",$_REQUEST['so_id']);
 		$_REQUEST['so_credit_due_date'] = date('Y-m-d', strtotime($so_date. ' + '.$_REQUEST['so_credit_days'].' days')); 
 		$stmt = null;				
@@ -61,7 +68,9 @@ if (isset($_POST['CONFIRM']))
 		die();
 		// print_r($data);die();
 	} catch (Exception $e) {
-		fnLogError($e);
+		if (strpos($e->getMessage(), 'Credit days') === false) {	// 2026-11-17 a wrong entry is not an error
+			fnLogError($e);
+		}
 		db_rollback($conn);
 		$_SESSION['_msg_err'] = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 	}
