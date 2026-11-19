@@ -24,8 +24,10 @@ qty, which added the stock a second time.
   would add the stock again - the button was only disabled on the page); a GRN that would take an item above its PO
   qty is refused on the server, with the PO row locked so two GRNs at once cannot both pass; no success message
   over a refusal.
-- No database change. The extra stock from the three cases is not corrected automatically - stock to be counted
-  for those items and adjusted.
+- No database change for the fix. **`db/fix_double_grn_191126.sql`** (run once, safe to run again) takes the extra
+  79 units out as stock adjustments (Decrease, next ADJ numbers, reason "Double GRN: ... are the same goods"), the
+  same way the Stock Adjustment screen saves them, never below 0. Where the stock is already lower than the extra
+  (items sold since), the result lists what could not be taken out - count those items.
 
 ---
 
