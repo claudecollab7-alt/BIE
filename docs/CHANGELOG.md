@@ -8,6 +8,27 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-19 - GRN entered twice (GRN/0258 and GRN/0260, same party bill 4896)
+
+**Cause (code, in the GRN edit page since the start):** a saved GRN whose party bill no. was left blank shows as
+"Pending" with an Edit link, so the bill no. can be typed in later. On that edit page every line of a fully received
+PO showed 0, and UPDATE deleted the GRN's lines and saved them again from the page - so entering the bill no. set the
+GRN's quantities to 0. Its stock stayed in, but the PO then looked not received and allowed a new GRN for the full
+qty, which added the stock a second time.
+
+- GRN/0258 (PO/0252, saved 23-10 16:06 with stock), bill no. entered 24-10 11:58 -> lines 0; GRN/0260 made 11:59:59
+  for the same 32 units. The same happened to GRN/1055 -> GRN/1056 (PO 999, 30-01-2026, 27 units, a minute apart)
+  and GRN/0413 -> GRN/0420 (PO 417, Sep 2024, 20 units).
+- **Fix (`grn_add.php`)**: UPDATE on a saved GRN changes only the bill details, never the lines (a draft still
+  updates its lines); the edit page shows the GRN's own quantities; Save GRN on a GRN already saved is refused (it
+  would add the stock again - the button was only disabled on the page); a GRN that would take an item above its PO
+  qty is refused on the server, with the PO row locked so two GRNs at once cannot both pass; no success message
+  over a refusal.
+- No database change. The extra stock from the three cases is not corrected automatically - stock to be counted
+  for those items and adjusted.
+
+---
+
 ## 2026-11-17 - Fixes from the 17-11 smoke test
 
 Five findings, all confirmed in the code and fixed on the server side (the page checks stay as they were).

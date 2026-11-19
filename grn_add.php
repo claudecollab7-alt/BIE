@@ -14,12 +14,46 @@ $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-06 new grn commit moved above the redirect - it sat after die; so every new grn was rolled back
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-11-19 a saved GRN's lines are never rewritten by Update (entering the bill no. set them to 0, the PO reopened and a second GRN added the stock again); Save GRN refused on a saved GRN; qty above the PO refused
 // 2026-11-13 stock added in the main unit: a line in an extra unit is converted (Item Price screen), refused when no conversion is set
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 
 $grn_date = date("Y-m-d");
+
+// 2026-11-19 the posted accepted qty plus what the PO's other saved GRNs accepted must not go above the PO qty
+// (the page checks it too; this stops a second GRN for stock already received). Returns the problem lines, or ''.
+function fnGrnOverPo($conn, $po_id, $grn_id)
+{
+	$po = array();
+	$q = $conn->prepare("SELECT item_id, SUM(po_qty) AS q FROM tbl_purchase_order_details WHERE po_id = :p GROUP BY item_id");
+	$q->execute(array(':p' => (int)$po_id));
+	foreach ($q->fetchAll(PDO::FETCH_OBJ) as $r) {
+		$po[$r->item_id] = (float)$r->q;
+	}
+	$done = array();
+	$q = $conn->prepare("SELECT d.grn_item_id, SUM(d.grn_accepted_qty) AS q FROM tbl_grn_details d JOIN tbl_grn g ON g.grn_id = d.grn_id
+						 WHERE g.po_id = :p AND g.grn_status = 2 AND g.grn_id <> :g GROUP BY d.grn_item_id");
+	$q->execute(array(':p' => (int)$po_id, ':g' => (int)$grn_id));
+	foreach ($q->fetchAll(PDO::FETCH_OBJ) as $r) {
+		$done[$r->grn_item_id] = (float)$r->q;
+	}
+	$now = array();
+	for ($x = 0; $x < fnRowCount('temp_item_id'); $x++) {
+		$i = $_REQUEST['temp_item_id'][$x];
+		$now[$i] = (isset($now[$i]) ? $now[$i] : 0) + (float)$_REQUEST['grn_accepted_qty'][$x];
+	}
+	$bad = array();
+	foreach ($now as $i => $qty) {
+		$prev = isset($done[$i]) ? $done[$i] : 0;
+		if ($qty > 0 && isset($po[$i]) && round($prev + $qty, 3) > round($po[$i], 3)) {
+			$code = $conn->query("SELECT item_purchase_code FROM tbl_item_details WHERE item_id = " . (int)$i)->fetchColumn();
+			$bad[] = $code . " (PO " . fnQty($po[$i]) . ", already received " . fnQty($prev) . ", now " . fnQty($qty) . ")";
+		}
+	}
+	return implode(', ', $bad);
+}
 
 if (isset($_REQUEST['Draft'])) {
 	try {
@@ -115,6 +149,8 @@ if (isset($_POST['UPDATE'])) {
 	$update_id = $_REQUEST['txtHid'];
 	try {
 		db_begin($conn);
+		// 2026-11-19 a saved GRN (stock already added) keeps its lines: Update only changes the bill details
+		$saved_grn = (int)$conn->query("SELECT grn_status FROM tbl_grn WHERE grn_id = " . (int)$update_id . " FOR UPDATE")->fetchColumn() == 2;
 
 		$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 		$_REQUEST['modify_by'] = $_SESSION['_user_id'];
@@ -161,6 +197,7 @@ if (isset($_POST['UPDATE'])) {
 
 		/* details */
 
+		if (!$saved_grn) {	// 2026-11-19 draft only - on a saved GRN the page showed 0 and this set its lines to 0
 		$delete_details =  "DELETE FROM tbl_grn_details WHERE grn_id = '" . $update_id . "'";
 		$result = $conn->prepare($delete_details);
 		$result->execute();
@@ -182,6 +219,7 @@ if (isset($_POST['UPDATE'])) {
 				':grn_recived_qty' => $_REQUEST['grn_recived_qty'][$x]
 			);
 			$stmt1->execute($data);
+		}
 		}
 
 		
@@ -227,6 +265,15 @@ if (isset($_POST['FINALIZE'])) {
 	if ($update_id != '' && $update_id > 0) {
 		try {
 			db_begin($conn);
+			// 2026-11-19 saving a GRN again added its stock again
+			if ((int)$conn->query("SELECT grn_status FROM tbl_grn WHERE grn_id = " . (int)$update_id . " FOR UPDATE")->fetchColumn() == 2) {
+				throw new Exception("This GRN is already saved and its stock added - only the bill details can be changed (UPDATE)..!");
+			}
+			$conn->query("SELECT po_id FROM tbl_purchase_order WHERE po_id = " . (int)$_REQUEST['po_id'] . " FOR UPDATE");
+			$over = fnGrnOverPo($conn, $_REQUEST['po_id'], $update_id);
+			if ($over != '') {
+				throw new Exception("GRN not saved - more than the PO qty: " . $over);
+			}
 
 			$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 			$_REQUEST['modify_by'] = $_SESSION['_user_id'];
@@ -343,18 +390,28 @@ if (isset($_POST['FINALIZE'])) {
 			/* GRN status */
 			db_commit($conn);
 		} catch (Exception $e) {
-			fnLogError($e);
+			if (strpos($e->getMessage(), 'GRN not saved') === false && strpos($e->getMessage(), 'already saved') === false) {	// 2026-11-19 a refusal is not an error
+				fnLogError($e);
+			}
 			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			$_SESSION['_msg_err'] = $str;
 		}
-		$_SESSION['_msg'] = "GRN succesfully Sent..!";
+		if (empty($_SESSION['_msg_err'])) {	// 2026-11-19 no success message over a refusal
+			$_SESSION['_msg'] = "GRN succesfully Sent..!";
+		}
 		header("location:grn_list.php");
 		die();
 		
 	} else {
 		try {
 			db_begin($conn);
+			// 2026-11-19 PO row locked so two GRNs saved at once see each other; qty above the PO refused
+			$conn->query("SELECT po_id FROM tbl_purchase_order WHERE po_id = " . (int)$_REQUEST['po_id'] . " FOR UPDATE");
+			$over = fnGrnOverPo($conn, $_REQUEST['po_id'], 0);
+			if ($over != '') {
+				throw new Exception("GRN not saved - more than the PO qty: " . $over);
+			}
 
 			$_REQUEST['grn_date'] = ($_REQUEST['grn_date'] != '') ? date('Y-m-d', strtotime($_REQUEST['grn_date'])) : NULL;
 
@@ -495,12 +552,16 @@ if (isset($_POST['FINALIZE'])) {
 			header("location:grn_list.php");
 			die;
 		} catch (Exception $e) {
-			fnLogError($e);
+			if (strpos($e->getMessage(), 'GRN not saved') === false && strpos($e->getMessage(), 'already saved') === false) {	// 2026-11-19 a refusal is not an error
+				fnLogError($e);
+			}
 			db_rollback($conn);
 			$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 			echo $_SESSION['_msg_err'] = $str;
 		}
-		$_SESSION['_msg'] = "GRN succesfully Recorded..!";
+		if (empty($_SESSION['_msg_err'])) {	// 2026-11-19 no success message over a refusal
+			$_SESSION['_msg'] = "GRN succesfully Recorded..!";
+		}
 		header("location:grn_list.php");
 		die();
 	}
@@ -953,7 +1014,9 @@ if (isset($_REQUEST['po_id']) && $_REQUEST['po_id'] != "") {
 
 																	    if($itm->po_qty <= $obj1->total_recived_qty)
 																		{
-																			$grn_rcvd = $grn_reje = $grn_acpt = 0;
+																			if ($_REQUEST['grn_id'] == '') {	// 2026-11-19 an existing GRN shows its own qty (it showed 0 and Update saved 0)
+																				$grn_rcvd = $grn_reje = $grn_acpt = 0;
+																			}
 																			echo '
 																			<tr id="' . $itm->item_id . '" style="color:green;">
 																				<td>' . $item_purchase_code . '
