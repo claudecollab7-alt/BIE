@@ -28,6 +28,11 @@ qty, which added the stock a second time.
   79 units out as stock adjustments (Decrease, next ADJ numbers, reason "Double GRN: ... are the same goods"), the
   same way the Stock Adjustment screen saves them, never below 0. Where the stock is already lower than the extra
   (items sold since), the result lists what could not be taken out - count those items.
+- **`db/cancel_double_grn_191126.sql`** (run after the stock one, safe to run again): GRN/0258, GRN/1055 and GRN/0413
+  marked Cancelled with the reason "Duplicate of GRN/... (same goods ...)" - the same fields the GRN cancel sets, header
+  only. The GRN list shows them as Cancelled, and they drop out of the GRN payment lists, the GRN Payment Pending tile
+  and the PO report. Kept, not deleted, so GRN numbers and the stock history stay whole.
+- `grn_add.php`: a cancelled GRN cannot be updated or saved; no success message over a refused UPDATE.
 
 ---
 

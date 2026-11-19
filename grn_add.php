@@ -14,6 +14,7 @@ $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-06 new grn commit moved above the redirect - it sat after die; so every new grn was rolled back
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-11-19 a cancelled GRN cannot be updated or saved
 // 2026-11-19 a saved GRN's lines are never rewritten by Update (entering the bill no. set them to 0, the PO reopened and a second GRN added the stock again); Save GRN refused on a saved GRN; qty above the PO refused
 // 2026-11-13 stock added in the main unit: a line in an extra unit is converted (Item Price screen), refused when no conversion is set
 
@@ -150,7 +151,11 @@ if (isset($_POST['UPDATE'])) {
 	try {
 		db_begin($conn);
 		// 2026-11-19 a saved GRN (stock already added) keeps its lines: Update only changes the bill details
-		$saved_grn = (int)$conn->query("SELECT grn_status FROM tbl_grn WHERE grn_id = " . (int)$update_id . " FOR UPDATE")->fetchColumn() == 2;
+		$cur_status = (int)$conn->query("SELECT grn_status FROM tbl_grn WHERE grn_id = " . (int)$update_id . " FOR UPDATE")->fetchColumn();
+		if ($cur_status == 3) {	// 2026-11-19 cancelled GRN
+			throw new Exception("This GRN is cancelled - it cannot be changed..!");
+		}
+		$saved_grn = $cur_status == 2;
 
 		$_REQUEST['modify_date_time'] = date('Y-m-d H:i:s');
 		$_REQUEST['modify_by'] = $_SESSION['_user_id'];
@@ -228,12 +233,16 @@ if (isset($_POST['UPDATE'])) {
 		/* details */
 		db_commit($conn);
 	} catch (Exception $e) {
-		fnLogError($e);
+		if (strpos($e->getMessage(), 'cancelled') === false) {	// 2026-11-19 a refusal is not an error
+			fnLogError($e);
+		}
 		db_rollback($conn);
 		$str = filter_var($e->getMessage(), FILTER_SANITIZE_STRING);
 		$_SESSION['_msg_err'] = $str;
 	}
-	$_SESSION['_msg'] = "GRN succesfully Sent..!";
+	if (empty($_SESSION['_msg_err'])) {	// 2026-11-19 no success message over a refusal
+		$_SESSION['_msg'] = "GRN succesfully Sent..!";
+	}
 	header("location:grn_list.php");
 	die();
 }
@@ -266,7 +275,11 @@ if (isset($_POST['FINALIZE'])) {
 		try {
 			db_begin($conn);
 			// 2026-11-19 saving a GRN again added its stock again
-			if ((int)$conn->query("SELECT grn_status FROM tbl_grn WHERE grn_id = " . (int)$update_id . " FOR UPDATE")->fetchColumn() == 2) {
+			$cur_status = (int)$conn->query("SELECT grn_status FROM tbl_grn WHERE grn_id = " . (int)$update_id . " FOR UPDATE")->fetchColumn();
+			if ($cur_status == 3) {	// 2026-11-19 cancelled GRN
+				throw new Exception("This GRN is cancelled - it cannot be saved..!");
+			}
+			if ($cur_status == 2) {
 				throw new Exception("This GRN is already saved and its stock added - only the bill details can be changed (UPDATE)..!");
 			}
 			$conn->query("SELECT po_id FROM tbl_purchase_order WHERE po_id = " . (int)$_REQUEST['po_id'] . " FOR UPDATE");
@@ -390,7 +403,7 @@ if (isset($_POST['FINALIZE'])) {
 			/* GRN status */
 			db_commit($conn);
 		} catch (Exception $e) {
-			if (strpos($e->getMessage(), 'GRN not saved') === false && strpos($e->getMessage(), 'already saved') === false) {	// 2026-11-19 a refusal is not an error
+			if (strpos($e->getMessage(), 'GRN not saved') === false && strpos($e->getMessage(), 'already saved') === false && strpos($e->getMessage(), 'cancelled') === false) {	// 2026-11-19 a refusal is not an error
 				fnLogError($e);
 			}
 			db_rollback($conn);
@@ -552,7 +565,7 @@ if (isset($_POST['FINALIZE'])) {
 			header("location:grn_list.php");
 			die;
 		} catch (Exception $e) {
-			if (strpos($e->getMessage(), 'GRN not saved') === false && strpos($e->getMessage(), 'already saved') === false) {	// 2026-11-19 a refusal is not an error
+			if (strpos($e->getMessage(), 'GRN not saved') === false && strpos($e->getMessage(), 'already saved') === false && strpos($e->getMessage(), 'cancelled') === false) {	// 2026-11-19 a refusal is not an error
 				fnLogError($e);
 			}
 			db_rollback($conn);
