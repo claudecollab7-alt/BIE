@@ -12,6 +12,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 
 // ini_set('display_errors', '	1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -604,8 +605,8 @@ $(function() {
                                                                 //     $obj1 = $already_rtn_rejected_qty->fetch(PDO::FETCH_OBJ);
                                                                 // }
 
-                                                                $temp_item_code = $dbconn->GetSingleReconrd("tbl_item_details","item_code","item_status = '1' AND item_id",$obj->grn_item_id);
-                                                                $temp_item_name = $dbconn->GetSingleReconrd("tbl_item_details","item_desciption","item_status = '1' AND item_id",$obj->grn_item_id);
+                                                                $temp_item_code = $dbconn->GetSingleReconrd("tbl_item_details","item_code","item_id",$obj->grn_item_id);
+                                                                $temp_item_name = $dbconn->GetSingleReconrd("tbl_item_details","item_desciption","item_id",$obj->grn_item_id);
                                                                 // $pi_remarks_id = $dbconn->GetSingleReconrd("tbl_grn_details","pi_remarks_id","pi_id = '".$pi_id."' AND pi_item_id",$obj->temp_rtn_item_id);
                                                                 
                                                                     echo '<tr>
@@ -656,8 +657,8 @@ $(function() {
                                                                 //     $obj1 = $already_rtn_rejected_qty->fetch(PDO::FETCH_OBJ);
                                                                 // }
 
-                                                                $temp_item_code = $dbconn->GetSingleReconrd("tbl_item_details","item_code","item_status = '1' AND item_id",$obj->rtn_item_id);
-                                                                $temp_item_name = $dbconn->GetSingleReconrd("tbl_item_details","item_desciption","item_status = '1' AND item_id",$obj->rtn_item_id);
+                                                                $temp_item_code = $dbconn->GetSingleReconrd("tbl_item_details","item_code","item_id",$obj->rtn_item_id);
+                                                                $temp_item_name = $dbconn->GetSingleReconrd("tbl_item_details","item_desciption","item_id",$obj->rtn_item_id);
                                                                 // $pi_remarks_id = $dbconn->GetSingleReconrd("tbl_grn_details","pi_remarks_id","pi_id = '".$pi_id."' AND pi_item_id",$obj->temp_rtn_item_id);
                                                                 
                                                                     echo '<tr>

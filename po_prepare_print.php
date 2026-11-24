@@ -12,6 +12,7 @@ $dbconn = new dbhandler();
 // 2026-11-11 a line indented in an extra unit gets that unit's list price (item_price) from tbl_item_uom_price
 // 2026-11-13 PO unit saved / shown as the unit code
 // 2026-11-11 Generate PO only in the indent's branch; a line with no price takes the price set since or stops it
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 //ini_set('display_errors', '1');
 //ini_set('display_startup_errors', '1');
 //error_reporting(E_ALL);
@@ -166,20 +167,20 @@ if (isset($_REQUEST['GEN_PO'])) {
                                 $wx_po_id = $dbconn->GetSingleReconrd("tbl_purchase_order", "po_id", "po_prepare_id", $_REQUEST['po_prepare_id']);
                                 $details_id = $dbconn->GetSingleReconrd("tbl_purchase_order_details", "details_id", "item_id ='" . $pod->item_id . "' AND po_prepare_id ", $_REQUEST['po_prepare_id']);
                                 //if($details_id == ''){	
-                                // $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
+                                // $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $pod->item_id);
                                 // $item_uom = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status='1' AND uom_id", $uom);
 
                                 $si_unit = $dbconn->GetSingleReconrd("tbl_store_indent_details","si_unit","item_id = '".$pod->item_id."' AND si_id",$pod->si_id);
 
 
                                 if($si_unit == 0 || $si_unit == '' || $si_unit == 'NULL'){
-                                    $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
+                                    $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $pod->item_id);
                                     $item_uom = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status='1' AND uom_id", $uom);
                                 }else{
                                     $item_uom = $dbconn->GetSingleReconrd("mst_uom","uom_code","uom_id",$si_unit);	// 2026-11-13 code (the name was cut to 4 letters: LITE, ROLL)
 
                                 }
-                                //$unit_price = $dbconn->GetSingleReconrd("tbl_item_details","item_selling_price","item_status = '1' AND item_id",$pod->item_id);
+                                //$unit_price = $dbconn->GetSingleReconrd("tbl_item_details","item_selling_price","item_id",$pod->item_id);
                                 // $branch_item_cost_price = $dbconn->GetSingleReconrd("mst_branch","branch_item_cost_price","branch_id",$_SESSION['_user_branch']);
                                 // $unit_price =  $dbconn->GetSingleReconrd("tbl_item_stock","$branch_item_cost_price","item_id",$pod->item_id);
 
@@ -196,10 +197,10 @@ if (isset($_REQUEST['GEN_PO'])) {
                                 }
 
 
-                                // $unit_price = $dbconn->GetSingleReconrd("tbl_item_details", "item_cost_price", "item_status = '1' AND item_id", $pod->item_id);
+                                // $unit_price = $dbconn->GetSingleReconrd("tbl_item_details", "item_cost_price", "item_id", $pod->item_id);
                                 $price = $pod->unit_price * $pod->si_qty;
 
-                                $item_hsn = $dbconn->GetSingleReconrd("tbl_item_details", "item_hsn", "item_status = '1' AND item_id", $pod->item_id);
+                                $item_hsn = $dbconn->GetSingleReconrd("tbl_item_details", "item_hsn", "item_id", $pod->item_id);
                                 $vat  = $dbconn->GetSingleReconrd("mst_hsn", "igst", "hsn_status = '1' AND hsn_id", $item_hsn);
 
                                 $tax = $price * $vat / 100;
@@ -540,35 +541,35 @@ if (isset($_REQUEST['GEN_PO'])) {
                                                                                     $send_to_admin = $pod->send_to_admin_status;
                                                                                     $send_admin_status = $pod->send_admin_status;
 
-                                                                                    $supp_item_code = $dbconn->GetSingleReconrd("tbl_item_details", "supp_item_code", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                    $supp_item_code = $dbconn->GetSingleReconrd("tbl_item_details", "supp_item_code", "item_id", $pod->item_id);
 
-                                                                                    $item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                    $item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $pod->item_id);
 
-                                                                                    $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                    $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $pod->item_id);
 
-                                                                                    $item_model = $dbconn->GetSingleReconrd("tbl_item_details", "item_model_manufac", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                    $item_model = $dbconn->GetSingleReconrd("tbl_item_details", "item_model_manufac", "item_id", $pod->item_id);
                                                                                     $po_qty = $pod->si_qty;
                                                                                     //if($po_qty > 0){
                                                                                     $branch_item_cost_price = $dbconn->GetSingleReconrd("mst_branch","branch_item_cost_price","branch_id",$_SESSION['_user_branch']);
                                                                                     $unit_price =  $dbconn->GetSingleReconrd("tbl_item_stock","$branch_item_cost_price","item_id",$pod->item_id);
                                                                                     
-                                                                                    // $unit_price = $dbconn->GetSingleReconrd("tbl_item_details", "item_cost_price", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                    // $unit_price = $dbconn->GetSingleReconrd("tbl_item_details", "item_cost_price", "item_id", $pod->item_id);
                                                                                     $price = $pod->unit_price * $po_qty;
 
 															                       $si_unit = $dbconn->GetSingleReconrd("tbl_store_indent_details","si_unit","item_id = '".$pod->item_id."' AND si_id",$pod->si_id);
 
 
                                                                                     if($si_unit == 0 || $si_unit == '' || $si_unit == 'NULL'){
-                                                                                        $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                        $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $pod->item_id);
                                                                                         $item_uom = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status='1' AND uom_id", $uom);
                                                                                     }else{
                                                                                         $item_uom = $dbconn->GetSingleReconrd("mst_uom","uom_code","uom_id",$si_unit);	// 2026-11-13 code (the name was cut to 4 letters: LITE, ROLL)
                             
                                                                                     }
-                                                                                    // $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                    // $uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $pod->item_id);
                                                                                     // $item_uom = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status='1' AND uom_id", $uom);
 
-                                                                                    $item_hsn = $dbconn->GetSingleReconrd("tbl_item_details", "item_hsn", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                    $item_hsn = $dbconn->GetSingleReconrd("tbl_item_details", "item_hsn", "item_id", $pod->item_id);
                                                                                     $gst  = $dbconn->GetSingleReconrd("mst_hsn", "igst", "hsn_status = '1' AND hsn_id", $item_hsn);
 
                                                                                     $tax = $price * $gst / 100;

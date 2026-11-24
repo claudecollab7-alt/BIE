@@ -1,4 +1,5 @@
 <?php
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 // Row renderers shared by the add/edit screens and their ajax endpoints.
 // The rows live in the page and post back as arrays - no temp tables.
 
@@ -66,8 +67,8 @@ function fnItemGroupRow($dbconn, $item_id, $qty, $position, $sno)
 	$qty      = trim($qty);
 	$position = trim($position);
 
-	$decp = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status = '1' AND item_id ", $item_id);
-	$code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_status = '1' AND item_id ", $item_id);
+	$decp = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $item_id);
+	$code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $item_id);
 
 	$h = function ($v) { return htmlspecialchars($v, ENT_QUOTES); };
 	$readonly = (isset($_SESSION['_user_type']) && $_SESSION['_user_type'] == 'S');

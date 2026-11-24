@@ -10,6 +10,7 @@ $dbconn = new dbhandler();
 // 2026-10-13 buttons checked against the repair's branch (company_id)
 // 2026-10-15 revoke under send for approval (back to draft) and approve (back to in approval) for Revokers (SALES_REPAIR R)
 // 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 
 if (isset($_REQUEST['sal_repair_id']) && $_REQUEST['sal_repair_id'] != '') {
 
@@ -226,11 +227,11 @@ $(function() {
 
                                                         $repair_item_name = $dbconn->GetSingleReconrd("tbl_item_details",
                                                             "item_desciption",
-                                                            "item_status = '1' AND item_id", $pr->repair_item_id);
+                                                            "item_id", $pr->repair_item_id);
 
                                                         $spare_item_name = $dbconn->GetSingleReconrd("tbl_item_details",
                                                             "item_code",
-                                                            "item_status = '1' AND item_id", $pr->repair_item_id);
+                                                            "item_id", $pr->repair_item_id);
 
                                                         $repair_remarks = "";
 

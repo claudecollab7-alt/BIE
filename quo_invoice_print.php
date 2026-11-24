@@ -13,6 +13,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 // 2026-10-30 invoice qty may be a part qty (0.5) - shown up to 3 decimals without trailing zeros (fnQty)
 // 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
@@ -424,15 +425,15 @@ if ($_REQUEST['inv_id'] != "") {
 														$igst_per  = $cgst_per  = $sgst_per = $cgst_vat = $cgst_val  =$sgst_vat  = $sgst_val  ='0';
 														$igst_vat = $igst_val =$igst_val = $igst_vat = $igst_val =  $igst_val = $igst_vat  =$igst_val = $igst_val ='0';
 
-														$item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_status='1' AND item_id", $inv->item_id);
-														$item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status='1' AND item_id", $inv->item_id);
-														$item_model = $dbconn->GetSingleReconrd("tbl_item_details", "item_model_manufac", "item_status='1' AND item_id", $inv->item_id);
-														$gst_id = $dbconn->GetSingleReconrd("tbl_item_details", "item_hsn", "item_status='1' AND item_id", $inv->item_id);
+														$item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $inv->item_id);
+														$item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $inv->item_id);
+														$item_model = $dbconn->GetSingleReconrd("tbl_item_details", "item_model_manufac", "item_id", $inv->item_id);
+														$gst_id = $dbconn->GetSingleReconrd("tbl_item_details", "item_hsn", "item_id", $inv->item_id);
 														
 														//$branch_item_selling_price = $dbconn->GetSingleReconrd("mst_branch","branch_item_selling_price","branch_id",$_SESSION['_user_branch']);
 														//$selling_price = $dbconn->GetSingleReconrd("tbl_item_stock", "$branch_item_selling_price", "item_id", $inv->item_id);
 
-														//$selling_price = $dbconn->GetSingleReconrd("tbl_item_details", "item_selling_price", "item_status='1' AND item_id", $inv->item_id);
+														//$selling_price = $dbconn->GetSingleReconrd("tbl_item_details", "item_selling_price", "item_id", $inv->item_id);
 
 
 														$hsn = $dbconn->GetSingleReconrd("mst_hsn", "hsn_code", "hsn_status='1' AND hsn_id", $gst_id);

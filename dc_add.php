@@ -16,6 +16,8 @@ $dbconn = new dbhandler();
 // 2026-10-13 _userid (never set at login) replaced by _user_id
 
 // 2026-11-03 dispatch qty can be a part qty (0.5, 1.25 - up to 3 decimals): box takes a dot, checks rounded to 3 places, shown via fnQty
+// 2026-11-24 save asks before leaving out lines with This DC 0 (they are not printed)
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -701,15 +703,15 @@ elseif (isset($_REQUEST['so_id']))
                                                                         $obj1 = $already_dispatch_qty->fetch(PDO::FETCH_OBJ);
                                                                     }
 
-                                                                    $temp_item_code = $dbconn->GetSingleReconrd("tbl_item_details","item_code","item_status = '1' AND item_id",$obj->dc_item_id);
-                                                                    $temp_item_name = $dbconn->GetSingleReconrd("tbl_item_details","item_desciption","item_status = '1' AND item_id",$obj->dc_item_id);
-                                                                    $item_type = $dbconn->GetSingleReconrd("tbl_item_details","item_type","item_status = '1' AND item_id",$obj->dc_item_id);
+                                                                    $temp_item_code = $dbconn->GetSingleReconrd("tbl_item_details","item_code","item_id",$obj->dc_item_id);
+                                                                    $temp_item_name = $dbconn->GetSingleReconrd("tbl_item_details","item_desciption","item_id",$obj->dc_item_id);
+                                                                    $item_type = $dbconn->GetSingleReconrd("tbl_item_details","item_type","item_id",$obj->dc_item_id);
 
                                                                     $field_name = $dbconn->GetSingleReconrd("mst_branch","branch_stock_field","branch_id",$_SESSION['_user_branch']);
 
                                                                     $temp_avl_qty = $dbconn->GetSingleReconrd("tbl_item_stock","$field_name","item_id",$obj->dc_item_id);
 
-                                                                    //$temp_avl_qty = $dbconn->GetSingleReconrd("tbl_item_details","item_curr_stock","item_status = '1' AND item_id",$obj->dc_item_id);
+                                                                    //$temp_avl_qty = $dbconn->GetSingleReconrd("tbl_item_details","item_curr_stock","item_id",$obj->dc_item_id);
                                                                     
                                                                    // $pack_box_no = $dbconn->GetSingleReconrd("tbl_package_box_details","pack_box_no"," item_id",$obj->dc_item_id); 
                                                                     if($obj->dc_qty == $obj1->total_dispatch_qty)
@@ -868,6 +870,18 @@ elseif (isset($_REQUEST['so_id']))
 <script type="text/javascript">
 	var wasSubmitted = false;
     function fnValidate() {
+		// 2026-11-24 a line with This DC 0 is not on the DC print - name them before saving (stock short at this branch)
+		if (!wasSubmitted) {
+			var left = [];
+			$('input.dc_dispatch_qty').not('[readonly]').each(function() {
+				if ((parseFloat($(this).val()) || 0) <= 0) {
+					left.push($.trim($(this).closest('tr').children('td').eq(1).text()));
+				}
+			});
+			if (left.length > 0 && !confirm('These items are not in this DC (This DC is 0), so they will not be printed on it:\n\n- ' + left.join('\n- ') + '\n\nSave the DC anyway?')) {
+				return false;
+			}
+		}
 		if (!wasSubmitted) {
             wasSubmitted = true;
             document.thisForm.submit();

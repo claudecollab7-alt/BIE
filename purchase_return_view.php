@@ -13,6 +13,7 @@ $dbconn = new dbhandler();
 // 2026-10-13 approve / reject only for approvers in Task Settings (PURCHASE_RETURN A) - was anyone opening the page
 // 2026-10-15 revoke button for Revokers (PURCHASE_RETURN R) once approved - back to draft
 // 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
 $grn_date = date("Y-m-d");
@@ -285,7 +286,7 @@ if (isset($_REQUEST['rtn_id']) && $_REQUEST['rtn_id'] != "") {
                                                                     $iSno = 1;
                                                                     $colspan = "4";
                                                                     while ($objT = $result->fetch(PDO::FETCH_OBJ)) {
-                                                                        $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status = '1' AND item_id", $objT->rtn_item_id);
+                                                                        $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $objT->rtn_item_id);
                                                                         $rtn_verify_status = $dbconn->GetSingleReconrd("tbl_purchase_return", "rtn_verify_status", "rtn_id", $objT->rtn_id);
                                                                         $rtn_approve_status = $dbconn->GetSingleReconrd("tbl_purchase_return", "rtn_approve_status", "rtn_id", $objT->rtn_id);
                                                                         // $item_id = $dbconn->GetSingleReconrd("tbl_grn_details", "grn_item_id", "grn_id", $objT->grn_id);

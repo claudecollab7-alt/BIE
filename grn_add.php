@@ -17,6 +17,7 @@ $dbconn = new dbhandler();
 // 2026-11-19 a cancelled GRN cannot be updated or saved
 // 2026-11-19 a saved GRN's lines are never rewritten by Update (entering the bill no. set them to 0, the PO reopened and a second GRN added the stock again); Save GRN refused on a saved GRN; qty above the PO refused
 // 2026-11-13 stock added in the main unit: a line in an extra unit is converted (Item Price screen), refused when no conversion is set
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 
 // ini_set('display_errors', '1');ini_set('display_startup_errors', '1');error_reporting(E_ALL);
 
@@ -979,7 +980,7 @@ if (isset($_REQUEST['po_id']) && $_REQUEST['po_id'] != "") {
 																	$item_desciption = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $itm->item_id);
 																	$item_purchase_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_purchase_code", "item_id", $itm->item_id);
 																	$item_code = $dbconn->GetSingleReconrd("tbl_item_details", "supp_item_code", "item_id", $itm->item_id);
-																	$item_uom = $dbconn->GetSingleReconrd("tbl_item_details","item_uom","item_status = '1' AND item_id",$itm->item_id);
+																	$item_uom = $dbconn->GetSingleReconrd("tbl_item_details","item_uom","item_id",$itm->item_id);
 															        $uom_code = $dbconn->GetSingleReconrd("mst_uom","uom_code","uom_status = '1' AND uom_id",$item_uom);
 																	
 																	

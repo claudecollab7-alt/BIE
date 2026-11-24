@@ -1,4 +1,5 @@
 <?php
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
@@ -28,14 +29,14 @@ if ($_POST['mode'] == 'save' && isset($_POST['item_id'])) {
 	$repair_item_name = $dbconn->GetSingleReconrd(
 		"tbl_item_details",
 		"CONCAT(item_desciption,' - ',item_code)",
-		"item_status = '1' AND item_id",
+		"item_id",
 		$repair_item_id
 	);
 
 	$spare_item_name = $dbconn->GetSingleReconrd(
 		"tbl_item_details",
 		"CONCAT(item_desciption,' - ',item_code)",
-		"item_status = '1' AND item_id",
+		"item_id",
 		$item_id
 	);
 

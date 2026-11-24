@@ -14,6 +14,7 @@ $dbconn = new dbhandler();
 // 2026-09-30 edit view posted quo_value (not a column here) and wiped inv_value, now inv_value
 // 2026-09-24 try/catch added, handlers had none before
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -697,7 +698,7 @@ if (isset($_REQUEST['inv_id'])) {
 																	$field_name = $dbconn->GetSingleReconrd("mst_branch","branch_stock_field","branch_id",$_SESSION['_user_branch']);
                                                                     $curr_stock = $dbconn->GetSingleReconrd("tbl_item_stock", "$field_name", "item_id", $obj->item_id);
 
-                                                                    $item_type = $dbconn->GetSingleReconrd("tbl_item_details","item_type","item_status = '1' AND item_id",$obj->item_id);
+                                                                    $item_type = $dbconn->GetSingleReconrd("tbl_item_details","item_type","item_id",$obj->item_id);
 
 																	if($curr_stock <= 0 && $item_type !=8){
 																	echo '<tr id="' . $obj->item_id . '" style="color:red;" class="g' . $obj->group_id . '">';

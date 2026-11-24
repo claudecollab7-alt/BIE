@@ -1,4 +1,5 @@
 <?php
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 function tbl_header($dc_id, $boxtype, $boxno)
 {
 	include_once("inc/common/css-js.php");
@@ -95,9 +96,9 @@ function tbl_body($item_id, $qty, $sno)
 	$dbconn = new dbhandler();
 
 
-	$item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_status = '1' AND item_id", $item_id);
-	$item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status = '1' AND item_id", $item_id);
-	$uom_id = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $item_id);
+	$item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $item_id);
+	$item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $item_id);
+	$uom_id = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $item_id);
 	$unit = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status = '1' AND uom_id", $uom_id);
 
 
