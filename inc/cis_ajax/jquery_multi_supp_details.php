@@ -1,4 +1,5 @@
 <?php
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 require_once("../common/dbconnect.php");
 require_once("../common/functions.php");
 require_once("../common/dbhandler.php");
@@ -24,7 +25,7 @@ if ($_POST['mode'] == "getsupp")
 		    <td width="100%" style="border-bottom-style: none;border-top-style: none;"><select data-placeholder="Select Supplier" name="supp_supp_id[]" class=" select-search supp_supp_id itmid_'.$_POST['id'].'" data-suppitm = "'.$_POST['id'].'">
 			    <option value="">--Select Supplier--</option> ';
 
-				$supp_ids = $dbconn->GetSingleReconrd("tbl_item_details","supp_id","item_status = '1' AND item_id",$_POST['id']);
+				$supp_ids = $dbconn->GetSingleReconrd("tbl_item_details","supp_id","item_id",$_POST['id']);
 			
 				$dbconn= new dbhandler(); 
 			

@@ -1,4 +1,5 @@
 <?php
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 ob_start();
 
 session_start();
@@ -47,10 +48,10 @@ if ($_REQUEST['id'] != "") {
             $iSno = 1;
 
             while ($obj = $result->fetch()) {
-                $product_decp = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status = '1' AND item_id ", $obj->item_id);
-                $product_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_status = '1' AND item_id ", $obj->item_id);
-				$purchase_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_purchase_code", "item_status = '1' AND item_id ", $obj->item_id);
-                $product_price = $dbconn->GetSingleReconrd("tbl_item_details", "item_selling_price", "item_status = '1' AND item_id ", $obj->item_id);
+                $product_decp = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $obj->item_id);
+                $product_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $obj->item_id);
+				$purchase_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_purchase_code", "item_id", $obj->item_id);
+                $product_price = $dbconn->GetSingleReconrd("tbl_item_details", "item_selling_price", "item_id", $obj->item_id);
 
                 $html_output .= '<tr>
 										<td>' . $iSno . '</td>';

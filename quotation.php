@@ -15,6 +15,7 @@ $dbconn = new dbhandler();
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8; package picker renamed so it cannot override the rows
 // 2026-10-13 named approver from Task Settings (QUOTATION A, else admin) - was tbl_task_user 1
 // 2026-10-13 named approver may be a holder for the quotation's branch (replaced by the real approver on approval)
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -1081,14 +1082,14 @@ if (isset($_REQUEST['quo_id'])) {
 																	$repair_item_name = $dbconn->GetSingleReconrd(
 																		"tbl_item_details",
 																		"item_desciption",
-																		"item_status = '1' AND item_id",
+																		"item_id",
 																		$obj->repair_item_id
 																	);
 
 																	$spare_item_name = $dbconn->GetSingleReconrd(
 																		"tbl_item_details",
 																		"item_code",
-																		"item_status = '1' AND item_id",
+																		"item_id",
 																		$obj->repair_item_id
 																	);
 

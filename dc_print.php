@@ -11,6 +11,7 @@ $dbconn = new dbhandler();
 // 2026-10-13 approve / reject for approvers in Task Settings (DC A) - was admin or the DC's branch
 // 2026-10-15 revoke button for Revokers (DC R) once approved - back to draft
 // 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
 // error_reporting(E_ALL);
@@ -298,12 +299,12 @@ if($obj->cus_branch_id > 0){
 
 
 
-                                                        $item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_status='1' AND item_id", $dc->dc_item_id);
+                                                        $item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $dc->dc_item_id);
 
-                                                        $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status='1' AND item_id", $dc->dc_item_id);
+                                                        $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $dc->dc_item_id);
 
 
-                                                        $gst_id = $dbconn->GetSingleReconrd("tbl_item_details", "item_hsn", "item_status='1' AND item_id", $dc->dc_item_id);
+                                                        $gst_id = $dbconn->GetSingleReconrd("tbl_item_details", "item_hsn", "item_id", $dc->dc_item_id);
 
                                                         $item_uom_id = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $dc->dc_item_id);
 

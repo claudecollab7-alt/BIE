@@ -12,6 +12,7 @@ $dbconn = new dbhandler();
 
 // 2026-09-24 csrf token check + transaction rollback on all post handlers
 // 2026-10-07 posted row counts via fnRowCount() - count() on a single value is fatal on php 8
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -419,14 +420,14 @@ if (isset($_REQUEST['sal_repair_id'])) {
 																	$repair_item_name = $dbconn->GetSingleReconrd(
 																		"tbl_item_details",
 																		"CONCAT(item_desciption,' - ',item_code)",
-																		"item_status = '1' AND item_id",
+																		"item_id",
 																		$obj->repair_item_id
 																	);
 
 																	$spare_item_name = $dbconn->GetSingleReconrd(
 																		"tbl_item_details",
 																		"CONCAT(item_desciption,' - ',item_code)",
-																		"item_status = '1' AND item_id",
+																		"item_id",
 																		$obj->spare_item_id
 																	);
 

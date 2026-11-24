@@ -10,6 +10,7 @@ $conn = new dbconnect();
 $dbconn = new dbhandler();
 
 // 2026-10-01 csrf + form token guard, transaction rollback, errors logged
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 
 // ini_set('display_errors', '1');
 // ini_set('display_startup_errors', '1');
@@ -305,7 +306,7 @@ if (isset($_POST['submit'])) {
 
                                                                             while ($obj = $result->fetch()) {
 
-                                                                                $items = $dbconn->GetSingleReconrd("tbl_item_details", "CONCAT(item_desciption,' - ',item_code)", "item_status = '1' AND item_id", $obj->item_id);
+                                                                                $items = $dbconn->GetSingleReconrd("tbl_item_details", "CONCAT(item_desciption,' - ',item_code)", "item_id", $obj->item_id);
 
                                                                                 $del_link = '<li><a href="" class="tip delete" rel="' . $obj->supp_item_id . '"  title="Remove"><i class="fa fa-times-circle"></i></a></li>';
 

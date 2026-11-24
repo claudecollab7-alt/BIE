@@ -1,5 +1,6 @@
 <?PHP
 // 2026-11-11 Created by / on from created_by / created_dtm (modify_by is now the last change); no date shown when the row has none
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 ob_start();
 session_start();
 require_once("inc/common/userclass.php");
@@ -285,7 +286,7 @@ if (isset($_REQUEST['grn_id']) && $_REQUEST['grn_id'] != "") {
                                                                     $iSno = 1;
                                                                     $colspan = "4";
                                                                     while ($objT = $result->fetch(PDO::FETCH_OBJ)) {
-                                                                        $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status = '1' AND item_id", $objT->grn_item_id);
+                                                                        $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $objT->grn_item_id);
                                                                         // $po_id = $dbconn->GetSingleReconrd("tbl_grn", "po_id", "grn_id", $objT->grn_id);
                                                                         // $item_id = $dbconn->GetSingleReconrd("tbl_grn_details", "grn_item_id", "grn_id", $objT->grn_id);
                                                                         // $po_qty = $dbconn->GetSingleReconrd("tbl_purchase_order_details", "sum(po_qty)", "item_id = $item_id AND po_id", $po_id);

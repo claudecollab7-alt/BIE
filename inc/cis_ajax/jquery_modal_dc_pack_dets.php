@@ -1,6 +1,7 @@
 <?php
 // 2026-11-03 box qty can be a part qty (0.5) - the box qty field takes a dot; total shown via fnQty
 // 2026-10-01 temp table dropped - renders the packing inputs from values sent by the page
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 
 ob_start();
 session_start();
@@ -33,8 +34,8 @@ $pack_item_qty = (isset($_POST['pack_item_qty']) && $_POST['pack_item_qty'] !== 
 			   ? explode(',', $_POST['pack_item_qty']) : array();
 $pack_total    = isset($_POST['pack_total_qty']) ? $_POST['pack_total_qty'] : '';
 
-$item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_status = '1' AND item_id", $item_id);
-$item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_status = '1' AND item_id", $item_id);
+$item_code = $dbconn->GetSingleReconrd("tbl_item_details", "item_code", "item_id", $item_id);
+$item_name = $dbconn->GetSingleReconrd("tbl_item_details", "item_desciption", "item_id", $item_id);
 
 $header = '<div class="row">
 		<div class="col-lg-6" style="text-align: left;">

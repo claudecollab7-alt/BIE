@@ -8,6 +8,24 @@ dated one-liner near the top, just above the commented-out `ini_set` lines. Deta
 
 ---
 
+## 2026-11-24 - Item missing / blank on the DC
+
+**Cause:** the DC page and the printed documents read an item's name, code and HSN only for an **active** item
+(`item_status = 1`). An item deleted from the item list after it was put on a quotation / sales order then showed as
+"-" with no code (and no HSN on the invoice print). SO/0110/BIE/KL/2627 (so_id 646): its item 171 EG-VRLA-BC-2 was
+deleted between 28-10 and 11-11, while the same item lives on as item 6627. Second cause of a "missing" item: a line
+whose This DC is 0 (stock at the user's branch is less than the SO qty) is saved but not printed on the DC.
+
+- **Display** (24 files - DC add / print, invoice / quotation invoice / proforma prints, package list, GRN view,
+  purchase return, PO prepare, quotation edit, repair pages, item group / supplier item popups): the item is read by
+  its id whether active or deleted. Item pickers still offer active items only.
+- **`inc/cis_ajax/jquery_delete_records.php`**: an item cannot be deleted while it has stock in any branch or is on a
+  quotation / sales order of the active year that is not cancelled; item delete needs Task Settings ITEM creator.
+- **`dc_add.php`**: Save names the lines with This DC 0 ("not printed on this DC") and asks before saving.
+- **`db/fix_so_646_item_241126.sql`**: SO 646 and quotations 1375 - 1377 moved from item 171 to item 6627.
+
+---
+
 ## 2026-11-19 - GRN entered twice (GRN/0258 and GRN/0260, same party bill 4896)
 
 **Cause (code, in the GRN edit page since the start):** a saved GRN whose party bill no. was left blank shows as

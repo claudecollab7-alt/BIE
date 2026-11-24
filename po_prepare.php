@@ -43,6 +43,7 @@ function fnPoPrepareQtyCheck($conn, $dbconn, $si_id)
 }
 
 // 2026-11-11 a refused save goes back to the page with the reason; any other error is logged as before
+// 2026-11-24 item name / code / HSN read by id for a deleted item too - a document holding an item deleted later showed it blank
 function fnPoPrepareFail($conn, $e, $back)
 {
     db_rollback($conn);
@@ -806,10 +807,10 @@ if ($_REQUEST['si_id'] != "") {
                                                             $missing_lines = 0;
                                                             while ($pod = $result->fetch()) {
 
-                                                                $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "CONCAT(item_desciption,' - ',item_code)", "item_status = '1' AND item_id", $pod->item_id);
+                                                                $item_name = $dbconn->GetSingleReconrd("tbl_item_details", "CONCAT(item_desciption,' - ',item_code)", "item_id", $pod->item_id);
 
-                                                                $item_uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
-                                                                $item_uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_status = '1' AND item_id", $pod->item_id);
+                                                                $item_uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $pod->item_id);
+                                                                $item_uom = $dbconn->GetSingleReconrd("tbl_item_details", "item_uom", "item_id", $pod->item_id);
 
                                                                 $uom = $dbconn->GetSingleReconrd("mst_uom", "uom_code", "uom_status='1' AND uom_id", $item_uom);
                                                                 // 2026-11-11 unit / price / gst of the line, as the save works it out
@@ -847,10 +848,10 @@ if ($_REQUEST['si_id'] != "") {
                                                                     <td width="100%" style="border-bottom-style: none;border-top-style: none;"><select data-placeholder="Select Supplier" name="supp_supp_id[]" class="select-search supp_supp_id itmid_' . $poc->item_id . '" data-suppitm = "' . $poc->item_id . '">
 																			 ';
 
-                                                                                    $supp_ids = $dbconn->GetSingleReconrd("tbl_item_details", "supp_id", "item_status = '1' AND item_id", $poc->item_id);
+                                                                                    $supp_ids = $dbconn->GetSingleReconrd("tbl_item_details", "supp_id", "item_id", $poc->item_id);
 
                                                                                     $sql3 = null;
-                                                                                    $supp_ids = $dbconn->GetSingleReconrd("tbl_item_details", "supp_id", "item_status = '1' AND item_id", $poc->item_id);
+                                                                                    $supp_ids = $dbconn->GetSingleReconrd("tbl_item_details", "supp_id", "item_id", $poc->item_id);
                                                                                     $dbconn = new dbhandler();
                                                                                     if ($supp_ids != '') {
                                                                                         $sql3 = "SELECT supp_id,supp_name FROM mst_supplier_new  WHERE supp_id IN (" . $supp_ids . ") AND supp_status='1' AND  company_branch_id= '".$_SESSION['_user_branch']."'  AND supp_type = 'S' order by supp_name asc ";
@@ -912,9 +913,9 @@ if ($_REQUEST['si_id'] != "") {
                                                                                         <select data-placeholder="Select Supplier" name="supp_supp_id[]" class="select-search supp_supp_id  itmid_<?php echo $pod->item_id; ?> " data-suppitm="<?php echo $pod->item_id; ?>">
                                                                                             <option value="">--Select Supplier--</option>
                                                                                             <?php
-                                                                                            $supp_ids = $dbconn->GetSingleReconrd("tbl_item_details", "supp_id", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                            $supp_ids = $dbconn->GetSingleReconrd("tbl_item_details", "supp_id", "item_id", $pod->item_id);
 
-                                                                                            $supp_ids = $dbconn->GetSingleReconrd("tbl_item_details", "supp_id", "item_status = '1' AND item_id", $pod->item_id);
+                                                                                            $supp_ids = $dbconn->GetSingleReconrd("tbl_item_details", "supp_id", "item_id", $pod->item_id);
                                                                                             $dbconn = new dbhandler();
                                                                                             if ($supp_ids != '') {
                                                                                                 $SQL2 = "SELECT supp_id,supp_name FROM mst_supplier_new  WHERE supp_id IN (" . $supp_ids . ") AND supp_status='1' AND  company_branch_id= '".$_SESSION['_user_branch']."'  AND supp_type = 'S' order by supp_name asc ";
